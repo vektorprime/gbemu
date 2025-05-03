@@ -43,6 +43,7 @@ impl Cpu {
     }
 
     fn setup_instructions() -> Vec<instructions::Instruction> {
+        //https://meganesu.github.io/generate-gb-opcodes/
         let mut all_instructions = Vec::new();
 
         let c3 = instructions::Instruction {
