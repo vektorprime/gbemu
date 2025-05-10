@@ -1,15 +1,19 @@
-
+use crate::gb::bios::*;
 
 
 
 pub struct Ram {
     memory: [u8; 65536],
+    bios:  Bios,
 }
 
+
 impl Ram {
-    pub fn new() -> Self {
+    pub fn new(mode: ColorMode) -> Self {
+        let bios = Bios::new(mode);
         Ram {
-            memory: [0; 65536]
+            memory: [0; 65536],
+            bios,
         }
     }
 

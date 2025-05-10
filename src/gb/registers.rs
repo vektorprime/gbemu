@@ -26,8 +26,8 @@ impl Registers {
             f: 0,
             h: 0,
             l: 0,
-            sp: 0xFFFE, // always this value when gameboy is init
-            pc: 0x100,  // always this value when gameboy is init
+            sp: 0,
+            pc: 0,
         }
     }
     pub fn get_a(&self) -> u8 {
