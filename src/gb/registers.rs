@@ -1,6 +1,33 @@
 
 
 
+pub const INVERSE_Z_FLAG_BITS: u8 = 0b0111_1111;
+pub const INVERSE_N_FLAG_BITS: u8 = 0b1011_1111;
+pub const INVERSE_H_FLAG_BITS: u8 = 0b1101_1111;
+pub const INVERSE_C_FLAG_BITS: u8 = 0b1110_1111;
+
+pub const Z_FLAG_BITS: u8 = 0b1000_0000;
+pub const N_FLAG_BITS: u8 = 0b0100_0000;
+pub const H_FLAG_BITS: u8 = 0b0010_0000;
+pub const C_FLAG_BITS: u8 = 0b0001_0000;
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum FlagBits {
+    Z = 0b1000_0000,
+    N = 0b0100_0000,
+    H = 0b0010_0000,
+    C = 0b0001_0000,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum InverseFlagBits {
+    Z = 0b0111_1111,
+    N = 0b1011_1111,
+    H = 0b1101_1111,
+    C = 0b1110_1111,
+}
 
 pub struct Registers {
     a: u8,
@@ -30,6 +57,57 @@ impl Registers {
             pc: 0,
         }
     }
+
+    pub fn handle_flags(&mut self, inst_name: &str) {
+        if inst_name.contains("ADD") {
+            self.clear_n_flag();
+        }
+        else if inst_name.contains("SUB") {
+            self.set_n_flag();
+        }
+        else if inst_name.contains("RLCA") || inst_name.contains("RLA") || inst_name.contains("RRCA") || inst_name.contains("RRA") {
+            self.clear_z_flag();
+            self.clear_n_flag();
+            self.clear_h_flag();
+            // handle CY in inst code
+        }
+    }
+
+    pub fn clear_z_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags &= INVERSE_Z_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+
+    pub fn clear_n_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags &= INVERSE_N_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+
+    pub fn clear_h_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags &= INVERSE_H_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+
+    pub fn clear_c_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags &= INVERSE_C_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+    pub fn set_c_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags |= C_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+
+    pub fn set_n_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags |= N_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+
     pub fn get_a(&self) -> u8 {
         self.a
     }
@@ -46,12 +124,29 @@ impl Registers {
         self.b = val;
     }
 
+    pub fn inc_b(&mut self) {
+        //inc should not handle overflows
+        self.b += 1;
+    }
+
+    pub fn dec_b(&mut self) {
+        self.b -= 1;
+    }
+
     pub fn get_c(&self) -> u8 {
         self.c
     }
 
     pub fn set_c(&mut self, val: u8) {
         self.c = val;
+    }
+
+    pub fn inc_c(&mut self) {
+        self.c += 1;
+    }
+
+    pub fn dec_c(&mut self) {
+        self.c -= 1;
     }
 
     pub fn get_d(&self) -> u8 {
@@ -123,6 +218,21 @@ impl Registers {
         (self.b as u16) << 8 | (self.c as u16)
     }
 
+    pub fn inc_bc(&mut self) {
+        let mut current_bc = (self.b as u16) << 8 | (self.c as u16);
+        //inc should not handle overflows
+        current_bc += 1;
+        self.set_bc(current_bc);
+
+    }
+
+    pub fn dec_bc(&mut self) {
+        let mut current_bc = (self.b as u16) << 8 | (self.c as u16);
+        //dec should not handle underflows
+        current_bc -= 1;
+        self.set_bc(current_bc);
+    }
+
     pub fn set_bc(&mut self, val: u16) {
         self.b = ((val & 0xFF00) >> 8) as u8;
         self.c = (val & 0xFF) as u8;
@@ -150,6 +260,19 @@ impl Registers {
         let ret_pc = self.pc;
         self.pc += 1;
         ret_pc
+    }
+
+    pub fn inc_pc_by_val(&mut self, size: u16) {
+        self.pc += size;
+    }
+
+    pub fn inc_pc_by_inst_val(&mut self, mut size: u8) {
+        //pc was already incremented once during get_next_op
+        if size > 1 {
+            size -= 1;
+            self.pc += size as u16;
+        }
+
     }
 
     pub fn inc_pc(&mut self) -> u16 {

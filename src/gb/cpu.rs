@@ -1,9 +1,9 @@
-use crate::gb::registers::Registers;
-use crate::gb::instructions::{ FlagBits, Instruction};
+use crate::gb::registers::{Registers, InverseFlagBits, FlagBits, INVERSE_C_FLAG_BITS, INVERSE_H_FLAG_BITS, INVERSE_N_FLAG_BITS, INVERSE_Z_FLAG_BITS};
+use crate::gb::instructions::Instruction;
 use crate::gb::ram::Ram;
 use crate::gb::bios::*;
-
 use std::collections::HashMap;
+
 
 
 pub struct Cpu {
@@ -23,6 +23,10 @@ impl Cpu {
             opcode: 0,
             cycles: 0,
         }
+    }
+
+    pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
+        self.cycles += size as u64;
     }
 
     pub fn run(&mut self, mem: &mut Ram) {
@@ -51,13 +55,163 @@ impl Cpu {
     }
 
 
-    pub fn execute_inst(&mut self,  inst: &Instruction, mem: &Ram) {
+
+    pub fn execute_inst(&mut self,  inst: &Instruction, mem: &mut Ram) {
         // todo
         match inst.opcode {
+            0x00 => {
+                // NOP
+                // pc is already inc
+            },
+            0x01 => {
+                // LD BC D16
+                let lo = mem.read(self.registers.get_pc());
+                let hi = mem.read(self.registers.get_pc() + 1);
+                self.registers.set_bc(u16::from_le_bytes([lo, hi]));
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x02 => {
+                // LD (BC) A
+                let a = self.registers.get_a();
+                let bc = self.registers.get_bc();
+                mem.write(bc, a);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x03 => {
+                // INC BC
+                self.registers.inc_bc();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x04 => {
+                // INC B
+                self.registers.inc_b();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x05 => {
+                // DEC B
+                self.registers.dec_b();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x06 => {
+                // LD B D8
+                let operand = mem.read(self.registers.get_pc());
+                self.registers.set_b(operand);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x07 => {
+                // RLCA
+                let mut bit0 = 0b0000_0001;
+                let mut a_reg = self.registers.get_a();
+                bit0 &= a_reg;
+                a_reg <<= 1;
+                if bit0 == 1 {
+                    a_reg |= bit0;
+                    self.registers.set_c_flag();
+                }
+                else {
+                    self.registers.clear_c_flag();
+                }
+                self.registers.set_a(a_reg);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x08 => {
+                // LD (A16) SP
+                let sp = self.registers.get_sp();
+                
+                let lower_8bits = 0b0000_0000_1111_1111;
+                let lower_sp = sp & lower_8bits;
+                let dst_addr_p1 = mem.read(self.registers.get_pc());
+                let dst_addr_p2 = mem.read(self.registers.get_pc() + 1);
+                let dst_addr = u16::from_le_bytes([dst_addr_p1, dst_addr_p2]);
+                mem.write(dst_addr, lower_sp as u8);
+
+                let upper_sp = (sp >> 8) as u8;
+                mem.write(dst_addr + 1, upper_sp);
+            },
+            0x09 => {
+                // ADD HL BC
+                let bc = self.registers.get_bc();
+                let hl = self.registers.get_hl();
+                let (new_val, overflowed) = bc.overflowing_add(hl);
+                if overflowed {
+                    self.registers.set_c_flag();
+                }
+                else {
+                    self.registers.set_hl(new_val);
+                }
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x0A => {
+                // LD A (BC)
+                let bc_deref = mem.read(self.registers.get_bc());
+                self.registers.set_a(bc_deref);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x0B => {
+                // DEC BC
+                self.registers.dec_bc();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x0C => {
+                // INC C
+                self.registers.inc_c();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x0D => {
+                // DEC C
+                self.registers.dec_c();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x0E => {
+                // LD C D8
+                let operand = mem.read(self.registers.get_pc());
+                self.registers.set_c(operand);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x0F => {
+                // RRCA
+                let mut bit0 = 0b0000_0001;
+                let bit7 = 0b1000_0000;
+                let mut a_reg = self.registers.get_a();
+                bit0 &= a_reg;
+                a_reg >>= 1;
+                if bit0 == 1 {
+                    a_reg |= bit7;
+                    self.registers.set_c_flag();
+                }
+                else {
+                    self.registers.clear_c_flag();
+                }
+                self.registers.set_a(a_reg);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
             0xC3 => {
-                let lo = mem.read(self.registers.get_pc() + 1);
-                let hi = mem.read(self.registers.get_pc() + 2);
+                // JP A16
+                let lo = mem.read(self.registers.get_pc());
+                let hi = mem.read(self.registers.get_pc() + 1);
                 self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                self.inc_cycles_by_inst_val(inst.cycles);
             },
             _ => {
                 //todo
@@ -65,83 +219,9 @@ impl Cpu {
         }
     }
 
-    fn setup_inst() -> HashMap<u8, Instruction> {
+   
+    pub fn setup_inst() -> HashMap<u8, Instruction> {
         // https://meganesu.github.io/generate-gb-opcodes/
-        let mut all_instructions = HashMap::new();
-
-        let inst_c3 = Instruction {
-            // Load the 16-bit immediate operand a16 into the program counter (PC). a16 specifies the address of the subsequently executed instruction.
-            // The second byte of the object code (immediately following the opcode) corresponds to the lower-order byte of a16 (bits 0-7), and the third byte of the object code corresponds to the higher-order byte (bits 8-15).
-            opcode: 0xC3,
-            name: "JP_A16",
-            cycles: 4,
-            size: 3,
-            flags: &[],
-        };
-
-        all_instructions.insert(0xC3, inst_c3);
-
-        let inst_fe = Instruction {
-            // Compare the contents of register A and the contents of the 8-bit immediate operand d8 by calculating A - d8, and set the Z flag if they are equal.
-            // The execution of this instruction does not affect the contents of register A.
-            opcode: 0xFE,
-            name: "CP",
-            cycles: 4,
-            size: 2,
-            flags: &[FlagBits::Z],
-        };
-
-        all_instructions.insert(0xFE, inst_fe);
-
-        let inst_20 = Instruction {
-            // If the Z flag is 0, jump s8 steps from the current address stored in the program counter (PC). If not, the instruction following the current JP instruction is executed (as usual).
-            opcode: 0x20,
-            name: "JR NZ",
-            cycles: 3,
-            size: 2,
-            flags: &[],
-        };
-
-        all_instructions.insert(0x20, inst_20);
-
-        let inst_cd = Instruction {
-            // In memory, push the program counter PC value corresponding to the address following the CALL instruction to the 2 bytes following the byte specified by the current stack pointer SP. Then load the 16-bit immediate operand a16 into PC.
-            opcode: 0xCD,
-            name: "CALL",
-            cycles: 6,
-            size: 3,
-            flags: &[],
-        };
-
-        all_instructions.insert(0xCD, inst_cd);
-        
-        let inst_21 = Instruction {
-            // Load the 2 bytes of immediate data into register pair HL.
-            // The first byte of immediate data is the lower byte (i.e., bits 0-7), and the second byte of immediate data is the higher byte (i.e., bits 8-15).
-            opcode: 0x21,
-            name: "LD HL",
-            cycles: 3,
-            size: 3,
-            flags: &[],
-        };
-
-        all_instructions.insert(0x21, inst_21);
-
-        let inst_06 = Instruction {
-            // Load the 8-bit immediate operand d8 into register B.
-            opcode: 0x06,
-            name: "LD B",
-            cycles: 2,
-            size: 2,
-            flags: &[],
-        };
-
-        all_instructions.insert(0x06, inst_06);
-
-        all_instructions
-    }
-
-    pub fn setup_inst2() -> HashMap<u8, Instruction> {
         let mut all_instructions = HashMap::new();
         all_instructions.insert(0x00, Instruction {
             opcode: 0x00,
@@ -159,7 +239,7 @@ impl Cpu {
         });
         all_instructions.insert(0x02, Instruction {
             opcode: 0x02,
-            name: "LD_BC_A",
+            name: "LD_(BC)_A",
             cycles: 1,
             size: 2,
             flags: &[],
@@ -176,7 +256,7 @@ impl Cpu {
             name: "INC_B",
             cycles: 1,
             size: 1,
-            flags: &[FlagBits::Z, FlagBits::H],
+            flags: &[FlagBits::H],
         });
         all_instructions.insert(0x05, Instruction {
             opcode: 0x05,
@@ -201,17 +281,17 @@ impl Cpu {
         });
         all_instructions.insert(0x08, Instruction {
             opcode: 0x08,
-            name: "UNIMPLEMENTED_08",
-            cycles: 0,
-            size: 1,
-            flags: &[],
+            name: "LD_(A16)_SP",
+            cycles: 3,
+            size: 5,
+            flags: &[FlagBits::C],
         });
         all_instructions.insert(0x09, Instruction {
             opcode: 0x09,
-            name: "UNIMPLEMENTED_09",
+            name: "ADD_HL_BC",
             cycles: 0,
             size: 1,
-            flags: &[],
+            flags: &[FlagBits::C],
         });
         all_instructions.insert(0x0A, Instruction {
             opcode: 0x0A,
@@ -1935,6 +2015,82 @@ impl Cpu {
             size: 1,
             flags: &[],
         });
+        all_instructions
+    }
+
+    fn setup_inst_OLD() -> HashMap<u8, Instruction> {
+        
+        let mut all_instructions = HashMap::new();
+
+        let inst_c3 = Instruction {
+            // Load the 16-bit immediate operand a16 into the program counter (PC). a16 specifies the address of the subsequently executed instruction.
+            // The second byte of the object code (immediately following the opcode) corresponds to the lower-order byte of a16 (bits 0-7), and the third byte of the object code corresponds to the higher-order byte (bits 8-15).
+            opcode: 0xC3,
+            name: "JP_A16",
+            cycles: 4,
+            size: 3,
+            flags: &[],
+        };
+
+        all_instructions.insert(0xC3, inst_c3);
+
+        let inst_fe = Instruction {
+            // Compare the contents of register A and the contents of the 8-bit immediate operand d8 by calculating A - d8, and set the Z flag if they are equal.
+            // The execution of this instruction does not affect the contents of register A.
+            opcode: 0xFE,
+            name: "CP",
+            cycles: 4,
+            size: 2,
+            flags: &[FlagBits::Z],
+        };
+
+        all_instructions.insert(0xFE, inst_fe);
+
+        let inst_20 = Instruction {
+            // If the Z flag is 0, jump s8 steps from the current address stored in the program counter (PC). If not, the instruction following the current JP instruction is executed (as usual).
+            opcode: 0x20,
+            name: "JR NZ",
+            cycles: 3,
+            size: 2,
+            flags: &[],
+        };
+
+        all_instructions.insert(0x20, inst_20);
+
+        let inst_cd = Instruction {
+            // In memory, push the program counter PC value corresponding to the address following the CALL instruction to the 2 bytes following the byte specified by the current stack pointer SP. Then load the 16-bit immediate operand a16 into PC.
+            opcode: 0xCD,
+            name: "CALL",
+            cycles: 6,
+            size: 3,
+            flags: &[],
+        };
+
+        all_instructions.insert(0xCD, inst_cd);
+        
+        let inst_21 = Instruction {
+            // Load the 2 bytes of immediate data into register pair HL.
+            // The first byte of immediate data is the lower byte (i.e., bits 0-7), and the second byte of immediate data is the higher byte (i.e., bits 8-15).
+            opcode: 0x21,
+            name: "LD HL",
+            cycles: 3,
+            size: 3,
+            flags: &[],
+        };
+
+        all_instructions.insert(0x21, inst_21);
+
+        let inst_06 = Instruction {
+            // Load the 8-bit immediate operand d8 into register B.
+            opcode: 0x06,
+            name: "LD B",
+            cycles: 2,
+            size: 2,
+            flags: &[],
+        };
+
+        all_instructions.insert(0x06, inst_06);
+
         all_instructions
     }
 }
