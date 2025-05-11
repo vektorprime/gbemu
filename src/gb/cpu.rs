@@ -68,6 +68,7 @@ impl Cpu {
                 let lo = mem.read(self.registers.get_pc());
                 let hi = mem.read(self.registers.get_pc() + 1);
                 self.registers.set_bc(u16::from_le_bytes([lo, hi]));
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
@@ -76,6 +77,7 @@ impl Cpu {
                 let a = self.registers.get_a();
                 let bc = self.registers.get_bc();
                 mem.write(bc, a);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
@@ -104,6 +106,7 @@ impl Cpu {
                 // LD B D8
                 let operand = mem.read(self.registers.get_pc());
                 self.registers.set_b(operand);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
@@ -121,6 +124,7 @@ impl Cpu {
                     self.registers.clear_c_flag();
                 }
                 self.registers.set_a(a_reg);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
@@ -137,12 +141,15 @@ impl Cpu {
 
                 let upper_sp = (sp >> 8) as u8;
                 mem.write(dst_addr + 1, upper_sp);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x09 => {
                 // ADD HL BC
                 let bc = self.registers.get_bc();
                 let hl = self.registers.get_hl();
-                let (new_val, overflowed) = bc.overflowing_add(hl);
+                let (new_val, overflowed) = hl.overflowing_add(bc);
                 if overflowed {
                     self.registers.set_c_flag();
                 }
@@ -157,6 +164,7 @@ impl Cpu {
                 // LD A (BC)
                 let bc_deref = mem.read(self.registers.get_bc());
                 self.registers.set_a(bc_deref);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
@@ -185,6 +193,7 @@ impl Cpu {
                 // LD C D8
                 let operand = mem.read(self.registers.get_pc());
                 self.registers.set_c(operand);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
@@ -202,10 +211,112 @@ impl Cpu {
                 else {
                     self.registers.clear_c_flag();
                 }
+                
                 self.registers.set_a(a_reg);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
+            0x10 => {
+                // STOP
+                // todo
+                // not sure how to handle this cleanly yet.
+                // maybe a loop that waits for button press
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x11 => {
+                // LD DE D16
+                let lo = mem.read(self.registers.get_pc());
+                let hi = mem.read(self.registers.get_pc() + 1);
+                self.registers.set_de(u16::from_le_bytes([lo, hi]));
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x12 => {
+                // LD (DE) A
+                let a = self.registers.get_a();
+                let de = self.registers.get_de();
+                mem.write(de, a);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x13 => {
+                // INC DE
+                self.registers.inc_de();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x14 => {
+                // INC D
+                self.registers.inc_d();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x15 => {
+                // DEC D
+                self.registers.dec_d();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x16 => {
+                // LD D D8
+                let operand = mem.read(self.registers.get_pc());
+                self.registers.set_d(operand);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x17 => {
+                // RLA
+                let c_flag = self.registers.get_c_flag();
+                let mut a_reg = self.registers.get_a();
+                a_reg <<= 1;
+                if c_flag > 0 {
+                    a_reg |= 0b0000_0001;
+                }
+                self.registers.set_a(a_reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x18 => {
+                // JR S8
+                let current_pc = self.registers.get_pc();
+                let new_pc = u16::from(mem.read(self.registers.get_pc() + 1));
+                self.registers.set_pc(current_pc + new_pc);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                // don't inc pc here because we jumped
+            },
+            0x19 => {
+                // ADD HL DE
+                let hl = self.registers.get_hl();
+                let de = self.registers.get_de();
+                let (new_val, overflowed) = hl.overflowing_add(de);
+                // check for 12 bit overflow and set h flag
+                let overflowed_12bit_max = 4096;
+                if new_val > overflowed_12bit_max {
+                    self.registers.set_h_flag();
+                }
+                // check for 16 bit overflow and set c flag
+                if overflowed {
+                    self.registers.set_c_flag();
+                }
+                else {
+                    self.registers.set_hl(new_val);
+                }
+                self.registers.handle_flags(inst.name, );
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+
             0xC3 => {
                 // JP A16
                 let lo = mem.read(self.registers.get_pc());
@@ -213,6 +324,7 @@ impl Cpu {
                 self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                 self.inc_cycles_by_inst_val(inst.cycles);
             },
+
             _ => {
                 //todo
             }
@@ -295,7 +407,7 @@ impl Cpu {
         });
         all_instructions.insert(0x0A, Instruction {
             opcode: 0x0A,
-            name: "UNIMPLEMENTED_0A",
+            name: "LD_A_(BC)",
             cycles: 0,
             size: 1,
             flags: &[],

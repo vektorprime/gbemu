@@ -69,7 +69,7 @@ impl Registers {
             self.clear_z_flag();
             self.clear_n_flag();
             self.clear_h_flag();
-            // handle CY in inst code
+            // handle C in inst code
         }
     }
 
@@ -85,10 +85,24 @@ impl Registers {
         self.set_f(current_flags);
     }
 
+
+
     pub fn clear_h_flag(&mut self)  {
         let mut current_flags = self.get_f();
         current_flags &= INVERSE_H_FLAG_BITS;
         self.set_f(current_flags);
+    }
+
+    pub fn set_h_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags |= H_FLAG_BITS;
+        self.set_f(current_flags);
+    }
+
+    pub fn get_c_flag(&mut self)  -> u8 {
+        let mut current_flags = self.get_f();
+        current_flags &= C_FLAG_BITS;
+        current_flags
     }
 
     pub fn clear_c_flag(&mut self)  {
@@ -157,6 +171,15 @@ impl Registers {
         self.d = val;
     }
 
+    
+    pub fn inc_d(&mut self) {
+        self.d += 1;
+    }
+
+    pub fn dec_d(&mut self) {
+        self.d -= 1;
+    }
+
     pub fn get_e(&self) -> u8 {
         self.e
     }
@@ -223,6 +246,14 @@ impl Registers {
         //inc should not handle overflows
         current_bc += 1;
         self.set_bc(current_bc);
+
+    }
+
+    pub fn inc_de(&mut self) {
+        let mut current_de = (self.d as u16) << 8 | (self.e as u16);
+        //inc should not handle overflows
+        current_de += 1;
+        self.set_de(current_de);
 
     }
 

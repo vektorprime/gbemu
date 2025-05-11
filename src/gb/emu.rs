@@ -22,7 +22,7 @@ impl Emu {
         self.rom = Some(file::Rom::new(file.as_str()));
     }
 
-    pub fn run(&mut self) {
+    pub fn run(&mut self) { 
        self.cpu.run(&mut self.mem);
         
     }

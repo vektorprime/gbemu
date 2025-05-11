@@ -11,9 +11,20 @@ pub struct Ram {
 impl Ram {
     pub fn new(mode: ColorMode) -> Self {
         let bios = Bios::new(mode);
-        Ram {
+
+        let mut mem = Ram {
             memory: [0; 65536],
             bios,
+        };
+
+        mem.load_bios_to_mem();
+
+        mem
+    }
+
+    pub fn load_bios_to_mem(&mut self) {
+        for (i, byte) in self.bios.data.iter().copied().enumerate() {
+            self.memory[i] = byte;
         }
     }
 
