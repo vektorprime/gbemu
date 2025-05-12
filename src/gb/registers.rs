@@ -220,6 +220,14 @@ impl Registers {
         self.sp = val;
     }
 
+    pub fn inc_sp(&mut self) {
+        let mut current = self.get_sp();
+        //inc should not handle overflows
+        current += 1;
+        self.set_sp(current);
+
+    }
+
     pub fn get_pc(&self) -> u16 {
         self.pc
     }
@@ -285,6 +293,20 @@ impl Registers {
     pub fn set_hl(&mut self, val: u16) {
         self.h = ((val & 0xFF00) >> 8) as u8;
         self.l = (val & 0xFF) as u8;
+    }
+
+    pub fn inc_hl(&mut self) {
+        let mut current = (self.b as u16) << 8 | (self.c as u16);
+        //inc should not handle overflows
+        current += 1;
+        self.set_hl(current);
+    }
+
+    pub fn dec_hl(&mut self) {
+        let mut current = (self.b as u16) << 8 | (self.c as u16);
+        //dec should not handle underflows
+        current -= 1;
+        self.set_hl(current);
     }
 
     pub fn get_and_inc_pc(&mut self) -> u16 {

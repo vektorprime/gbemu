@@ -11,6 +11,7 @@ pub struct Cpu {
     pub ime: bool, // interrupt master
     pub opcode: u8, // opcode of current inst.
     pub cycles: u64, // total cycles count
+    pub halted: bool,
 }
 
 
@@ -22,6 +23,7 @@ impl Cpu {
             ime: false,
             opcode: 0,
             cycles: 0,
+            halted: false, 
         }
     }
 
@@ -33,19 +35,21 @@ impl Cpu {
         let valid_instructions    =  Cpu::setup_inst();
         let valid_cb_instructions =  Cpu::setup_inst();
         loop {
-            let mut opcode = self.fetch_next_inst(mem);
-            //if CB, read another byte, else decode and execute
-            let mut cb_opcode = false;
-            if opcode == 0xCB {
-                cb_opcode = true;
-                opcode = self.fetch_next_inst(mem);
+            if !self.halted {
+                let mut opcode = self.fetch_next_inst(mem);
+                //if CB, read another byte, else decode and execute
+                let mut cb_opcode = false;
+                if opcode == 0xCB {
+                    cb_opcode = true;
+                    opcode = self.fetch_next_inst(mem);
+                }
+                let inst = if cb_opcode {
+                    valid_cb_instructions.get(&opcode).unwrap()
+                } else {
+                    valid_instructions.get(&opcode).unwrap()
+                };
+                self.execute_inst(inst, mem);
             }
-            let inst = if cb_opcode {
-                valid_cb_instructions.get(&opcode).unwrap()
-            } else {
-                valid_instructions.get(&opcode).unwrap()
-            };
-            self.execute_inst(inst, mem);
         }
     }
 
@@ -313,6 +317,575 @@ impl Cpu {
                     self.registers.set_hl(new_val);
                 }
                 self.registers.handle_flags(inst.name, );
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x21 => {
+                // LD HL D16
+                let lo = mem.read(self.registers.get_pc());
+                let hi = mem.read(self.registers.get_pc() + 1);
+                self.registers.set_hl(u16::from_le_bytes([lo, hi]));
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x22 => {
+                // LD (HL+) A
+                let a = self.registers.get_a();
+                let hl = self.registers.get_hl();
+                mem.write(hl, a);
+                self.registers.inc_hl();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x23 => {
+                // INC DE
+                self.registers.inc_de();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x31 => {
+                // LD SP D16
+                let lo = mem.read(self.registers.get_pc());
+                let hi = mem.read(self.registers.get_pc() + 1);
+                self.registers.set_sp(u16::from_le_bytes([lo, hi]));
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x32 => {
+                // LD (HL-) A
+                let a = self.registers.get_a();
+                let add = self.registers.get_hl();
+                mem.write(add, a);
+                self.registers.dec_hl();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x33 => {
+                // INC SP
+                self.registers.inc_sp();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x40 => {
+                // LD B B
+                let reg = self.registers.get_b();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x41 => {
+                // LD B C
+                let reg = self.registers.get_c();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x42 => {
+                // LD B D
+                let reg = self.registers.get_d();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x43 => {
+                // LD B E
+                let reg = self.registers.get_e();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x44 => {
+                // LD B H
+                let reg = self.registers.get_h();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x45 => {
+                // LD B L
+                let reg = self.registers.get_l();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x46 => {
+                // LD B (HL)
+                let reg = self.registers.get_hl();
+                self.registers.set_b(mem.read(reg));
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x47 => {
+                // LD B A
+                let reg = self.registers.get_a();
+                self.registers.set_b(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x48 => {
+                // LD C B
+                let reg = self.registers.get_b();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x49 => {
+                // LD C C
+                let reg = self.registers.get_c();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x4A => {
+                // LD C D
+                let reg = self.registers.get_d();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x4B => {
+                // LD C E
+                let reg = self.registers.get_e();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x4C => {
+                // LD C H
+                let reg = self.registers.get_h();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x4D => {
+                // LD C L
+                let reg = self.registers.get_l();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x4E => {
+                // LD C (HL)
+                let addr = self.registers.get_hl();
+                let reg = mem.read(addr);
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x4F => {
+                // LD C A
+                let reg = self.registers.get_a();
+                self.registers.set_c(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x50 => {
+                // LD D B
+                let reg = self.registers.get_b();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x51 => {
+                // LD D C
+                let reg = self.registers.get_c();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x52 => {
+                // LD D D
+                let reg = self.registers.get_d();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x53 => {
+                // LD D E
+                let reg = self.registers.get_e();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x54 => {
+                // LD D H
+                let reg = self.registers.get_h();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x55 => {
+                // LD D L
+                let reg = self.registers.get_l();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x56 => {
+                // LD D (HL)
+                let addr = self.registers.get_hl();
+                let reg = mem.read(addr);
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x57 => {
+                // LD D A
+                let reg = self.registers.get_a();
+                self.registers.set_d(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x58 => {
+                // LD E B
+                let reg = self.registers.get_b();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x59 => {
+                // LD E C
+                let reg = self.registers.get_c();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x5A => {
+                // LD E D
+                let reg = self.registers.get_d();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x5B => {
+                // LD E E
+                let reg = self.registers.get_e();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x5C => {
+                // LD E H
+                let reg = self.registers.get_h();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x5D => {
+                // LD E L
+                let reg = self.registers.get_l();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x5E => {
+                // LD E (HL)
+                let addr = self.registers.get_hl();
+                let reg = mem.read(addr);
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x5F => {
+                // LD E A
+                let reg = self.registers.get_a();
+                self.registers.set_e(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x60 => {
+                // LD H B
+                let reg = self.registers.get_b();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x61 => {
+                // LD H C
+                let reg = self.registers.get_c();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x62 => {
+                // LD H D
+                let reg = self.registers.get_d();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x63 => {
+                // LD H E
+                let reg = self.registers.get_e();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x64 => {
+                // LD H H
+                let reg = self.registers.get_h();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x65 => {
+                // LD H L
+                let reg = self.registers.get_l();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x66 => {
+                // LD H (HL)
+                let addr = self.registers.get_hl();
+                let reg = mem.read(addr);
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x67 => {
+                // LD H A
+                let reg = self.registers.get_a();
+                self.registers.set_h(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x68 => {
+                // LD L B
+                let reg = self.registers.get_b();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x69 => {
+                // LD L C
+                let reg = self.registers.get_c();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x6A => {
+                // LD L D
+                let reg = self.registers.get_d();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x6B => {
+                // LD L E
+                let reg = self.registers.get_e();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x6C => {
+                // LD L H
+                let reg = self.registers.get_h();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x6D => {
+                // LD L L
+                let reg = self.registers.get_l();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x6E => {
+                // LD L (HL)
+                let addr = self.registers.get_hl();
+                let reg = mem.read(addr);
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x6F => {
+                // LD L A
+                let reg = self.registers.get_a();
+                self.registers.set_l(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x70 => {
+                // LD (HL), B
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_b());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x71 => {
+                // LD (HL), C
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_c());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x72 => {
+                // LD (HL), D
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_d());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x73 => {
+                // LD (HL), E
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_e());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x74 => {
+                // LD (HL), H
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_h());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x75 => {
+                // LD (HL), L
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_l());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x76 => {
+                // HALT
+                self.halted = true;
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x77 => {
+                // LD (HL), A
+                let addr = self.registers.get_hl();
+                mem.write(addr, self.registers.get_a());
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x78 => {
+                // LD A B
+                let reg = self.registers.get_b();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x79 => {
+                // LD A C
+                let reg = self.registers.get_c();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x7A => {
+                // LD A D
+                let reg = self.registers.get_d();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x7B => {
+                // LD A E
+                let reg = self.registers.get_e();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x7C => {
+                // LD A H
+                let reg = self.registers.get_h();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x7D => {
+                // LD A L
+                let reg = self.registers.get_l();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x7E => {
+                // LD A (HL)
+                let addr = self.registers.get_hl();
+                let reg = mem.read(addr);
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x7F => {
+                // LD A A
+                let reg = self.registers.get_a();
+                self.registers.set_a(reg);
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
