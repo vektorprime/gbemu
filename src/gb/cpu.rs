@@ -151,15 +151,20 @@ impl Cpu {
             },
             0x09 => {
                 // ADD HL BC
-                let bc = self.registers.get_bc();
-                let hl = self.registers.get_hl();
-                let (new_val, overflowed) = hl.overflowing_add(bc);
+                let first_operand = self.registers.get_hl();
+                let second_operand = self.registers.get_bc();
+                let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
+                // check for 12 bit overflow and set h flag
+                let overflowed_12bit_max = 4096;
+                if new_val > overflowed_12bit_max {
+                    self.registers.set_h_flag();
+                }
+                // check for 16 bit overflow and set c flag
                 if overflowed {
                     self.registers.set_c_flag();
                 }
-                else {
-                    self.registers.set_hl(new_val);
-                }
+                // always set val whether overflow or not
+                self.registers.set_hl(new_val);
                 self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
@@ -215,7 +220,6 @@ impl Cpu {
                 else {
                     self.registers.clear_c_flag();
                 }
-                
                 self.registers.set_a(a_reg);
                 self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
@@ -301,9 +305,10 @@ impl Cpu {
             },
             0x19 => {
                 // ADD HL DE
-                let hl = self.registers.get_hl();
-                let de = self.registers.get_de();
-                let (new_val, overflowed) = hl.overflowing_add(de);
+                let first_operand = self.registers.get_hl();
+                let second_operand = self.registers.get_de();
+
+                let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
                 // check for 12 bit overflow and set h flag
                 let overflowed_12bit_max = 4096;
                 if new_val > overflowed_12bit_max {
@@ -313,13 +318,91 @@ impl Cpu {
                 if overflowed {
                     self.registers.set_c_flag();
                 }
-                else {
-                    self.registers.set_hl(new_val);
-                }
-                self.registers.handle_flags(inst.name, );
+                // always set val whether overflow or not
+                self.registers.set_hl(new_val);
+
+                self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
+            0x1A => {
+                // LD A, (DE)
+                let addr = self.registers.get_de();
+                let value = mem.read(addr);
+                self.registers.set_a(value);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x1B => {
+                // DEC DE
+                self.registers.dec_de();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },    
+            0x1C => {
+                // INC E
+                self.registers.inc_e();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x1D => {
+                // DEC E
+                self.registers.dec_e();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x1E => {
+                // LD E, d8
+                let value = mem.read(self.registers.get_pc());
+                self.registers.set_e(value);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },   
+            0x1F => {
+                // RRA
+                let mut bit0 = 0b0000_0001;
+                let c_flag_bit = self.registers.is_c_flag_set();
+                let bit7 = match c_flag_bit {
+                    true =>  0b1000_0000,
+                    false => 0b0000_0000,
+                };
+                let mut a_reg = self.registers.get_a();
+                bit0 &= a_reg;
+                a_reg >>= 1;
+                a_reg |= bit7;
+                if bit0 == 1 {
+                    self.registers.set_c_flag(); 
+                }
+                else {
+                    self.registers.clear_c_flag();
+                }
+
+                self.registers.set_a(a_reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },       
+            0x20 => {
+                // JR NZ S8
+                let z_flag = self.registers.is_z_flag_set();
+                if !z_flag {
+                    let pc = self.registers.get_pc();
+                    let pc_offset = mem.read(pc) as u16;
+                    let new_pc = pc + pc_offset;
+                    self.registers.set_pc(new_pc);
+                }
+                else {
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                }
+
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+            },     
             0x21 => {
                 // LD HL D16
                 let lo = mem.read(self.registers.get_pc());
@@ -346,6 +429,160 @@ impl Cpu {
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
+            0x24 => {
+                // INC H
+                self.registers.inc_h();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x25 => {
+                // DEC H
+                self.registers.dec_h();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x26 => {
+                // LD H D8
+                let val = mem.read(self.registers.get_pc());
+                self.registers.set_h(val);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x27 => {
+                // DAA
+                // note: assumes a is a uint8_t and wraps from 0xff to 0
+                let n_flag = self.registers.is_n_flag_set();
+                let h_flag = self.registers.is_h_flag_set();
+                let c_flag = self.registers.is_c_flag_set();
+                let mut a_reg = self.registers.get_a();
+                if !n_flag {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
+                    if c_flag || a_reg > 0x99 { 
+                        a_reg += 0x60;  
+                        self.registers.set_c_flag();                        
+                    }
+                    if h_flag || (a_reg & 0x0f) > 0x09 { 
+                        a_reg += 0x6; 
+                    }
+                } 
+                else {  // after a subtraction, only adjust if (half-)carry occurred
+                    if c_flag { 
+                        a_reg -= 0x60; 
+                    }
+                    if h_flag { 
+                        a_reg -= 0x6; 
+                    }
+                }
+
+                self.registers.set_a(a_reg);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x28 => {
+                // JR Z S8
+                let z_flag = self.registers.is_z_flag_set();
+                if z_flag {
+                    let pc = self.registers.get_pc();
+                    let pc_offset = mem.read(pc) as u16;
+                    let new_pc = pc + pc_offset;
+                    self.registers.set_pc(new_pc);
+                }
+                else {
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                }
+
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+            },   
+            0x29 => {
+                // ADD HL HL
+                let first_operand = self.registers.get_hl();
+                let second_operand = self.registers.get_hl();
+                
+                let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
+                // check for 12 bit overflow and set h flag
+                let overflowed_12bit_max = 4096;
+                if new_val > overflowed_12bit_max {
+                    self.registers.set_h_flag();
+                }
+                // check for 16 bit overflow and set c flag
+                if overflowed {
+                    self.registers.set_c_flag();
+                }
+                // always set val whether overflow or not
+                self.registers.set_hl(new_val);
+                
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x2A => {
+                // LD A (HL+)
+                let addr = self.registers.get_hl();
+                let value = mem.read(addr);
+                self.registers.set_a(value);
+                self.registers.set_hl(addr.wrapping_add(1));
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x2B => {
+                // DEC HL
+                self.registers.dec_hl();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x2C => {
+                // INC L
+                self.registers.inc_l();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x2D => {
+                // DEC L
+                self.registers.dec_l();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x2E => {
+                // LD L, d8
+                let value = mem.read(self.registers.get_pc());
+                self.registers.set_l(value);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x2F => { 
+                // CPL 
+                let reg = self.registers.get_a();
+                let mut val  =  !reg;
+                self.registers.set_a(val);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x30 => {
+                // JR NC S8
+                let c_flag = self.registers.is_c_flag_set();
+                if c_flag {
+                    let pc = self.registers.get_pc();
+                    let pc_offset = mem.read(pc) as u16;
+                    let new_pc = pc + pc_offset;
+                    self.registers.set_pc(new_pc);
+                }
+                else {
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                }
+
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+            },   
             0x31 => {
                 // LD SP D16
                 let lo = mem.read(self.registers.get_pc());
@@ -368,6 +605,131 @@ impl Cpu {
             0x33 => {
                 // INC SP
                 self.registers.inc_sp();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x34 => {
+                // INC (HL)
+                let addr = self.registers.get_hl();
+                let value = mem.read(addr);
+                let result = value.wrapping_add(1);
+                mem.write(addr, result);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x35 => {
+                // DEC (HL)
+                let addr = self.registers.get_hl();
+                let value = mem.read(addr);
+                let result = value.wrapping_sub(1);
+                mem.write(addr, result);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x36 => {
+                // LD (HL), d8
+                let value = mem.read(self.registers.get_pc());
+                let addr = self.registers.get_hl();
+                mem.write(addr, value);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x37 => {
+                // SCF
+                self.registers.set_c_flag();
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x38 => {
+                // JR C S8
+                let flag = self.registers.is_c_flag_set();
+                if flag {
+                    let pc = self.registers.get_pc();
+                    let pc_offset = mem.read(pc) as u16;
+                    let new_pc = pc + pc_offset;
+                    self.registers.set_pc(new_pc);
+                }
+                else {
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                }
+
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+            },   
+            0x39 => {
+                // ADD HL SP
+                let first_operand = self.registers.get_hl();
+                let second_operand = self.registers.get_sp();
+                
+                let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
+                // check for 12 bit overflow and set h flag
+                let overflowed_12bit_max = 4096;
+                if new_val > overflowed_12bit_max {
+                    self.registers.set_h_flag();
+                }
+                // check for 16 bit overflow and set c flag
+                if overflowed {
+                    self.registers.set_c_flag();
+                }
+                // always set val whether overflow or not
+                self.registers.set_hl(new_val);
+                
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x3A => {
+                // LD A (HL-) 
+                let addr = self.registers.get_hl();
+                let val = mem.read(addr);
+                self.registers.set_a(val);
+                self.registers.dec_hl(); 
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x3B => {
+                // DEC SP
+                self.registers.dec_sp();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x3C => {
+                // INC A
+                self.registers.inc_a();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x3D => {
+                // DEC A
+                self.registers.dec_a();
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x3E => {
+                // LD A D8
+                let value = mem.read(self.registers.get_pc());
+                self.registers.set_a(value);
+                self.registers.handle_flags(inst.name);
+                self.inc_cycles_by_inst_val(inst.cycles);
+                self.registers.inc_pc_by_inst_val(inst.size);
+            },
+            0x3F => { 
+                // CCF
+                let current_flag = self.registers.is_c_flag_set();
+                if current_flag {
+                    self.registers.clear_c_flag();
+                }
+                else {
+                    self.registers.set_c_flag();
+                }
                 self.registers.handle_flags(inst.name);
                 self.inc_cycles_by_inst_val(inst.cycles);
                 self.registers.inc_pc_by_inst_val(inst.size);
@@ -762,7 +1124,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x70 => {
-                // LD (HL), B
+                // LD (HL) B
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_b());
                 self.registers.handle_flags(inst.name);
@@ -770,7 +1132,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x71 => {
-                // LD (HL), C
+                // LD (HL) C
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_c());
                 self.registers.handle_flags(inst.name);
@@ -778,7 +1140,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x72 => {
-                // LD (HL), D
+                // LD (HL) D
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_d());
                 self.registers.handle_flags(inst.name);
@@ -786,7 +1148,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x73 => {
-                // LD (HL), E
+                // LD (HL) E
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_e());
                 self.registers.handle_flags(inst.name);
@@ -794,7 +1156,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x74 => {
-                // LD (HL), H
+                // LD (HL) H
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_h());
                 self.registers.handle_flags(inst.name);
@@ -802,7 +1164,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x75 => {
-                // LD (HL), L
+                // LD (HL) L
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_l());
                 self.registers.handle_flags(inst.name);
@@ -817,7 +1179,7 @@ impl Cpu {
                 self.registers.inc_pc_by_inst_val(inst.size);
             },
             0x77 => {
-                // LD (HL), A
+                // LD (HL) A
                 let addr = self.registers.get_hl();
                 mem.write(addr, self.registers.get_a());
                 self.registers.handle_flags(inst.name);

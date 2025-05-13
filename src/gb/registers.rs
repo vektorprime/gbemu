@@ -73,6 +73,17 @@ impl Registers {
         }
     }
 
+    pub fn is_z_flag_set(&mut self) -> bool {
+        let mut current_flags = self.get_f();
+        current_flags &= Z_FLAG_BITS;
+        if current_flags == Z_FLAG_BITS {
+            true
+        }
+        else {
+            false
+        }
+    }
+    
     pub fn clear_z_flag(&mut self)  {
         let mut current_flags = self.get_f();
         current_flags &= INVERSE_Z_FLAG_BITS;
@@ -99,12 +110,34 @@ impl Registers {
         self.set_f(current_flags);
     }
 
+    pub fn is_h_flag_set(&mut self) -> bool {
+        let mut current_flags = self.get_f();
+        current_flags &= H_FLAG_BITS;
+        if current_flags == H_FLAG_BITS {
+            true
+        }
+        else {
+            false
+        }
+    }
+
     pub fn get_c_flag(&mut self)  -> u8 {
         let mut current_flags = self.get_f();
         current_flags &= C_FLAG_BITS;
         current_flags
     }
-
+ 
+    pub fn is_c_flag_set(&mut self) -> bool {
+        let mut current_flags = self.get_f();
+        current_flags &= C_FLAG_BITS;
+        if current_flags == C_FLAG_BITS {
+            true
+        }
+        else {
+            false
+        }
+    }
+    
     pub fn clear_c_flag(&mut self)  {
         let mut current_flags = self.get_f();
         current_flags &= INVERSE_C_FLAG_BITS;
@@ -122,12 +155,33 @@ impl Registers {
         self.set_f(current_flags);
     }
 
+    pub fn is_n_flag_set(&mut self) -> bool {
+        let mut current_flags = self.get_f();
+        current_flags &= N_FLAG_BITS;
+        if current_flags == N_FLAG_BITS {
+            true
+        }
+        else {
+            false
+        }
+    }
+
     pub fn get_a(&self) -> u8 {
         self.a
     }
 
     pub fn set_a(&mut self, val: u8) {
         self.a = val;
+    }
+
+    pub fn inc_a(&mut self) {
+        // wrap on overflow 
+        self.a = self.a.wrapping_add(1);
+    }
+
+    pub fn dec_a(&mut self) {
+       // wrap on underflow
+        self.a = self.a.wrapping_sub(1); 
     }
 
     pub fn get_b(&self) -> u8 {
@@ -139,12 +193,13 @@ impl Registers {
     }
 
     pub fn inc_b(&mut self) {
-        //inc should not handle overflows
-        self.b += 1;
+        // wrap on overflow 
+        self.b = self.b.wrapping_add(1);
     }
 
     pub fn dec_b(&mut self) {
-        self.b -= 1;
+        // wrap on underflow
+        self.b = self.b.wrapping_sub(1);
     }
 
     pub fn get_c(&self) -> u8 {
@@ -156,11 +211,13 @@ impl Registers {
     }
 
     pub fn inc_c(&mut self) {
-        self.c += 1;
+        // wrap on overflow 
+        self.c = self.c.wrapping_add(1);
     }
 
     pub fn dec_c(&mut self) {
-        self.c -= 1;
+        // wrap on underflow
+        self.c = self.c.wrapping_sub(1);
     }
 
     pub fn get_d(&self) -> u8 {
@@ -173,11 +230,13 @@ impl Registers {
 
     
     pub fn inc_d(&mut self) {
-        self.d += 1;
+        // wrap on overflow 
+        self.d = self.d.wrapping_add(1);
     }
 
     pub fn dec_d(&mut self) {
-        self.d -= 1;
+        // wrap on underflow
+        self.d = self.d.wrapping_sub(1);
     }
 
     pub fn get_e(&self) -> u8 {
@@ -186,6 +245,15 @@ impl Registers {
 
     pub fn set_e(&mut self, val: u8) {
         self.e = val;
+    }
+
+    pub fn inc_e(&mut self) {
+        // wrap on overflow 
+        self.e = self.e.wrapping_add(1);
+    }
+    pub fn dec_e(&mut self) {
+        // wrap on underflow
+        self.e = self.e.wrapping_sub(1);
     }
 
     pub fn get_f(&self) -> u8 {
@@ -202,6 +270,16 @@ impl Registers {
 
     pub fn set_h(&mut self, val: u8) {
         self.h = val;
+    } 
+
+    pub fn inc_h(&mut self) {
+        // wrap on overflow 
+        self.h = self.h.wrapping_add(1);
+    }
+ 
+    pub fn dec_h(&mut self) {
+        // wrap on overflow 
+        self.h = self.h.wrapping_sub(1); 
     }
 
     pub fn get_l(&self) -> u8 {
@@ -210,6 +288,16 @@ impl Registers {
 
     pub fn set_l(&mut self, val: u8) {
         self.l = val;
+    }
+
+    pub fn inc_l(&mut self) {
+        // wrap on overflow 
+        self.l = self.l.wrapping_add(1);
+    }
+
+    pub fn dec_l(&mut self) {
+       // wrap on underflow
+        self.l = self.l.wrapping_sub(1); 
     }
 
     pub fn get_sp(&self) -> u16 {
@@ -221,13 +309,13 @@ impl Registers {
     }
 
     pub fn inc_sp(&mut self) {
-        let mut current = self.get_sp();
-        //inc should not handle overflows
-        current += 1;
-        self.set_sp(current);
-
+        // wrap on overflow 
+        self.sp = self.sp.wrapping_add(1); 
     }
-
+    pub fn dec_sp(&mut self) {
+        // wrap on overflow 
+        self.sp = self.sp.wrapping_sub(1); 
+    }
     pub fn get_pc(&self) -> u16 {
         self.pc
     }
@@ -250,26 +338,33 @@ impl Registers {
     }
 
     pub fn inc_bc(&mut self) {
-        let mut current_bc = (self.b as u16) << 8 | (self.c as u16);
+        let mut current = (self.b as u16) << 8 | (self.c as u16);
         //inc should not handle overflows
-        current_bc += 1;
-        self.set_bc(current_bc);
+        current = current.wrapping_add(1);
+        self.set_bc(current);
 
     }
 
     pub fn inc_de(&mut self) {
-        let mut current_de = (self.d as u16) << 8 | (self.e as u16);
+        let mut current = (self.d as u16) << 8 | (self.e as u16);
         //inc should not handle overflows
-        current_de += 1;
-        self.set_de(current_de);
+        current = current.wrapping_add(1);
+        self.set_de(current);
 
     }
 
-    pub fn dec_bc(&mut self) {
-        let mut current_bc = (self.b as u16) << 8 | (self.c as u16);
+    pub fn dec_de(&mut self) {
+        let mut current = (self.d as u16) << 8 | (self.e as u16);
         //dec should not handle underflows
-        current_bc -= 1;
-        self.set_bc(current_bc);
+        current = current.wrapping_sub(1);
+        self.set_de(current);
+    }
+
+    pub fn dec_bc(&mut self) {
+        let mut current = (self.b as u16) << 8 | (self.c as u16);
+        //dec should not handle underflows
+        current = current.wrapping_sub(1);
+        self.set_bc(current);
     }
 
     pub fn set_bc(&mut self, val: u16) {
@@ -295,17 +390,18 @@ impl Registers {
         self.l = (val & 0xFF) as u8;
     }
 
+
     pub fn inc_hl(&mut self) {
-        let mut current = (self.b as u16) << 8 | (self.c as u16);
+        let mut current = (self.h as u16) << 8 | (self.l as u16);
         //inc should not handle overflows
-        current += 1;
+        current = current.wrapping_add(1);
         self.set_hl(current);
     }
 
     pub fn dec_hl(&mut self) {
-        let mut current = (self.b as u16) << 8 | (self.c as u16);
+        let mut current = (self.h as u16) << 8 | (self.l as u16);
         //dec should not handle underflows
-        current -= 1;
+        current = current.wrapping_sub(1);
         self.set_hl(current);
     }
 
