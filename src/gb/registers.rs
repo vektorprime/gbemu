@@ -83,6 +83,12 @@ impl Registers {
             false
         }
     }
+
+        pub fn set_z_flag(&mut self)  {
+        let mut current_flags = self.get_f();
+        current_flags |= Z_FLAG_BITS;
+        self.set_f(current_flags);
+    }
     
     pub fn clear_z_flag(&mut self)  {
         let mut current_flags = self.get_f();
@@ -428,4 +434,126 @@ impl Registers {
         self.pc += 1;
         self.pc
     }
+
+    pub fn add_8bit(&mut self, a: u8, b: u8) -> u8 {
+        // check for 8 bit overflow and set c flag
+        let (result, overflowed) = a.overflowing_add(b);
+        if overflowed {
+            self.set_c_flag();
+        }
+        else {
+            self.clear_c_flag();
+        }
+        if result == 0 {
+            self.set_z_flag();
+        }
+        else {
+            self.clear_z_flag();
+        }
+
+        // check for half-carry
+        let half_a = a & 0b0000_1111;
+        let half_b = b & 0b0000_1111;
+        if half_a + half_b > 0b0000_1111 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+        
+        // always set val whether overflow or not
+        result
+    }
+
+    pub fn add_16bit(&mut self, a: u16, b: u16) -> u16 {
+        // check for 16 bit overflow and set c flag
+        let (result, overflowed) = a.overflowing_add(b);
+        if overflowed {
+            self.set_c_flag();
+        }
+        else {
+            self.clear_c_flag();
+        }
+        if result == 0 {
+            self.set_z_flag();
+        }
+        else {
+            self.clear_z_flag();
+        }
+
+        // check for half-carry
+        let half_a = a & 0b0000_1111_1111_1111;
+        let half_b = b & 0b0000_1111_1111_1111;
+        if half_a + half_b > 0b0000_1111_1111_1111 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+
+        // always return the overflow val
+        result
+    }
+
+    pub fn sub_8bit(&mut self, a: u8, b: u8) -> u8 {
+        // check for 8 bit underflow and set c flag
+        let (result, underflowed) = a.overflowing_sub(b);
+        if underflowed {
+            self.set_c_flag();
+        }
+        else {
+            self.clear_c_flag();
+        }
+
+        if result == 0 {
+            self.set_z_flag();
+        }
+        else {
+            self.clear_z_flag();
+        }
+
+        // // check for half-carry attempt
+        let half_a = a & 0b0000_1111;
+        let half_b = b & 0b0000_1111;
+        if half_a < half_b {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+
+        // always set val whether overflow or not
+        result
+    }
+
+    pub fn sub_16bit(&mut self, a: u16, b: u16) -> u16 {
+        // check for 16 bit overflow and set c flag
+        let (result, underflowed) = a.overflowing_sub(b);
+        if underflowed {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+        if result == 0 {
+            self.set_z_flag();
+        }
+        else {
+            self.clear_z_flag();
+        }
+
+
+        // check for 12 bit half-carry
+        let half_a = a & 0b0000_1111_1111_1111;
+        let half_b = b & 0b0000_1111_1111_1111;
+        if half_a < half_b {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+        // always return the overflow val
+        result
+    }
+
 }

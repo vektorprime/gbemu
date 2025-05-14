@@ -152,20 +152,10 @@ impl Cpu {
                 },
                 0x09 => {
                     // ADD HL BC
-                    let first_operand = self.registers.get_hl();
-                    let second_operand = self.registers.get_bc();
-                    let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
-                    // check for 12 bit overflow and set h flag
-                    let overflowed_12bit_max = 4096;
-                    if new_val > overflowed_12bit_max {
-                        self.registers.set_h_flag();
-                    }
-                    // check for 16 bit overflow and set c flag
-                    if overflowed {
-                        self.registers.set_c_flag();
-                    }
-                    // always set val whether overflow or not
-                    self.registers.set_hl(new_val);
+                    let a = self.registers.get_hl();
+                    let b = self.registers.get_bc();
+                    let result = self.registers.add_16bit(a, b);
+                    self.registers.set_hl(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1252,7 +1242,168 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
-
+                0x80 => {
+                    // ADD A B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x81 => {
+                    // ADD A C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x82 => {
+                    // ADD A D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x83 => {
+                    // ADD A E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x84 => {
+                    // ADD A H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x85 => {
+                    // ADD A L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x86 => {
+                    // ADD A (HL)
+                    let a = self.registers.get_a(); 
+                    let hl = self.registers.get_hl();
+                    let b = mem.read(hl);
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x87 => {
+                    // ADD A A
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_a();
+                    let result = self.registers.add_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                 0x90 => {
+                    //SUB A B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x91 => {
+                    // SUB A C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x92 => {
+                    // SUB A D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x93 => {
+                    // SUB A E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x94 => {
+                    // SUB A H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x95 => {
+                    // SUB A L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x96 => { 
+                    // SUB A (HL)
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_hl();
+                    let b = mem.read(addr);
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x97 => {
+                    // SUB A A
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_a();
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 0xC3 => {
                     // JP A16
                     let lo = mem.read(self.registers.get_pc());
