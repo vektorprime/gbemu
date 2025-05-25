@@ -3,20 +3,21 @@
 
 
 
-
-pub enum ColorMode {
+#[derive(Debug, Clone, Copy)]pub enum ColorMode {
     Color,
     Gray,
 }
 
 pub struct Bios {
     pub data: Vec<u8>,
+    pub mode: ColorMode,
 }
 
 impl Bios {
     pub fn new(mode: ColorMode) -> Self {
         let mut bios = Bios {
             data: Vec::new(),
+            mode
         };
         match mode {
             // https://github.com/joamag/boytacean/blob/8c4301a18d8e81a1c87425692bd8e5ad587364a1/src/data.rs#L177

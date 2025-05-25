@@ -1,40 +1,66 @@
 use crate::gb::registers::{Registers, InverseFlagBits, FlagBits, INVERSE_C_FLAG_BITS, INVERSE_H_FLAG_BITS, INVERSE_N_FLAG_BITS, INVERSE_Z_FLAG_BITS};
-use crate::gb::instructions::Instruction;
-use crate::gb::ram::Ram;
+use crate::gb::hwregisters::*;
+use crate::gb::instructions::Instruction; 
+use crate::gb::mbc::*;
 use crate::gb::bios::*;
 use std::collections::HashMap;
 
-
+pub const MAX_T_CYCLE_PER_FRAME: u64 = 70224;
 
 pub struct Cpu {
+    pub hw_registers: HardwareRegisters,
     pub registers: Registers,
     pub ime: bool, // interrupt master
     pub opcode: u8, // opcode of current inst.
-    pub cycles: u64, // total cycles count
+    pub cycles: u64, // total m cycle count
     pub halted: bool,
+    pub instructions: HashMap<u8, Instruction>,
+    pub cb_instructions: HashMap<u8, Instruction>
 }
 
 
-impl Cpu {
-
+impl Cpu { 
+ 
     pub fn new() -> Self {
         Cpu {
+            hw_registers: HardwareRegisters::new(),
             registers: Registers::new(),
             ime: false,
             opcode: 0,
             cycles: 0,
             halted: false, 
-        }
-    }
+            instructions: Cpu::setup_inst(),
+            cb_instructions: Cpu::setup_cb_inst(),
+        } 
+    } 
 
     pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
         self.cycles += size as u64;
     }
 
-    pub fn run(&mut self, mem: &mut Ram) {
-        let valid_instructions    =  Cpu::setup_inst();
-        let valid_cb_instructions =  Cpu::setup_cb_inst();
-        loop {
+    pub fn run_bios(&mut self, mem: &mut Mbc, bios: &Bios) {
+        while self.cycles * 4 < MAX_T_CYCLE_PER_FRAME {
+            if self.registers.get_pc() > bios.data.len() as u16 {
+                let mut opcode = self.fetch_next_inst(mem);
+                //if CB, read another byte, else decode and execute
+                let mut is_cb_opcode = false;
+                if opcode == 0xCB {
+                    is_cb_opcode = true;
+                    opcode = self.fetch_next_inst(mem);
+                } 
+                let inst = if is_cb_opcode {
+                    self.cb_instructions.get(&opcode).unwrap().clone()
+                } else {
+                    self.instructions.get(&opcode).unwrap().clone()
+                };
+                self.execute_inst(inst, mem, is_cb_opcode);
+            }
+        }
+
+    }
+
+    pub fn run_rom(&mut self, mem: &mut Mbc) { 
+        while self.cycles * 4 < MAX_T_CYCLE_PER_FRAME {
             if !self.halted {
                 let mut opcode = self.fetch_next_inst(mem);
                 //if CB, read another byte, else decode and execute
@@ -44,23 +70,22 @@ impl Cpu {
                     opcode = self.fetch_next_inst(mem);
                 }
                 let inst = if is_cb_opcode {
-                    valid_cb_instructions.get(&opcode).unwrap()
+                    self.cb_instructions.get(&opcode).unwrap().clone()
                 } else {
-                    valid_instructions.get(&opcode).unwrap()
+                    self.instructions.get(&opcode).unwrap().clone()
                 };
                 self.execute_inst(inst, mem, is_cb_opcode);
             }
         }
     }
 
-    pub fn fetch_next_inst(&mut self, mem: &Ram) -> u8 {
+    pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {
         let pc_reg = self.registers.get_and_inc_pc();
         mem.read(pc_reg)
     }
 
 
-
-    pub fn execute_inst(&mut self,  inst: &Instruction, mem: &mut Ram, is_cb_opcode: bool) {
+    pub fn execute_inst(&mut self,  inst: Instruction, mem: &mut Mbc, is_cb_opcode: bool) {
         // todo
         if !is_cb_opcode {
             match inst.opcode {
@@ -1402,6 +1427,299 @@ impl Cpu {
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                 0x98 => {
+                    // SUBC A B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b(); 
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                 0x99 => {
+                    // SUBC A C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c(); 
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9A => {
+                    // SUBC A D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d();
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },  
+                0x9B => {
+                    // SUBC A E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e(); 
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },   
+                0x9C => {
+                    // SUBC A H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h(); 
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },  
+                0x9D => {
+                    // SUBC A L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l(); 
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                }, 
+                0x9E => {
+                    // SUBC A (HL)
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_hl(); 
+                    let b = mem.read(addr);
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9F => {
+                    // SUBC A A
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_a(); 
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA0 => {
+                    // AND B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA1 => {
+                    // AND B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA2 => {
+                    // AND D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA3 => {
+                    // AND E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA4 => {
+                    // AND H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA5 => {
+                    // AND L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA6 => {
+                    // AND (HL)
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_hl(); 
+                    let b = mem.read(addr); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA7 => {
+                    // AND A
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_a(); 
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA8 => {
+                    // XOR B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b(); 
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA9 => {
+                    // XOR B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c(); 
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAA => {
+                    // XOR D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d(); 
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAB => {
+                    // XOR E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e();
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAC => {
+                    // XOR H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h();
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAD => {
+                    // XOR L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l();
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAE => {
+                    // XOR (HL)
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_hl(); 
+                    let b = mem.read(addr);
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAF => {
+                    // XOR A
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_a();
+                    let result = a ^ b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB0 => {
+                    // OR B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b();
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB1 => {
+                    // OR C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c();
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB2 => {
+                    // OR C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d();
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB3 => {
+                    // OR C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e();
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB4 => {
+                    // OR H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h();
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xC3 => {

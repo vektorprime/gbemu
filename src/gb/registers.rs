@@ -40,6 +40,7 @@ pub struct Registers {
     l: u8,
     sp: u16,
     pc: u16,
+    bgp: u8,
 }
 
 impl Registers {
@@ -55,6 +56,7 @@ impl Registers {
             l: 0,
             sp: 0,
             pc: 0,
+            bgp: 0,
         }
     }
 
@@ -84,7 +86,7 @@ impl Registers {
         }
     }
 
-        pub fn set_z_flag(&mut self)  {
+    pub fn set_z_flag(&mut self)  {
         let mut current_flags = self.get_f();
         current_flags |= Z_FLAG_BITS;
         self.set_f(current_flags);
@@ -498,6 +500,40 @@ impl Registers {
     pub fn sub_8bit(&mut self, a: u8, b: u8) -> u8 {
         // check for 8 bit underflow and set c flag
         let (result, underflowed) = a.overflowing_sub(b);
+        if underflowed {
+            self.set_c_flag();
+        }
+        else {
+            self.clear_c_flag();
+        }
+
+        if result == 0 {
+            self.set_z_flag();
+        }
+        else {
+            self.clear_z_flag();
+        }
+
+        // // check for half-carry attempt
+        let half_a = a & 0b0000_1111;
+        let half_b = b & 0b0000_1111;
+        if half_a < half_b {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+
+        // always set val whether overflow or not
+        result
+    }
+
+    pub fn sub_8bit_carry(&mut self, a: u8, b: u8) -> u8 {
+        // check for 8 bit underflow and set c flag
+        let c_bool = self.is_c_flag_set();
+        let c = if c_bool { 1 } else { 0 };
+        let (mut result, underflowed) = a.overflowing_sub(b);
+        result -= c; 
         if underflowed {
             self.set_c_flag();
         }
