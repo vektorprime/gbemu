@@ -40,7 +40,6 @@ pub struct Registers {
     l: u8,
     sp: u16,
     pc: u16,
-    bgp: u8,
 }
 
 impl Registers {
@@ -56,7 +55,6 @@ impl Registers {
             l: 0,
             sp: 0,
             pc: 0,
-            bgp: 0,
         }
     }
 

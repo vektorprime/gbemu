@@ -96,7 +96,7 @@ fn main() -> Result<(), Error>  {
             }
 
             // Update internal state and request a redraw
-            lcd.update();
+            //lcd.update();
             window.request_redraw();
         }
     });

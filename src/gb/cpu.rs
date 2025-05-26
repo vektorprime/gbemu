@@ -11,7 +11,7 @@ pub struct Cpu {
     pub hw_registers: HardwareRegisters,
     pub registers: Registers,
     pub ime: bool, // interrupt master
-    pub opcode: u8, // opcode of current inst.
+    //pub opcode: u8, // opcode of current inst.
     pub cycles: u64, // total m cycle count
     pub halted: bool,
     pub instructions: HashMap<u8, Instruction>,
@@ -26,7 +26,7 @@ impl Cpu {
             hw_registers: HardwareRegisters::new(),
             registers: Registers::new(),
             ime: false,
-            opcode: 0,
+            //opcode: 0, 
             cycles: 0,
             halted: false, 
             instructions: Cpu::setup_inst(),
@@ -1752,7 +1752,8 @@ impl Cpu {
                 },
 
                 _ => {
-                    //todo
+                    // todo
+                    panic!("unsure of opcode - {}", inst.opcode)
                 }
             }
         }

@@ -38,7 +38,7 @@ impl Lcd {
         } 
     }
 
-        pub fn draw(&self, frame: &mut [u8], emu: &mut Emu) {
+    pub fn draw(&self, frame: &mut [u8], emu: &mut Emu) {
         let mut pixels_source: Vec<[u8; 4]> = Vec::new();
         for tile in &emu.ppu.tiles {
             // tile.data is an array of 8 arrays that hold 8 PaletteColor
@@ -56,10 +56,17 @@ impl Lcd {
         }
         
     }
-    
-    /// Draw the `World` state to the frame buffer.
-    ///
-    /// Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
+
+
+    pub fn log_error<E: std::error::Error + 'static>(method_name: &str, err: E) {
+        error!("{method_name}() failed: {err}");
+        for source in err.sources().skip(1) {
+            error!("  Caused by: {source}");
+    }
+
+    // Draw the `World` state to the frame buffer.
+    //
+    // Assumes the default texture format: `wgpu::TextureFormat::Rgba8UnormSrgb`
     // pub fn draw(&self, frame: &mut [u8]) {
     //     for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
     //         // the remainder will always get the correct x value (horizontal)
@@ -86,11 +93,7 @@ impl Lcd {
         
     // }
 
-    pub fn log_error<E: std::error::Error + 'static>(method_name: &str, err: E) {
-    error!("{method_name}() failed: {err}");
-    for source in err.sources().skip(1) {
-        error!("  Caused by: {source}");
-    }
+
 } 
 }
  
