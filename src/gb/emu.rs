@@ -3,21 +3,26 @@ use crate::gb::rom::*;
 use crate::gb::bios::*;
 use crate::gb::mbc::*;
  use crate::gb::graphics::ppu::*;
+ use crate::gb::graphics::lcd::*;
 
 pub struct Emu {
     cpu: Cpu,
     bios: Bios,
     mbc: Mbc, // mbc includes rom and ram
-    ppu: Ppu,
+    pub ppu: Ppu,
+    // pub lcd: Lcd,
+    pub debug: bool,
 }
 
 impl Emu {
-    pub fn new(color_mode: ColorMode) -> Self {
+    pub fn new(color_mode: ColorMode, debug: bool) -> Self {
         Emu {
             cpu: Cpu::new(),
             mbc: Mbc::new(), // mbc has rom and ram
             bios: Bios::new(color_mode), 
             ppu: Ppu::new(),
+            // lcd: Lcd::new(),
+            debug,
         }
     }
 
@@ -37,5 +42,7 @@ impl Emu {
         self.cpu.tick(&mut self.mbc, &self.bios);
         self.ppu.tick(&self.mbc);
     }
+
+  
 
 }

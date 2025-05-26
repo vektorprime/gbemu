@@ -11,8 +11,8 @@ use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
 //screen
-const WIDTH: u32 = 320;
-const HEIGHT: u32 = 240;
+const WIDTH: u32 = 160;
+const HEIGHT: u32 = 144;
 const BOX_SIZE: i16 = 64;
 
 mod gb;  
@@ -44,13 +44,16 @@ fn main() -> Result<(), Error>  {
     };
 
     // Representation of the object we're drawing
-    let mut lcd = Lcd::new();
+    
 
     //////////////////////
     // setup emu
-    let mut emu = Emu::new(ColorMode::Gray);
+    let debug = true;
+    let mut emu = Emu::new(ColorMode::Gray, debug);
+    // rom is loaded after bios runs
     emu.load_rom_file(String::from("tetris.gb"));
     emu.load_bios();
+    let mut lcd = Lcd::new();
     emu.init_ppu();
     //////////////////////
     // RUN event loop
@@ -67,7 +70,7 @@ fn main() -> Result<(), Error>  {
             ..
         } = event
         {
-            lcd.draw(pixels.frame_mut());
+            lcd.draw(pixels.frame_mut(), &mut emu);
             if let Err(err) = pixels.render() {
                 Lcd::log_error("pixels.render", err);
                 elwt.exit();

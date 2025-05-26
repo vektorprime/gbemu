@@ -13,16 +13,26 @@ pub enum PaletteColor {
 }
 
 impl PaletteColor {
- pub fn from_u8(n: u8) -> Self {
+    pub fn from_u8(n: u8) -> Self {
         match n {
             0 => Self::White,
             1 => Self::LightGray,
             2 => Self::DarkGray,
             3 => Self::Black,
             4 => Self::Transparent,
-            _ => Self::Transparent,
+            _ => Self::White,
         }
     }
+    pub fn get_rgba_code(&self) -> [u8; 4] {
+        match self {
+            PaletteColor::White => [155, 188, 15, 0],
+            PaletteColor::LightGray => [139, 172, 15, 0],
+            PaletteColor::DarkGray => [48, 98, 48, 0],
+            PaletteColor::Black => [15, 56, 15, 0],
+            PaletteColor::Transparent => [0, 0, 0, 255],
+        }
+    }
+
 }
 
 pub struct BGPalette {

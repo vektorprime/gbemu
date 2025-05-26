@@ -3,15 +3,15 @@ use crate::gb::mbc::*;
 use crate::gb::graphics::palette::*;
 use crate::gb::graphics::tile::*;
 pub struct Ppu {
-    bit0_bg_win_priority_enable: bool,
-    bit1_obj_enable: bool, // 0 =  bg and win blank (white), and win display Bit is ignored in that case. Only objects may still be displayed (if enabled in Bit 1).
-    bit2_obj_size: bool, // 0 = 8×8; 1 = 8×16 obj sprites
-    bit3_bg_tile_map: bool, // 0 = 9800–9BFF; 1 = 9C00–9FFF
-    bit4_bg_win_tiles: bool, // 0 = 8800–97FF; 1 = 8000–8FFF
-    bit5_win_enable: bool,
-    bit6_win_tile_map: bool, // 0 = 9800–9BFF; 1 = 9C00–9FFF
-    bit7_lcd_ppu_enable: bool, 
-    tiles: Vec<Tile>, 
+    pub bit0_bg_win_priority_enable: bool,
+    pub bit1_obj_enable: bool, // 0 =  bg and win blank (white), and win display Bit is ignored in that case. Only objects may still be displayed (if enabled in Bit 1).
+    pub bit2_obj_size: bool, // 0 = 8×8; 1 = 8×16 obj sprites
+    pub bit3_bg_tile_map: bool, // 0 = 9800–9BFF; 1 = 9C00–9FFF
+    pub bit4_bg_win_tiles: bool, // 0 = 8800–97FF; 1 = 8000–8FFF
+    pub bit5_win_enable: bool,
+    pub bit6_win_tile_map: bool, // 0 = 9800–9BFF; 1 = 9C00–9FFF
+    pub bit7_lcd_ppu_enable: bool, 
+    pub tiles: Vec<Tile>, 
     //bg_tile_map: [u8; 1024],
 }
 impl Ppu {
@@ -29,6 +29,9 @@ impl Ppu {
         }
     }
     
+    pub fn debug_show_tiles(&self) {
+
+    }
 
 
     pub fn load_all_tiles(&mut self, mbc: &Mbc) {
@@ -51,9 +54,6 @@ impl Ppu {
 
             // store in self.tiles vec
             self.tiles.push(new_tile);
-
-            // clear temp_tile
-            temp_tile = [0; 16];
             
         }
 
