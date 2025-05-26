@@ -15,9 +15,9 @@ pub struct Cpu {
     pub cycles: u64, // total m cycle count
     pub halted: bool,
     pub instructions: HashMap<u8, Instruction>,
-    pub cb_instructions: HashMap<u8, Instruction>
+    pub cb_instructions: HashMap<u8, Instruction>,
+    bios_executed: bool,
 }
-
 
 impl Cpu { 
  
@@ -31,6 +31,7 @@ impl Cpu {
             halted: false, 
             instructions: Cpu::setup_inst(),
             cb_instructions: Cpu::setup_cb_inst(),
+            bios_executed: false,
         } 
     } 
 
@@ -38,9 +39,13 @@ impl Cpu {
         self.cycles += size as u64;
     }
 
-    pub fn run_bios(&mut self, mem: &mut Mbc, bios: &Bios) {
-        while self.cycles * 4 < MAX_T_CYCLE_PER_FRAME {
-            if self.registers.get_pc() > bios.data.len() as u16 {
+   
+
+
+
+    pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) { 
+        if !self.bios_executed {
+            if self.registers.get_pc() < bios.data.len() as u16 {
                 let mut opcode = self.fetch_next_inst(mem);
                 //if CB, read another byte, else decode and execute
                 let mut is_cb_opcode = false;
@@ -55,28 +60,29 @@ impl Cpu {
                 };
                 self.execute_inst(inst, mem, is_cb_opcode);
             }
-        }
-
-    }
-
-    pub fn run_rom(&mut self, mem: &mut Mbc) { 
-        while self.cycles * 4 < MAX_T_CYCLE_PER_FRAME {
-            if !self.halted {
-                let mut opcode = self.fetch_next_inst(mem);
-                //if CB, read another byte, else decode and execute
-                let mut is_cb_opcode = false;
-                if opcode == 0xCB {
-                    is_cb_opcode = true;
-                    opcode = self.fetch_next_inst(mem);
-                }
-                let inst = if is_cb_opcode {
-                    self.cb_instructions.get(&opcode).unwrap().clone()
-                } else {
-                    self.instructions.get(&opcode).unwrap().clone()
-                };
-                self.execute_inst(inst, mem, is_cb_opcode);
+            else {
+                self.bios_executed = true;
+                mem.load_rom_to_mem();
             }
         }
+        else if !self.halted {
+            let mut opcode = self.fetch_next_inst(mem);
+            //if CB, read another byte, else decode and execute
+            let mut is_cb_opcode = false;
+            if opcode == 0xCB {
+                is_cb_opcode = true;
+                opcode = self.fetch_next_inst(mem);
+            }
+            let inst = if is_cb_opcode {
+                self.cb_instructions.get(&opcode).unwrap().clone()
+            } else {
+                self.instructions.get(&opcode).unwrap().clone()
+            };
+            self.execute_inst(inst, mem, is_cb_opcode);
+        }
+        
+
+        
     }
 
     pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {

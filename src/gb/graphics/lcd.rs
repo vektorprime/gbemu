@@ -8,7 +8,8 @@ const HEIGHT: u32 = 240;
 const BOX_SIZE: i16 = 64;
 
 
-pub struct Screen {
+pub struct Lcd {
+    
     pub x: i16,
     pub y: i16,
     pub velocity_x: i16,
@@ -17,7 +18,7 @@ pub struct Screen {
 
 
 
-impl Screen {
+impl Lcd {
     /// Create a new `World` instance that can draw a moving box.
     pub fn new() -> Self {
         Self {
@@ -72,3 +73,4 @@ impl Screen {
     }
 } 
 }
+ 

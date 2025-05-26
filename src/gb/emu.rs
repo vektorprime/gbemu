@@ -2,12 +2,13 @@ use crate::gb::cpu::*;
 use crate::gb::rom::*;
 use crate::gb::bios::*;
 use crate::gb::mbc::*;
- 
+ use crate::gb::graphics::ppu::*;
 
 pub struct Emu {
     cpu: Cpu,
     bios: Bios,
     mbc: Mbc, // mbc includes rom and ram
+    ppu: Ppu,
 }
 
 impl Emu {
@@ -16,6 +17,7 @@ impl Emu {
             cpu: Cpu::new(),
             mbc: Mbc::new(), // mbc has rom and ram
             bios: Bios::new(color_mode), 
+            ppu: Ppu::new(),
         }
     }
 
@@ -23,15 +25,17 @@ impl Emu {
         self.mbc.rom = Some(Rom::new(file.as_str()));
     }
 
-    pub fn init(&mut self) {
+    pub fn load_bios(&mut self) {
         self.mbc.ram.load_bios_to_mem(&self.bios);
-        self.cpu.run_bios(&mut self.mbc, &self.bios);
-        self.mbc.load_rom_to_mem();
-        //self.cpu.run_rom(&mut self.mbc);
     }
 
-    pub fn tick_cpu(&mut self) {
-        self.cpu.run_rom(&mut self.mbc);
+    pub fn init_ppu(&mut self) {
+        self.ppu.load_all_tiles(&self.mbc);
+    }
+
+    pub fn tick(&mut self) {
+        self.cpu.tick(&mut self.mbc, &self.bios);
+        self.ppu.tick(&self.mbc);
     }
 
 }

@@ -15,11 +15,11 @@ const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;
 const BOX_SIZE: i16 = 64;
 
-mod gb; 
+mod gb;  
 
 use gb::bios::ColorMode;
 use crate::gb::emu::*;
-use crate::gb::graphics::screen::*;
+use crate::gb::graphics::lcd::*;
 
 fn main() -> Result<(), Error>  {
 
@@ -44,30 +44,32 @@ fn main() -> Result<(), Error>  {
     };
 
     // Representation of the object we're drawing
-    let mut screen = Screen::new();
+    let mut lcd = Lcd::new();
 
-
+    //////////////////////
     // setup emu
     let mut emu = Emu::new(ColorMode::Gray);
     emu.load_rom_file(String::from("tetris.gb"));
-    emu.init();
-
+    emu.load_bios();
+    emu.init_ppu();
+    //////////////////////
     // RUN event loop
     let res = event_loop.run(|event, elwt| {
+        //////////////////////
         // todo
         // finish cpu code
         // finish drawing code
-        //emu.tick_cpu();
-
+        emu.tick();
+        //////////////////////
         // Draw the current frame
         if let Event::WindowEvent {
             event: WindowEvent::RedrawRequested,
             ..
         } = event
         {
-            screen.draw(pixels.frame_mut());
+            lcd.draw(pixels.frame_mut());
             if let Err(err) = pixels.render() {
-                Screen::log_error("pixels.render", err);
+                Lcd::log_error("pixels.render", err);
                 elwt.exit();
                 return;
             }
@@ -84,14 +86,14 @@ fn main() -> Result<(), Error>  {
             // Resize the window
             if let Some(size) = input.window_resized() {
                 if let Err(err) = pixels.resize_surface(size.width, size.height) {
-                    Screen::log_error("pixels.resize_surface", err);
+                    Lcd::log_error("pixels.resize_surface", err);
                     elwt.exit();
                     return;
                 }
             }
 
             // Update internal state and request a redraw
-            screen.update();
+            lcd.update();
             window.request_redraw();
         }
     });

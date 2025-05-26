@@ -3,6 +3,7 @@
 
 // palette is set via hardware register (mem location) 0xFF47, BG palette data aka BGP
 
+#[derive(Copy, Clone)]
 pub enum PaletteColor {
     White,
     LightGray,
@@ -11,6 +12,18 @@ pub enum PaletteColor {
     Transparent,
 }
 
+impl PaletteColor {
+ pub fn from_u8(n: u8) -> Self {
+        match n {
+            0 => Self::White,
+            1 => Self::LightGray,
+            2 => Self::DarkGray,
+            3 => Self::Black,
+            4 => Self::Transparent,
+            _ => Self::Transparent,
+        }
+    }
+}
 
 pub struct BGPalette {
     id0: PaletteColor,
