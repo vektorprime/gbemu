@@ -378,6 +378,11 @@ impl Registers {
         self.c = (val & 0xFF) as u8;
     }
 
+    pub fn set_bc_with_two_val(&mut self, val1: u8, val2: u8) {
+        self.b = val2;
+        self.c = val1;
+    }
+
     pub fn get_de(&self) -> u16 {
         (self.d as u16) << 8 | (self.e as u16)
     }

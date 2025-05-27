@@ -55,6 +55,12 @@ fn main() -> Result<(), Error>  {
     emu.load_bios();
     let mut lcd = Lcd::new();
     emu.init_ppu();
+
+    // //
+    // // uncomment this to temp skip bios
+    // emu.cpu.bios_executed = true;  
+    // emu.mbc.load_rom_to_mem(); 
+    // //
     //////////////////////
     // RUN event loop
     let res = event_loop.run(|event, elwt| {
@@ -64,19 +70,20 @@ fn main() -> Result<(), Error>  {
         // finish drawing code
         emu.tick();
         //////////////////////
+        /// not sure why this was causing the lcd to to not draw
         // Draw the current frame
-        if let Event::WindowEvent {
-            event: WindowEvent::RedrawRequested,
-            ..
-        } = event
-        {
+        // if let Event::WindowEvent {
+        //     event: WindowEvent::RedrawRequested,
+        //     ..
+        // } = event
+        // {
             lcd.draw(pixels.frame_mut(), &mut emu);
             if let Err(err) = pixels.render() {
                 Lcd::log_error("pixels.render", err);
                 elwt.exit();
                 return;
             }
-        }
+        //}
 
         // Handle input events
         if input.update(&event) {

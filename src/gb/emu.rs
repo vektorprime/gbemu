@@ -6,9 +6,9 @@ use crate::gb::mbc::*;
  use crate::gb::graphics::lcd::*;
 
 pub struct Emu {
-    cpu: Cpu,
+    pub cpu: Cpu,
     bios: Bios,
-    mbc: Mbc, // mbc includes rom and ram
+    pub mbc: Mbc, // mbc includes rom and ram
     pub ppu: Ppu,
     // pub lcd: Lcd,
     pub debug: bool,

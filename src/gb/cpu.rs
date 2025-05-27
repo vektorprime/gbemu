@@ -16,7 +16,7 @@ pub struct Cpu {
     pub halted: bool,
     pub instructions: HashMap<u8, Instruction>,
     pub cb_instructions: HashMap<u8, Instruction>,
-    bios_executed: bool,
+    pub bios_executed: bool,
 }
 
 impl Cpu { 
@@ -1724,6 +1724,154 @@ impl Cpu {
                     let b = self.registers.get_h();
                     let result = a | b;
                     self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB5 => {
+                    // OR L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l();
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB6 => {
+                    // OR (HL)
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_hl();
+                    let b = mem.read(addr);
+                    let result = a | b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB7 => {
+                    // OR A
+                    let a = self.registers.get_a();
+                    let result = a; 
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                 0xB8 => {
+                    // CP B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b();
+                    let result = a - b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB9 => {
+                    // CP C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c();
+                    let result = a.wrapping_sub(b);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBA => {
+                    // CP D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d();
+                    let result = a.wrapping_sub(b);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBB => {
+                    // CP E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e();
+                    let result = a.wrapping_sub(b);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBC => {
+                    // CP H
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h();
+                    let result = a.wrapping_sub(b);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBD => {
+                    // CP L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l();
+                    let result = a.wrapping_sub(b);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBE => {
+                    // CP (HL)
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_hl();
+                    let b = mem.read(addr);
+                    let result = a.wrapping_sub(b);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBF => {
+                    // CP A
+                    let a = self.registers.get_a();
+                    let result = a.wrapping_sub(a);
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC0 => {
+                    // RET NZ
+                    if !self.registers.is_z_flag_set() {
+                        let address = self.registers.get_sp();
+                        self.registers.set_pc(address);
+                        self.registers.set_sp(address + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles); 
+                },
+                0xC1 => {
+                    // POP BC
+                    let address = self.registers.get_sp();
+                    let lo = mem.read(address);
+                    let hi = mem.read(address + 1);
+                    self.registers.set_bc_with_two_val(lo, hi);
+                    self.registers.set_sp(address + 2);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
