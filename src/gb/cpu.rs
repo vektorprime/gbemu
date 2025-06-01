@@ -36,6 +36,7 @@ impl Cpu {
     } 
 
     pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
+        
         self.cycles += size as u64;
     }
 
@@ -1891,6 +1892,1484 @@ impl Cpu {
         }
         else { // cb opcodes
             match inst.opcode {
+                0x00 => {
+                    // RLC B
+                    //rotate register B left
+                    //bit 7 is rotated to both C and bit 0 of reg B
+                    let mut b = self.registers.get_b();
+                    let select_bit7: u8 = 0b1000_0000;
+                    let bit7 = b & select_bit7;
+                    b <<= 1;
+                    if bit7 == select_bit7 {
+                        let select_bit0: u8 = 0b0000_0001;
+                        b |= select_bit0;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x01 => {
+                    // RLC C
+                    let mut c = self.registers.get_c();
+                    let bit7 = c & 0b1000_0000;
+                    c <<= 1;
+                    if bit7 != 0 {
+                        c |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x02 => {
+                    // RLC D
+                    let mut d = self.registers.get_d();
+                    let bit7 = d & 0b1000_0000;
+                    d <<= 1;
+                    if bit7 != 0 {
+                        d |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x03 => {
+                    // RLC E
+                    let mut e = self.registers.get_e();
+                    let bit7 = e & 0b1000_0000;
+                    e <<= 1;
+                    if bit7 != 0 {
+                        e |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x04 => {
+                    // RLC H
+                    let mut h = self.registers.get_h();
+                    let bit7 = h & 0b1000_0000;
+                    h <<= 1;
+                    if bit7 != 0 {
+                        h |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x05 => {
+                    // RLC L
+                    let mut l = self.registers.get_l();
+                    let bit7 = l & 0b1000_0000;
+                    l <<= 1;
+                    if bit7 != 0 {
+                        l |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x06 => {
+                    // RLC (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let bit7 = val & 0b1000_0000;
+                    val <<= 1;
+                    if bit7 != 0 {
+                        val |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    mem.write(addr, val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x07 => {
+                    // RLC A
+                    let mut a = self.registers.get_a();
+                    let bit7 = a & 0b1000_0000;
+                    a <<= 1;
+                    if bit7 != 0 {
+                        a |= 0b0000_0001;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x08 => {
+                    // RRC B
+                    let mut b = self.registers.get_b();
+                    let bit0 = b & 0b0000_0001;
+                    b >>= 1;
+                    if bit0 != 0 {
+                        b |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x09 => {
+                    // RRC C
+                    let mut c = self.registers.get_c();
+                    let bit0 = c & 0b0000_0001;
+                    c >>= 1;
+                    if bit0 != 0 {
+                        c |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x0A => {
+                    // RRC D
+                    let mut d = self.registers.get_d();
+                    let bit0 = d & 0b0000_0001;
+                    d >>= 1;
+                    if bit0 != 0 {
+                        d |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x0B => {
+                    // RRC E
+                    let mut e = self.registers.get_e();
+                    let bit0 = e & 0b0000_0001;
+                    e >>= 1;
+                    if bit0 != 0 {
+                        e |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x0C => {
+                    // RRC H
+                    let mut h = self.registers.get_h();
+                    let bit0 = h & 0b0000_0001;
+                    h >>= 1;
+                    if bit0 != 0 {
+                        h |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x0D => {
+                    // RRC L
+                    let mut l = self.registers.get_l();
+                    let bit0 = l & 0b0000_0001;
+                    l >>= 1;
+                    if bit0 != 0 {
+                        l |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x0E => {
+                    // RRC (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let bit0 = val & 0b0000_0001;
+                    val >>= 1;
+                    if bit0 != 0 {
+                        val |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    mem.write(addr, val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x0F => {
+                    // RRC A
+                    let mut a = self.registers.get_a();
+                    let bit0 = a & 0b0000_0001;
+                    a >>= 1;
+                    if bit0 != 0 {
+                        a |= 0b1000_0000;
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x10 => {
+                    // RL B
+                    let mut b = self.registers.get_b();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = b & 0b1000_0000;
+                    b = (b << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x11 => {
+                    // RL C
+                    let mut c = self.registers.get_c();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = c & 0b1000_0000;
+                    c = (c << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x12 => {
+                    // RL D
+                    let mut d = self.registers.get_d();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = d & 0b1000_0000;
+                    d = (d << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x13 => {
+                    // RL E
+                    let mut e = self.registers.get_e();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = e & 0b1000_0000;
+                    e = (e << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x14 => {
+                    // RL H
+                    let mut h = self.registers.get_h();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = h & 0b1000_0000;
+                    h = (h << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x15 => {
+                    // RL L
+                    let mut l = self.registers.get_l();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = l & 0b1000_0000;
+                    l = (l << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x16 => {
+                    // RL (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = val & 0b1000_0000;
+                    val = (val << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    mem.write(addr, val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x17 => {
+                    // RL A
+                    let mut a = self.registers.get_a();
+                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
+                    let bit7 = a & 0b1000_0000;
+                    a = (a << 1) | carry;
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x18 => {
+                    // RR B
+                    let mut b = self.registers.get_b();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = b & 0b0000_0001;
+                    b >>= 1;
+                    b |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x19 => {
+                    // RR C
+                    let mut c = self.registers.get_c();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = c & 0b0000_0001;
+                    c >>= 1;
+                    c |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x1A => {
+                    // RR D
+                    let mut d = self.registers.get_d();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = d & 0b0000_0001;
+                    d >>= 1;
+                    d |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x1B => {
+                    // RR E
+                    let mut e = self.registers.get_e();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = e & 0b0000_0001;
+                    e >>= 1;
+                    e |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x1C => {
+                    // RR H
+                    let mut h = self.registers.get_h();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = h & 0b0000_0001;
+                    h >>= 1;
+                    h |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x1D => {
+                    // RR L
+                    let mut l = self.registers.get_l();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = l & 0b0000_0001;
+                    l >>= 1;
+                    l |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x1E => {
+                    // RR (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = val & 0b0000_0001;
+                    val >>= 1;
+                    val |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    mem.write(addr, val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x1F => {
+                    // RR A
+                    let mut a = self.registers.get_a();
+                    let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
+                    let bit0 = a & 0b0000_0001;
+                    a >>= 1;
+                    a |= carry;
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x20 => {
+                    // SLA B
+                    let mut b = self.registers.get_b();
+                    let bit7 = b & 0b1000_0000;
+                    b <<= 1;
+                    self.registers.set_b(b);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x21 => {
+                    // SLA C
+                    let mut c = self.registers.get_c();
+                    let bit7 = c & 0b1000_0000;
+                    c <<= 1;
+                    self.registers.set_c(c);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x22 => {
+                    // SLA D
+                    let mut d = self.registers.get_d();
+                    let bit7 = d & 0b1000_0000;
+                    d <<= 1;
+                    self.registers.set_d(d);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x23 => {
+                    // SLA E
+                    let mut e = self.registers.get_e();
+                    let bit7 = e & 0b1000_0000;
+                    e <<= 1;
+                    self.registers.set_e(e);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x24 => {
+                    // SLA H
+                    let mut h = self.registers.get_h();
+                    let bit7 = h & 0b1000_0000;
+                    h <<= 1;
+                    self.registers.set_h(h);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x25 => {
+                    // SLA L
+                    let mut l = self.registers.get_l();
+                    let bit7 = l & 0b1000_0000;
+                    l <<= 1;
+                    self.registers.set_l(l);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x26 => {
+                    // SLA (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let bit7 = val & 0b1000_0000;
+                    val <<= 1;
+                    mem.write(addr, val);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x27 => {
+                    // SLA A
+                    let mut a = self.registers.get_a();
+                    let bit7 = a & 0b1000_0000;
+                    a <<= 1;
+                    self.registers.set_a(a);
+                    if bit7 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x28 => {
+                    // SRA B
+                    let mut b = self.registers.get_b();
+                    let bit0 = b & 0b0000_0001;
+                    let msb = b & 0b1000_0000;
+                    b >>= 1;
+                    b |= msb;
+                    self.registers.set_b(b);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x29 => {
+                    // SRA C
+                    let mut c = self.registers.get_c();
+                    let bit0 = c & 0b0000_0001;
+                    let msb = c & 0b1000_0000;
+                    c >>= 1;
+                    c |= msb;
+                    self.registers.set_c(c);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x2A => {
+                    // SRA D
+                    let mut d = self.registers.get_d();
+                    let bit0 = d & 0b0000_0001;
+                    let msb = d & 0b1000_0000;
+                    d >>= 1;
+                    d |= msb;
+                    self.registers.set_d(d);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x2B => {
+                    // SRA E
+                    let mut e = self.registers.get_e();
+                    let bit0 = e & 0b0000_0001;
+                    let msb = e & 0b1000_0000;
+                    e >>= 1;
+                    e |= msb;
+                    self.registers.set_e(e);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x2C => {
+                    // SRA H
+                    let mut h = self.registers.get_h();
+                    let bit0 = h & 0b0000_0001;
+                    let msb = h & 0b1000_0000;
+                    h >>= 1;
+                    h |= msb;
+                    self.registers.set_h(h);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x2D => {
+                    // SRA L
+                    let mut l = self.registers.get_l();
+                    let bit0 = l & 0b0000_0001;
+                    let msb = l & 0b1000_0000;
+                    l >>= 1;
+                    l |= msb;
+                    self.registers.set_l(l);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x2E => {
+                    // SRA (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let bit0 = val & 0b0000_0001;
+                    let msb = val & 0b1000_0000;
+                    val >>= 1;
+                    val |= msb;
+                    mem.write(addr, val);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x2F => {
+                    // SRA A
+                    let mut a = self.registers.get_a();
+                    let bit0 = a & 0b0000_0001;
+                    let msb = a & 0b1000_0000;
+                    a >>= 1;
+                    a |= msb;
+                    self.registers.set_a(a);
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    }
+                    else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x30 => {
+                    // SWAP B
+                    // swap the lower-order (4 bits) with the higher-order (4 bits) of B
+                    // get lower 4 bits
+                    // get higher 4 bits
+                    // shift lower left 4 times
+                    // shift higher right 4 times
+                    // combine to one
+                    // set B
+                    let mut b = self.registers.get_b();
+                    let select_lower_4bits: u8 = 0b0000_1111;
+                    let select_higher_4bits: u8 = 0b1111_0000;
+                    let mut lower_4bits = b & select_lower_4bits;
+                    let mut higher_4bits = b & select_higher_4bits;
+                    lower_4bits <<= 4;
+                    higher_4bits >>= 4;
+                    let mut new_b: u8 = 0;
+                    new_b |= lower_4bits;
+                    new_b |= higher_4bits;
+                    self.registers.set_b(new_b);
+                    if new_b == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x31 => {
+                    // SWAP C
+                    let mut c = self.registers.get_c();
+                    let lower = c & 0b0000_1111;
+                    let upper = c & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    self.registers.set_c(swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x32 => {
+                    // SWAP D
+                    let mut d = self.registers.get_d();
+                    let lower = d & 0b0000_1111;
+                    let upper = d & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    self.registers.set_d(swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x33 => {
+                    // SWAP E
+                    let mut e = self.registers.get_e();
+                    let lower = e & 0b0000_1111;
+                    let upper = e & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    self.registers.set_e(swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x34 => {
+                    // SWAP H
+                    let mut h = self.registers.get_h();
+                    let lower = h & 0b0000_1111;
+                    let upper = h & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    self.registers.set_h(swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x35 => {
+                    // SWAP L
+                    let mut l = self.registers.get_l();
+                    let lower = l & 0b0000_1111;
+                    let upper = l & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    self.registers.set_l(swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x36 => {
+                    // SWAP (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let lower = val & 0b0000_1111;
+                    let upper = val & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    mem.write(addr, swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x37 => {
+                    // SWAP A
+                    let mut a = self.registers.get_a();
+                    let lower = a & 0b0000_1111;
+                    let upper = a & 0b1111_0000;
+                    let swapped = (lower << 4) | (upper >> 4);
+                    self.registers.set_a(swapped);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if swapped == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x38 => {
+                    // SRL B
+                    let mut b = self.registers.get_b();
+                    let bit0 = b & 0b0000_0001;
+                    b >>= 1;
+                    self.registers.set_b(b);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if b == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x39 => {
+                    // SRL C
+                    let mut c = self.registers.get_c();
+                    let bit0 = c & 0b0000_0001;
+                    c >>= 1;
+                    self.registers.set_c(c);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if c == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x3A => {
+                    // SRL D
+                    let mut d = self.registers.get_d();
+                    let bit0 = d & 0b0000_0001;
+                    d >>= 1;
+                    self.registers.set_d(d);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if d == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x3B => {
+                    // SRL E
+                    let mut e = self.registers.get_e();
+                    let bit0 = e & 0b0000_0001;
+                    e >>= 1;
+                    self.registers.set_e(e);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if e == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x3C => {
+                    // SRL H
+                    let mut h = self.registers.get_h();
+                    let bit0 = h & 0b0000_0001;
+                    h >>= 1;
+                    self.registers.set_h(h);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if h == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x3D => {
+                    // SRL L
+                    let mut l = self.registers.get_l();
+                    let bit0 = l & 0b0000_0001;
+                    l >>= 1;
+                    self.registers.set_l(l);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if l == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x3E => {
+                    // SRL (HL)
+                    let addr = self.registers.get_hl();
+                    let mut val = mem.read(addr);
+                    let bit0 = val & 0b0000_0001;
+                    val >>= 1;
+                    mem.write(addr, val);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x3F => {
+                    // SRL A
+                    let mut a = self.registers.get_a();
+                    let bit0 = a & 0b0000_0001;
+                    a >>= 1;
+                    self.registers.set_a(a);
+                    self.registers.clear_h_flag();
+                    self.registers.clear_n_flag();
+                    if bit0 != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x40 => {
+                    // BIT 0 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0000_0001;
+                    // complement of bit 0 is what we evaluate to set Z flag in BIT
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 0xC3 => {
                     // JP A16
                     let lo = mem.read(self.registers.get_pc());
@@ -1898,10 +3377,2093 @@ impl Cpu {
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
-
+                0x41 => {
+                    // BIT 0 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x42 => {
+                    // BIT 0 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x43 => {
+                    // BIT 0 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x44 => {
+                    // BIT 0 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x45 => {
+                    // BIT 0 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x46 => {
+                    // BIT 0 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x47 => {
+                    // BIT 0 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0000_0001;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x48 => {
+                    // BIT 1 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x49 => {
+                    // BIT 1 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x4A => {
+                    // BIT 1 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x4B => {
+                    // BIT 1 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x4C => {
+                    // BIT 1 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x4D => {
+                    // BIT 1 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x4E => {
+                    // BIT 1 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x4F => {
+                    // BIT 1 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0000_0010;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x50 => {
+                    // BIT 2 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x51 => {
+                    // BIT 2 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x52 => {
+                    // BIT 2 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x53 => {
+                    // BIT 2 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x54 => {
+                    // BIT 2 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x55 => {
+                    // BIT 2 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x56 => {
+                    // BIT 2 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x57 => {
+                    // BIT 2 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0000_0100;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x58 => {
+                    // BIT 3 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x59 => {
+                    // BIT 3 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x5A => {
+                    // BIT 3 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x5B => {
+                    // BIT 3 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x5C => {
+                    // BIT 3 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x5D => {
+                    // BIT 3 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x5E => {
+                    // BIT 3 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x5F => {
+                    // BIT 3 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0000_1000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x60 => {
+                    // BIT 4 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x61 => {
+                    // BIT 4 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x62 => {
+                    // BIT 4 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x63 => {
+                    // BIT 4 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x64 => {
+                    // BIT 4 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x65 => {
+                    // BIT 4 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x66 => {
+                    // BIT 4 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x67 => {
+                    // BIT 4 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0001_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x68 => {
+                    // BIT 5 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x69 => {
+                    // BIT 5 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x6A => {
+                    // BIT 5 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x6B => {
+                    // BIT 5 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x6C => {
+                    // BIT 5 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x6D => {
+                    // BIT 5 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x6E => {
+                    // BIT 5 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x6F => {
+                    // BIT 5 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0010_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x70 => {
+                    // BIT 6 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x71 => {
+                    // BIT 6 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x72 => {
+                    // BIT 6 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x73 => {
+                    // BIT 6 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x74 => {
+                    // BIT 6 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x75 => {
+                    // BIT 6 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x76 => {
+                    // BIT 6 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x77 => {
+                    // BIT 6 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b0100_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x78 => {
+                    // BIT 7 B
+                    let b = self.registers.get_b();
+                    let val = b & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x79 => {
+                    // BIT 7 C
+                    let c = self.registers.get_c();
+                    let val = c & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x7A => {
+                    // BIT 7 D
+                    let d = self.registers.get_d();
+                    let val = d & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x7B => {
+                    // BIT 7 E
+                    let e = self.registers.get_e();
+                    let val = e & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x7C => {
+                    // BIT 7 H
+                    let h = self.registers.get_h();
+                    let val = h & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x7D => {
+                    // BIT 7 L
+                    let l = self.registers.get_l();
+                    let val = l & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x7E => {
+                    // BIT 7 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr) & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x7F => {
+                    // BIT 7 A
+                    let a = self.registers.get_a();
+                    let val = a & 0b1000_0000;
+                    if val == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x80 => {
+                    // RES 0 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1111_1110;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x81 => {
+                    // RES 0 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1111_1110;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x82 => {
+                    // RES 0 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1111_1110;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x83 => {
+                    // RES 0 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1111_1110;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x84 => {
+                    // RES 0 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1111_1110;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x85 => {
+                    // RES 0 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1111_1110;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x86 => {
+                    // RES 0 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1111_1110);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x87 => {
+                    // RES 0 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1111_1110;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x88 => {
+                    // RES 1 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1111_1101;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x89 => {
+                    // RES 1 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1111_1101;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8A => {
+                    // RES 1 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1111_1101;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8B => {
+                    // RES 1 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1111_1101;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8C => {
+                    // RES 1 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1111_1101;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8D => {
+                    // RES 1 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1111_1101;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8E => {
+                    // RES 1 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1111_1101);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8F => {
+                    // RES 1 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1111_1101;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x90 => {
+                    // RES 2 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1111_1011;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x91 => {
+                    // RES 2 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1111_1011;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x92 => {
+                    // RES 2 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1111_1011;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x93 => {
+                    // RES 2 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1111_1011;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x94 => {
+                    // RES 2 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1111_1011;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x95 => {
+                    // RES 2 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1111_1011;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x96 => {
+                    // RES 2 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1111_1011);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x97 => {
+                    // RES 2 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1111_1011;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x98 => {
+                    // RES 3 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1111_0111;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x99 => {
+                    // RES 3 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1111_0111;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9A => {
+                    // RES 3 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1111_0111;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9B => {
+                    // RES 3 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1111_0111;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9C => {
+                    // RES 3 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1111_0111;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9D => {
+                    // RES 3 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1111_0111;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9E => {
+                    // RES 3 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1111_0111);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x9F => {
+                    // RES 3 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1111_0111;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA0 => {
+                    // RES 4 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1110_1111;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA1 => {
+                    // RES 4 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1110_1111;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA2 => {
+                    // RES 4 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1110_1111;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA3 => {
+                    // RES 4 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1110_1111;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA4 => {
+                    // RES 4 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1110_1111;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA5 => {
+                    // RES 4 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1110_1111;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA6 => {
+                    // RES 4 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1110_1111);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA7 => {
+                    // RES 4 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1110_1111;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA8 => {
+                    // RES 5 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1101_1111;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xA9 => {
+                    // RES 5 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1101_1111;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAA => {
+                    // RES 5 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1101_1111;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAB => {
+                    // RES 5 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1101_1111;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAC => {
+                    // RES 5 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1101_1111;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAD => {
+                    // RES 5 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1101_1111;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAE => {
+                    // RES 5 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1101_1111);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xAF => {
+                    // RES 5 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1101_1111;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB0 => {
+                    // RES 6 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b1011_1111;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB1 => {
+                    // RES 6 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b1011_1111;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB2 => {
+                    // RES 6 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b1011_1111;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB3 => {
+                    // RES 6 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b1011_1111;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB4 => {
+                    // RES 6 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b1011_1111;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB5 => {
+                    // RES 6 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b1011_1111;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB6 => {
+                    // RES 6 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b1011_1111);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB7 => {
+                    // RES 6 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b1011_1111;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB8 => {
+                    // RES 7 B
+                    let mut b = self.registers.get_b();
+                    let reset_bit: u8 = 0b0111_1111;
+                    b &= reset_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xB9 => {
+                    // RES 7 C
+                    let mut c = self.registers.get_c();
+                    let reset_bit: u8 = 0b0111_1111;
+                    c &= reset_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBA => {
+                    // RES 7 D
+                    let mut d = self.registers.get_d();
+                    let reset_bit: u8 = 0b0111_1111;
+                    d &= reset_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBB => {
+                    // RES 7 E
+                    let mut e = self.registers.get_e();
+                    let reset_bit: u8 = 0b0111_1111;
+                    e &= reset_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBC => {
+                    // RES 7 H
+                    let mut h = self.registers.get_h();
+                    let reset_bit: u8 = 0b0111_1111;
+                    h &= reset_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBD => {
+                    // RES 7 L
+                    let mut l = self.registers.get_l();
+                    let reset_bit: u8 = 0b0111_1111;
+                    l &= reset_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBE => {
+                    // RES 7 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val & 0b0111_1111);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xBF => {
+                    // RES 7 A
+                    let mut a = self.registers.get_a();
+                    let reset_bit: u8 = 0b0111_1111;
+                    a &= reset_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC0 => {
+                    // SET 0 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0000_0001;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC1 => {
+                    // SET 0 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0000_0001;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC2 => {
+                    // SET 0 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0000_0001;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC3 => {
+                    // SET 0 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0000_0001;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC4 => {
+                    // SET 0 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0000_0001;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC5 => {
+                    // SET 0 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0000_0001;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC6 => {
+                    // SET 0 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0000_0001);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC7 => {
+                    // SET 0 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0000_0001;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC8 => {
+                    // SET 1 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0000_0010;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC9 => {
+                    // SET 1 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0000_0010;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xCA => {
+                    // SET 1 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0000_0010;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xCB => {
+                    // SET 1 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0000_0010;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xCC => {
+                    // SET 1 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0000_0010;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xCD => {
+                    // SET 1 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0000_0010;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xCE => {
+                    // SET 1 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0000_0010);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xCF => {
+                    // SET 1 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0000_0010;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD0 => {
+                    // SET 2 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0000_0100;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD1 => {
+                    // SET 2 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0000_0100;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD2 => {
+                    // SET 2 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0000_0100;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD3 => {
+                    // SET 2 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0000_0100;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD4 => {
+                    // SET 2 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0000_0100;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD5 => {
+                    // SET 2 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0000_0100;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD6 => {
+                    // SET 2 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0000_0100);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD7 => {
+                    // SET 2 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0000_0100;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD8 => {
+                    // SET 3 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0000_1000;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD9 => {
+                    // SET 3 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0000_1000;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDA => {
+                    // SET 3 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0000_1000;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDB => {
+                    // SET 3 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0000_1000;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDC => {
+                    // SET 3 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0000_1000;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDD => {
+                    // SET 3 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0000_1000;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDE => {
+                    // SET 3 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0000_1000);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDF => {
+                    // SET 3 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0000_1000;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE0 => {
+                    // SET 4 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0001_0000;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE1 => {
+                    // SET 4 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0001_0000;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE2 => {
+                    // SET 4 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0001_0000;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE3 => {
+                    // SET 4 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0001_0000;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE4 => {
+                    // SET 4 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0001_0000;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE5 => {
+                    // SET 4 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0001_0000;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE6 => {
+                    // SET 4 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0001_0000);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE7 => {
+                    // SET 4 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0001_0000;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE8 => {
+                    // SET 5 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0010_0000;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE9 => {
+                    // SET 5 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0010_0000;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEA => {
+                    // SET 5 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0010_0000;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEB => {
+                    // SET 5 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0010_0000;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEC => {
+                    // SET 5 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0010_0000;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xED => {
+                    // SET 5 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0010_0000;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEE => {
+                    // SET 5 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0010_0000);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEF => {
+                    // SET 5 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0010_0000;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF0 => {
+                    // SET 6 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b0100_0000;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF1 => {
+                    // SET 6 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b0100_0000;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF2 => {
+                    // SET 6 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b0100_0000;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF3 => {
+                    // SET 6 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b0100_0000;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF4 => {
+                    // SET 6 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b0100_0000;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF5 => {
+                    // SET 6 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b0100_0000;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF6 => {
+                    // SET 6 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b0100_0000);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF7 => {
+                    // SET 6 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b0100_0000;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF8 => {
+                    // SET 7 B
+                    let mut b = self.registers.get_b();
+                    let set_bit: u8 = 0b1000_0000;
+                    b |= set_bit;
+                    self.registers.set_b(b);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF9 => {
+                    // SET 7 C
+                    let mut c = self.registers.get_c();
+                    let set_bit: u8 = 0b1000_0000;
+                    c |= set_bit;
+                    self.registers.set_c(c);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFA => {
+                    // SET 7 D
+                    let mut d = self.registers.get_d();
+                    let set_bit: u8 = 0b1000_0000;
+                    d |= set_bit;
+                    self.registers.set_d(d);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFB => {
+                    // SET 7 E
+                    let mut e = self.registers.get_e();
+                    let set_bit: u8 = 0b1000_0000;
+                    e |= set_bit;
+                    self.registers.set_e(e);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFC => {
+                    // SET 7 H
+                    let mut h = self.registers.get_h();
+                    let set_bit: u8 = 0b1000_0000;
+                    h |= set_bit;
+                    self.registers.set_h(h);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFD => {
+                    // SET 7 L
+                    let mut l = self.registers.get_l();
+                    let set_bit: u8 = 0b1000_0000;
+                    l |= set_bit;
+                    self.registers.set_l(l);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFE => {
+                    // SET 7 (HL)
+                    let addr = self.registers.get_hl();
+                    let val = mem.read(addr);
+                    mem.write(addr, val | 0b1000_0000);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFF => {
+                    // SET 7 A
+                    let mut a = self.registers.get_a();
+                    let set_bit: u8 = 0b1000_0000;
+                    a |= set_bit;
+                    self.registers.set_a(a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 _ => {
                     // todo
-                    panic!("unsure of opcode - {}", inst.opcode)
+                    // panic here later once I've worked out the rest of code
+                    println!("unsure of opcode - {}", inst.opcode);
                 }
             }
         }

@@ -71,9 +71,25 @@ impl Registers {
             self.clear_h_flag();
             // handle C in inst code
         }
+        else if inst_name.contains("SWAP") {
+            self.clear_c_flag();
+            self.clear_n_flag();
+            self.clear_h_flag();
+            // handle Z in inst code
+        }
+        else if inst_name.contains("RLC") {
+            self.clear_n_flag();
+            self.clear_h_flag();
+            // handle Z in inst code
+        }
+        else if inst_name.contains("BIT") {
+            self.clear_n_flag();
+            self.set_h_flag();
+            // handle Z in inst code
+        }
     }
 
-    pub fn is_z_flag_set(&mut self) -> bool {
+    pub fn is_z_flag_set(&self) -> bool {
         let mut current_flags = self.get_f();
         current_flags &= Z_FLAG_BITS;
         if current_flags == Z_FLAG_BITS {
@@ -116,7 +132,7 @@ impl Registers {
         self.set_f(current_flags);
     }
 
-    pub fn is_h_flag_set(&mut self) -> bool {
+    pub fn is_h_flag_set(&self) -> bool {
         let mut current_flags = self.get_f();
         current_flags &= H_FLAG_BITS;
         if current_flags == H_FLAG_BITS {
@@ -133,7 +149,7 @@ impl Registers {
         current_flags
     }
  
-    pub fn is_c_flag_set(&mut self) -> bool {
+    pub fn is_c_flag_set(&self) -> bool {
         let mut current_flags = self.get_f();
         current_flags &= C_FLAG_BITS;
         if current_flags == C_FLAG_BITS {
@@ -161,7 +177,7 @@ impl Registers {
         self.set_f(current_flags);
     }
 
-    pub fn is_n_flag_set(&mut self) -> bool {
+    pub fn is_n_flag_set(&self) -> bool {
         let mut current_flags = self.get_f();
         current_flags &= N_FLAG_BITS;
         if current_flags == N_FLAG_BITS {
