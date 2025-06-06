@@ -31,6 +31,7 @@ impl Cpu {
             halted: false, 
             instructions: Cpu::setup_inst(),
             cb_instructions: Cpu::setup_cb_inst(),
+            // set to true to test bios bypass
             bios_executed: false,
         } 
     } 
@@ -1877,6 +1878,20 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xC2 => {
+                    // JP NZ A16
+                    if !self.registers.is_z_flag_set() {
+                        let lo = mem.read(self.registers.get_pc());
+                        let hi = mem.read(self.registers.get_pc() + 1);
+                        self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                    }
+                    else {
+                        self.registers.set_pc(self.registers.get_pc() + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
                 0xC3 => {
                     // JP A16
                     let lo = mem.read(self.registers.get_pc());
@@ -1884,9 +1899,88 @@ impl Cpu {
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
+                0xC4 => {
+                    // CALL NZ A16
+                    // if z is 0, set pc to a16, and push addr pc + 2 to stack
+                    let ret_addr = self.registers.get_pc() + 2;
+                    if !self.registers.is_z_flag_set() {
+                        // get the called address and set pc to it
+                        let lo = mem.read(self.registers.get_pc());
+                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let called_addr = u16::from_le_bytes([lo, hi]);
+                        self.registers.set_pc(called_addr);
 
+                        // push return address to stack
+                        // grow stack down
+                        let sp_addr = self.registers.get_sp() - 2;
+                        self.registers.set_sp(sp_addr);
+                        // split ret_addr into two
+                        let ret_part_1 = (ret_addr & 0x00FF) as u8;
+                        mem.write(sp_addr, ret_part_1);
+                        let ret_part_2 = (ret_addr >> 8) as u8;
+                        mem.write(sp_addr + 1, ret_part_2);
+                    }
+                    else {
+                        self.registers.set_pc(self.registers.get_pc() + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xC5 => {
+                    // PUSH BC
+                    // get the contents of BC
+                    let bc = self.registers.get_bc();
+                    let lo_bc = (bc & 0x00FF) as u8;
+                    let hi_bc = (bc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_bc);
+                    mem.write(new_sp + 1, hi_bc);
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD0 => {
+                    // RET NC
+                    if !self.registers.is_c_flag_set() {
+                        let address = self.registers.get_sp();
+                        self.registers.set_pc(address);
+                        self.registers.set_sp(address + 2);
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xC6 => {
+                    // ADD A, d8
+                    let a = self.registers.get_a();
+                    let imm = mem.read(self.registers.get_pc());
+                    let result = a.wrapping_add(imm);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xD1 => {
+                    // POP DE
+                    let address = self.registers.get_sp();
+                    let lo = mem.read(address);
+                    let hi = mem.read(address + 1);
+                    self.registers.set_de_with_two_val(lo, hi);
+                    self.registers.set_sp(address + 2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 _ => {
                     //todo
+                    // panic here later once I've worked out the rest of code
+                    println!("unsure of opcode - {}", inst.opcode);
                 }
             } // match
         }

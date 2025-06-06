@@ -408,6 +408,11 @@ impl Registers {
         self.e = (val & 0xFF) as u8;
     }
 
+    pub fn set_de_with_two_val(&mut self, val1: u8, val2: u8) {
+        self.d = val2;
+        self.e = val1;
+    }
+
     pub fn get_hl(&self) -> u16 {
         (self.h as u16) << 8 | (self.l as u16)
     }
@@ -434,7 +439,7 @@ impl Registers {
 
     pub fn get_and_inc_pc(&mut self) -> u16 {
         let ret_pc = self.pc;
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         ret_pc
     }
 
@@ -452,7 +457,7 @@ impl Registers {
     }
 
     pub fn inc_pc(&mut self) -> u16 {
-        self.pc += 1;
+        self.pc = self.pc.wrapping_add(1);
         self.pc
     }
 
@@ -552,7 +557,7 @@ impl Registers {
         let c_bool = self.is_c_flag_set();
         let c = if c_bool { 1 } else { 0 };
         let (mut result, underflowed) = a.overflowing_sub(b);
-        result -= c; 
+        result = result.wrapping_sub(c);
         if underflowed {
             self.set_c_flag();
         }

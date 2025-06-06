@@ -71,7 +71,9 @@ impl Ppu {
         for x in 0x0..0x3FF {
             bg_tile_map[x] = mbc.read(address); 
         }
-
+        if mbc.read(address) != 0 {
+            println!("Something inside of tile map");
+        }
         bg_tile_map
     }
 
