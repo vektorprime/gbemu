@@ -8,45 +8,49 @@ use std::collections::HashMap;
 pub const MAX_T_CYCLE_PER_FRAME: u64 = 70224;
 
 pub struct Cpu {
-    pub hw_registers: HardwareRegisters,
     pub registers: Registers,
     pub ime: bool, // interrupt master
     //pub opcode: u8, // opcode of current inst.
     pub cycles: u64, // total m cycle count
+    pub last_cycles: u64,
     pub halted: bool,
     pub instructions: HashMap<u8, Instruction>,
     pub cb_instructions: HashMap<u8, Instruction>,
     pub bios_executed: bool,
+    pub rom_loaded: bool,
 }
 
 impl Cpu { 
  
     pub fn new() -> Self {
         Cpu {
-            hw_registers: HardwareRegisters::new(),
             registers: Registers::new(),
             ime: false,
             //opcode: 0, 
             cycles: 0,
+            last_cycles: 0,
             halted: false, 
             instructions: Cpu::setup_inst(),
             cb_instructions: Cpu::setup_cb_inst(),
             // set to true to test bios bypass
-            bios_executed: false,
+            bios_executed: true,
+            rom_loaded: false,
         } 
     } 
 
     pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
         
         self.cycles += size as u64;
+        self.last_cycles = size as u64;
     }
 
-   
+    
+    pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
+        let pc_print = self.registers.get_pc();
+        println!("pc - 0x{:X}", pc_print);
 
-
-
-    pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) { 
         if !self.bios_executed {
+            // execute bios until end of data
             if self.registers.get_pc() < bios.data.len() as u16 {
                 let mut opcode = self.fetch_next_inst(mem);
                 //if CB, read another byte, else decode and execute
@@ -65,9 +69,16 @@ impl Cpu {
             else {
                 self.bios_executed = true;
                 mem.load_rom_to_mem();
+                self.rom_loaded = true;
             }
         }
-        else if !self.halted {
+        // else if !self.halted {
+        else {
+            // load rom here in case we want to test skipping bios
+            if !self.rom_loaded {
+                mem.load_rom_to_mem();
+                self.rom_loaded = true;
+            }
             let mut opcode = self.fetch_next_inst(mem);
             //if CB, read another byte, else decode and execute
             let mut is_cb_opcode = false;
@@ -82,9 +93,7 @@ impl Cpu {
             };
             self.execute_inst(inst, mem, is_cb_opcode);
         }
-        
-
-        
+        self.last_cycles
     }
 
     pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {
@@ -320,12 +329,23 @@ impl Cpu {
                 },
                 0x18 => {
                     // JR S8
-                    let current_pc = self.registers.get_pc();
-                    let new_pc = u16::from(mem.read(self.registers.get_pc() + 1));
-                    self.registers.set_pc(current_pc + new_pc);
+                    let pc = self.registers.get_pc();
+                    let pc_offset_signed = mem.read(pc) as i8;
+                    if pc_offset_signed < 0 {
+                        let neg_offset = pc_offset_signed.abs() as u8;
+                        // need to +1 because we start counting on the next op
+                        let new_pc = pc - (neg_offset as u16) + 1;
+                        self.registers.set_pc(new_pc);
+                    }
+                    else {
+                        let offset = mem.read(pc) as u16;
+                        // need to +1 because we start counting on the next op
+                        let new_pc = pc + offset + 1;
+                        self.registers.set_pc(new_pc);
+                    }
+                    //
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
-                    // don't inc pc here because we jumped
                 },
                 0x19 => {
                     // ADD HL DE
@@ -416,9 +436,19 @@ impl Cpu {
                     let z_flag = self.registers.is_z_flag_set();
                     if !z_flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset = mem.read(pc) as u16;
-                        let new_pc = pc + pc_offset;
-                        self.registers.set_pc(new_pc);
+                        let pc_offset_signed = mem.read(pc) as i8;
+                        if pc_offset_signed < 0 {
+                            let neg_offset = pc_offset_signed.abs() as u8;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc - (neg_offset as u16) + 1;
+                            self.registers.set_pc(new_pc);
+                        }
+                        else {
+                            let offset = mem.read(pc) as u16;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc + offset + 1;
+                            self.registers.set_pc(new_pc);
+                        }
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
@@ -510,9 +540,19 @@ impl Cpu {
                     let z_flag = self.registers.is_z_flag_set();
                     if z_flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset = mem.read(pc) as u16;
-                        let new_pc = pc + pc_offset;
-                        self.registers.set_pc(new_pc);
+                        let pc_offset_signed = mem.read(pc) as i8;
+                        if pc_offset_signed < 0 {
+                            let neg_offset = pc_offset_signed.abs() as u8;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc - (neg_offset as u16) + 1;
+                            self.registers.set_pc(new_pc);
+                        }
+                        else {
+                            let offset = mem.read(pc) as u16;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc + offset + 1;
+                            self.registers.set_pc(new_pc);
+                        }
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
@@ -594,11 +634,21 @@ impl Cpu {
                 0x30 => {
                     // JR NC S8
                     let c_flag = self.registers.is_c_flag_set();
-                    if c_flag {
+                    if !c_flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset = mem.read(pc) as u16;
-                        let new_pc = pc + pc_offset;
-                        self.registers.set_pc(new_pc);
+                        let pc_offset_signed = mem.read(pc) as i8;
+                        if pc_offset_signed < 0 {
+                            let neg_offset = pc_offset_signed.abs() as u8;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc - (neg_offset as u16) + 1;
+                            self.registers.set_pc(new_pc);
+                        }
+                        else {
+                            let offset = mem.read(pc) as u16;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc + offset + 1;
+                            self.registers.set_pc(new_pc);
+                        }
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
@@ -673,9 +723,19 @@ impl Cpu {
                     let flag = self.registers.is_c_flag_set();
                     if flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset = mem.read(pc) as u16;
-                        let new_pc = pc + pc_offset;
-                        self.registers.set_pc(new_pc);
+                        let pc_offset_signed = mem.read(pc) as i8;
+                        if pc_offset_signed < 0 {
+                            let neg_offset = pc_offset_signed.abs() as u8;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc - (neg_offset as u16) + 1;
+                            self.registers.set_pc(new_pc);
+                        }
+                        else {
+                            let offset = mem.read(pc) as u16;
+                            // need to +1 because we start counting on the next op
+                            let new_pc = pc + offset + 1;
+                            self.registers.set_pc(new_pc);
+                        }
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
@@ -1945,6 +2005,93 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xC6 => {
+                    // ADD A D8
+                    let a = self.registers.get_a();
+                    let imm = mem.read(self.registers.get_pc());
+                    let result = a.wrapping_add(imm);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xC7 => {
+                    // RST 0
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc to 0x00
+                    self.registers.set_pc(0x00);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xC9 => {
+                    // RET
+                    // get 16 bit add from SP
+                    let sp = self.registers.get_sp();
+                    let lo_sp = mem.read(sp);
+                    let hi_sp = mem.read(sp + 1);
+                    let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
+                    //set pc to 16 bit add
+                    self.registers.set_pc(ret_addr);
+                    // shrink stack by 2
+                    let new_sp = self.registers.get_sp() + 2;
+                    self.registers.set_sp(new_sp);
+                    // set pc to ret addr
+                    self.registers.set_pc(ret_addr);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xCD => {
+                    // CALL A16
+                    let pc = self.registers.get_pc();
+                    // get 16 bit address in next 2 bytes
+                    let lo_call = mem.read(pc);
+                    let hi_call = mem.read(pc + 1);
+                    // set new pc
+                    self.registers.set_pc(u16::from_le_bytes([lo_call, hi_call]));
+                    // push old pc to stack
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xCF => {
+                    // RST 1
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc to 0x08
+                    self.registers.set_pc(0x08);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
                 0xD0 => {
                     // RET NC
                     if !self.registers.is_c_flag_set() {
@@ -1955,16 +2102,6 @@ impl Cpu {
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
-                },
-                0xC6 => {
-                    // ADD A, d8
-                    let a = self.registers.get_a();
-                    let imm = mem.read(self.registers.get_pc());
-                    let result = a.wrapping_add(imm);
-                    self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.registers.inc_pc_by_inst_val(inst.size);
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xD1 => {
                     // POP DE
@@ -1977,10 +2114,218 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xD5 => {
+                    // PUSH DE
+                    // get the contents of DE
+                    let de = self.registers.get_de();
+                    let lo_de = (de & 0x00FF) as u8;
+                    let hi_de = (de >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of de in sp
+                    // store msb of de in sp + 1
+                    mem.write(new_sp, lo_de);
+                    mem.write(new_sp + 1, hi_de);
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE5 => {
+                    // PUSH HL
+                    // get the contents of HL
+                    let hl = self.registers.get_hl();
+                    let lo_hl = (hl & 0x00FF) as u8;
+                    let hi_hl = (hl >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of hl in sp
+                    // store msb of hl in sp + 1
+                    mem.write(new_sp, lo_hl);
+                    mem.write(new_sp + 1, hi_hl);
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xDF => {
+                    // RST 3
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc to 0x18
+                    self.registers.set_pc(0x18);
+                },
+                0xE0 => {
+                    // LD (A8) A
+                    // get the value in reg A
+                    let a = self.registers.get_a();
+                    // calculate the address with 0xFF00 + PC
+                    let offset = mem.read(self.registers.get_pc()) as u16;
+                    // Add the offset to 0xFF00
+                    let base = 0xFF00;
+                    let addr = base + offset;
+                    // store the val from a in the addr
+                    mem.write(addr, a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE2 => {
+                    // LD (C) A
+                    // get the value in reg A and C
+                    let a = self.registers.get_a();
+                    let offset = self.registers.get_c() as u16;
+                    // calculate the address with 0xFF00 + C
+                    // Add the offset to 0xFF00
+                    let base = 0xFF00;
+                    let addr = base + offset;
+                    // store the val from a in the addr
+                    mem.write(addr, a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEA => {
+                    // LD (A16) A
+                    // get the value in reg A
+                    let a = self.registers.get_a();
+                    // store it in the addr in next 2 bytes
+                    let lo = mem.read(self.registers.get_pc());
+                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let addr = u16::from_le_bytes([lo, hi]);
+                    // store the val from a in the addr
+                    mem.write(addr, a);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xEF => {
+                    // RST 5
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc to 0x28
+                    self.registers.set_pc(0x28);
+                },
+                0xF0 => {
+                    // LD A (A8)
+                    // get the value at PC
+                    let offset = mem.read(self.registers.get_pc()) as u16;
+                    // Add the offset to 0xFF00
+                    let base = 0xFF00;
+                    let addr = base + offset;
+                    // deref that mem address
+                    let val = mem.read(addr);
+                    // store the value in A
+                    self.registers.set_a(val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF2 => {
+                    // LD A, (C)
+                    // get the value of register C
+                    let offset = self.registers.get_c() as u16;
+                    // Add the offset to 0xFF00
+                    let base = 0xFF00;
+                    let addr = base + offset;
+                    // deref that mem address
+                    let val = mem.read(addr);
+                    // store the value in A
+                    self.registers.set_a(val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF5 => {
+                    // PUSH AF
+                    // get the contents of AF
+                    let af = self.registers.get_af();
+                    let lo_af = (af & 0x00FF) as u8;
+                    let hi_af = (af >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of af in sp
+                    // store msb of af in sp + 1
+                    mem.write(new_sp, lo_af);
+                    mem.write(new_sp + 1, hi_af);
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFA => {
+                    // LD A, (a16)
+                    // get the 16-bit immediate address from PC and PC+1
+                    let lo = mem.read(self.registers.get_pc());
+                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let addr = u16::from_le_bytes([lo, hi]);
+                    // deref that mem address
+                    let val = mem.read(addr);
+                    // store the value in A
+                    self.registers.set_a(val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFE => {
+                    // CP D8
+                    let a = self.registers.get_a();
+                    let val = mem.read(self.registers.get_pc());
+                    if a.wrapping_sub(val) == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFF => {
+                    // RST 7
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp().wrapping_sub(2);
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc to 0x38
+                    self.registers.set_pc(0x38);
+                },
                 _ => {
                     //todo
                     // panic here later once I've worked out the rest of code
-                    println!("unsure of opcode - {}", inst.opcode);
+                    let pc = self.registers.get_pc();
+                    println!("current pc is 0x{:X}, unsure of opcode 0x{:X}", pc, inst.opcode);
                 }
             } // match
         }
@@ -5557,11 +5902,11 @@ impl Cpu {
                 _ => {
                     // todo
                     // panic here later once I've worked out the rest of code
-                    println!("unsure of opcode - {}", inst.opcode);
+                    let pc = self.registers.get_pc();
+                    println!("current pc is 0x{:X}, unsure of opcode 0x{:X}", pc, inst.opcode);
                 }
             }
         }
-        
     } // fn
 
    
@@ -6580,589 +6925,589 @@ impl Cpu {
         });
         all_instructions.insert(0x90, Instruction {
             opcode: 0x90,
-            name: "UNIMPLEMENTED_90",
-            cycles: 0,
+            name: "SUB B",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x91, Instruction {
             opcode: 0x91,
-            name: "UNIMPLEMENTED_91",
-            cycles: 0,
+            name: "SUB C",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x92, Instruction {
             opcode: 0x92,
-            name: "UNIMPLEMENTED_92",
-            cycles: 0,
+            name: "SUB D",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x93, Instruction {
             opcode: 0x93,
-            name: "UNIMPLEMENTED_93",
-            cycles: 0,
+            name: "SUB E",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x94, Instruction {
             opcode: 0x94,
-            name: "UNIMPLEMENTED_94",
-            cycles: 0,
+            name: "SUB H",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x95, Instruction {
             opcode: 0x95,
-            name: "UNIMPLEMENTED_95",
-            cycles: 0,
+            name: "SUB L",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x96, Instruction {
             opcode: 0x96,
-            name: "UNIMPLEMENTED_96",
-            cycles: 0,
+            name: "SUB (HL)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x97, Instruction {
             opcode: 0x97,
-            name: "UNIMPLEMENTED_97",
-            cycles: 0,
+            name: "SUB A",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x98, Instruction {
             opcode: 0x98,
-            name: "UNIMPLEMENTED_98",
-            cycles: 0,
+            name: "SBC A, B",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x99, Instruction {
             opcode: 0x99,
-            name: "UNIMPLEMENTED_99",
-            cycles: 0,
+            name: "SBC A, C",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x9A, Instruction {
             opcode: 0x9A,
-            name: "UNIMPLEMENTED_9A",
-            cycles: 0,
+            name: "SBC A, D",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x9B, Instruction {
             opcode: 0x9B,
-            name: "UNIMPLEMENTED_9B",
-            cycles: 0,
+            name: "SBC A, E",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x9C, Instruction {
             opcode: 0x9C,
-            name: "UNIMPLEMENTED_9C",
-            cycles: 0,
+            name: "SBC A, H",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x9D, Instruction {
             opcode: 0x9D,
-            name: "UNIMPLEMENTED_9D",
-            cycles: 0,
+            name: "SBC A, L",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x9E, Instruction {
             opcode: 0x9E,
-            name: "UNIMPLEMENTED_9E",
-            cycles: 0,
+            name: "SBC A, (HL)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x9F, Instruction {
             opcode: 0x9F,
-            name: "UNIMPLEMENTED_9F",
-            cycles: 0,
+            name: "SBC A, A",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA0, Instruction {
             opcode: 0xA0,
-            name: "UNIMPLEMENTED_A0",
-            cycles: 0,
+            name: "AND B",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA1, Instruction {
             opcode: 0xA1,
-            name: "UNIMPLEMENTED_A1",
-            cycles: 0,
+            name: "AND C",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA2, Instruction {
             opcode: 0xA2,
-            name: "UNIMPLEMENTED_A2",
-            cycles: 0,
+            name: "AND D",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA3, Instruction {
             opcode: 0xA3,
-            name: "UNIMPLEMENTED_A3",
-            cycles: 0,
+            name: "AND E",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA4, Instruction {
             opcode: 0xA4,
-            name: "UNIMPLEMENTED_A4",
-            cycles: 0,
+            name: "AND H",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA5, Instruction {
             opcode: 0xA5,
-            name: "UNIMPLEMENTED_A5",
-            cycles: 0,
+            name: "AND L",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA6, Instruction {
             opcode: 0xA6,
-            name: "UNIMPLEMENTED_A6",
-            cycles: 0,
+            name: "AND (HL)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA7, Instruction {
             opcode: 0xA7,
-            name: "UNIMPLEMENTED_A7",
-            cycles: 0,
+            name: "AND A",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA8, Instruction {
             opcode: 0xA8,
-            name: "UNIMPLEMENTED_A8",
-            cycles: 0,
+            name: "XOR B",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xA9, Instruction {
             opcode: 0xA9,
-            name: "UNIMPLEMENTED_A9",
-            cycles: 0,
+            name: "XOR C",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xAA, Instruction {
             opcode: 0xAA,
-            name: "UNIMPLEMENTED_AA",
-            cycles: 0,
+            name: "XOR D",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xAB, Instruction {
             opcode: 0xAB,
-            name: "UNIMPLEMENTED_AB",
-            cycles: 0,
+            name: "XOR E",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xAC, Instruction {
             opcode: 0xAC,
-            name: "UNIMPLEMENTED_AC",
-            cycles: 0,
+            name: "XOR H",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xAD, Instruction {
             opcode: 0xAD,
-            name: "UNIMPLEMENTED_AD",
-            cycles: 0,
+            name: "XOR L",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xAE, Instruction {
             opcode: 0xAE,
-            name: "UNIMPLEMENTED_AE",
-            cycles: 0,
+            name: "XOR (HL)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xAF, Instruction {
             opcode: 0xAF,
-            name: "UNIMPLEMENTED_AF",
-            cycles: 0,
+            name: "XOR A",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB0, Instruction {
             opcode: 0xB0,
-            name: "UNIMPLEMENTED_B0",
-            cycles: 0,
+            name: "OR B",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB1, Instruction {
             opcode: 0xB1,
-            name: "UNIMPLEMENTED_B1",
-            cycles: 0,
+            name: "OR C",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB2, Instruction {
             opcode: 0xB2,
-            name: "UNIMPLEMENTED_B2",
-            cycles: 0,
+            name: "OR D",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB3, Instruction {
             opcode: 0xB3,
-            name: "UNIMPLEMENTED_B3",
-            cycles: 0,
+            name: "OR E",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB4, Instruction {
             opcode: 0xB4,
-            name: "UNIMPLEMENTED_B4",
-            cycles: 0,
+            name: "OR H",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB5, Instruction {
             opcode: 0xB5,
-            name: "UNIMPLEMENTED_B5",
-            cycles: 0,
+            name: "OR L",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB6, Instruction {
             opcode: 0xB6,
-            name: "UNIMPLEMENTED_B6",
-            cycles: 0,
+            name: "OR (HL)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB7, Instruction {
             opcode: 0xB7,
-            name: "UNIMPLEMENTED_B7",
-            cycles: 0,
+            name: "OR A",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB8, Instruction {
             opcode: 0xB8,
-            name: "UNIMPLEMENTED_B8",
-            cycles: 0,
+            name: "CP B",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xB9, Instruction {
             opcode: 0xB9,
-            name: "UNIMPLEMENTED_B9",
-            cycles: 0,
+            name: "CP C",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xBA, Instruction {
             opcode: 0xBA,
-            name: "UNIMPLEMENTED_BA",
-            cycles: 0,
+            name: "CP D",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xBB, Instruction {
             opcode: 0xBB,
-            name: "UNIMPLEMENTED_BB",
-            cycles: 0,
+            name: "CP E",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xBC, Instruction {
             opcode: 0xBC,
-            name: "UNIMPLEMENTED_BC",
-            cycles: 0,
+            name: "CP H",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xBD, Instruction {
             opcode: 0xBD,
-            name: "UNIMPLEMENTED_BD",
-            cycles: 0,
+            name: "CP L",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xBE, Instruction {
             opcode: 0xBE,
-            name: "UNIMPLEMENTED_BE",
-            cycles: 0,
+            name: "CP (HL)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xBF, Instruction {
             opcode: 0xBF,
-            name: "UNIMPLEMENTED_BF",
-            cycles: 0,
+            name: "CP A",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xC0, Instruction {
             opcode: 0xC0,
-            name: "UNIMPLEMENTED_C0",
-            cycles: 0,
+            name: "RET NZ",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xC1, Instruction {
             opcode: 0xC1,
-            name: "UNIMPLEMENTED_C1",
-            cycles: 0,
+            name: "POP BC",
+            cycles: 3,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xC2, Instruction {
             opcode: 0xC2,
-            name: "UNIMPLEMENTED_C2",
-            cycles: 0,
-            size: 1,
+            name: "JP NZ, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xC3, Instruction {
             opcode: 0xC3,
-            name: "UNIMPLEMENTED_C3",
-            cycles: 0,
-            size: 1,
+            name: "JP A16",
+            cycles: 4,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xC4, Instruction {
             opcode: 0xC4,
-            name: "UNIMPLEMENTED_C4",
-            cycles: 0,
-            size: 1,
+            name: "CALL NZ, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xC5, Instruction {
             opcode: 0xC5,
-            name: "UNIMPLEMENTED_C5",
-            cycles: 0,
+            name: "PUSH BC",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xC6, Instruction {
             opcode: 0xC6,
-            name: "UNIMPLEMENTED_C6",
-            cycles: 0,
-            size: 1,
+            name: "ADD A, D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xC7, Instruction {
             opcode: 0xC7,
-            name: "UNIMPLEMENTED_C7",
-            cycles: 0,
+            name: "RST 00H",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xC8, Instruction {
             opcode: 0xC8,
-            name: "UNIMPLEMENTED_C8",
-            cycles: 0,
+            name: "RET Z",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xC9, Instruction {
             opcode: 0xC9,
-            name: "UNIMPLEMENTED_C9",
-            cycles: 0,
+            name: "RET",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xCA, Instruction {
             opcode: 0xCA,
-            name: "UNIMPLEMENTED_CA",
-            cycles: 0,
-            size: 1,
+            name: "JP Z, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xCB, Instruction {
             opcode: 0xCB,
-            name: "UNIMPLEMENTED_CB",
-            cycles: 0,
+            name: "PREFIX",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xCC, Instruction {
             opcode: 0xCC,
-            name: "UNIMPLEMENTED_CC",
-            cycles: 0,
-            size: 1,
+            name: "CALL Z, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xCD, Instruction {
             opcode: 0xCD,
-            name: "UNIMPLEMENTED_CD",
-            cycles: 0,
-            size: 1,
+            name: "CALL A16",
+            cycles: 6,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xCE, Instruction {
             opcode: 0xCE,
-            name: "UNIMPLEMENTED_CE",
-            cycles: 0,
-            size: 1,
+            name: "ADC A, D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xCF, Instruction {
             opcode: 0xCF,
-            name: "UNIMPLEMENTED_CF",
-            cycles: 0,
+            name: "RST 08H",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD0, Instruction {
             opcode: 0xD0,
-            name: "UNIMPLEMENTED_D0",
-            cycles: 0,
+            name: "RET NC",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD1, Instruction {
             opcode: 0xD1,
-            name: "UNIMPLEMENTED_D1",
-            cycles: 0,
+            name: "POP DE",
+            cycles: 3,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD2, Instruction {
             opcode: 0xD2,
-            name: "UNIMPLEMENTED_D2",
-            cycles: 0,
-            size: 1,
+            name: "JP NC, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xD3, Instruction {
             opcode: 0xD3,
-            name: "UNIMPLEMENTED_D3",
+            name: "UNUSED",
             cycles: 0,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD4, Instruction {
             opcode: 0xD4,
-            name: "UNIMPLEMENTED_D4",
-            cycles: 0,
-            size: 1,
+            name: "CALL NC, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xD5, Instruction {
             opcode: 0xD5,
-            name: "UNIMPLEMENTED_D5",
-            cycles: 0,
+            name: "PUSH DE",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD6, Instruction {
             opcode: 0xD6,
-            name: "UNIMPLEMENTED_D6",
-            cycles: 0,
-            size: 1,
+            name: "SUB D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xD7, Instruction {
             opcode: 0xD7,
-            name: "UNIMPLEMENTED_D7",
-            cycles: 0,
+            name: "RST 10H",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD8, Instruction {
             opcode: 0xD8,
-            name: "UNIMPLEMENTED_D8",
-            cycles: 0,
+            name: "RET C",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xD9, Instruction {
             opcode: 0xD9,
-            name: "UNIMPLEMENTED_D9",
-            cycles: 0,
+            name: "RETI",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xDA, Instruction {
             opcode: 0xDA,
-            name: "UNIMPLEMENTED_DA",
-            cycles: 0,
-            size: 1,
+            name: "JP C, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xDB, Instruction {
             opcode: 0xDB,
-            name: "UNIMPLEMENTED_DB",
+            name: "UNUSED",
             cycles: 0,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xDC, Instruction {
             opcode: 0xDC,
-            name: "UNIMPLEMENTED_DC",
-            cycles: 0,
-            size: 1,
+            name: "CALL C, A16",
+            cycles: 3,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xDD, Instruction {
             opcode: 0xDD,
-            name: "UNIMPLEMENTED_DD",
+            name: "UNUSED",
             cycles: 0,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xDE, Instruction {
             opcode: 0xDE,
-            name: "UNIMPLEMENTED_DE",
-            cycles: 0,
-            size: 1,
+            name: "SBC D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xDF, Instruction {
             opcode: 0xDF,
-            name: "UNIMPLEMENTED_DF",
-            cycles: 0,
+            name: "RST 18H",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xE0, Instruction {
             opcode: 0xE0,
-            name: "UNIMPLEMENTED_E0",
-            cycles: 0,
-            size: 1,
+            name: "LD (A8) A",
+            cycles: 3,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xE1, Instruction {
             opcode: 0xE1,
-            name: "UNIMPLEMENTED_E1",
-            cycles: 0,
+            name: "PO HL",
+            cycles: 3,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xE2, Instruction {
             opcode: 0xE2,
-            name: "UNIMPLEMENTED_E2",
-            cycles: 0,
+            name: "LD (C) A",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xE3, Instruction {
             opcode: 0xE3,
             name: "UNIMPLEMENTED_E3",
-            cycles: 0,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
@@ -7175,44 +7520,44 @@ impl Cpu {
         });
         all_instructions.insert(0xE5, Instruction {
             opcode: 0xE5,
-            name: "UNIMPLEMENTED_E5",
-            cycles: 0,
+            name: "PUSH HL",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xE6, Instruction {
             opcode: 0xE6,
-            name: "UNIMPLEMENTED_E6",
-            cycles: 0,
-            size: 1,
+            name: "AND D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xE7, Instruction {
             opcode: 0xE7,
-            name: "UNIMPLEMENTED_E7",
-            cycles: 0,
+            name: "RST 4",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xE8, Instruction {
             opcode: 0xE8,
-            name: "UNIMPLEMENTED_E8",
-            cycles: 0,
-            size: 1,
+            name: "ADD SP S8",
+            cycles: 4,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xE9, Instruction {
             opcode: 0xE9,
-            name: "UNIMPLEMENTED_E9",
-            cycles: 0,
+            name: "JP HL",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xEA, Instruction {
             opcode: 0xEA,
-            name: "UNIMPLEMENTED_EA",
-            cycles: 0,
-            size: 1,
+            name: "LD (A16) A",
+            cycles: 4,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xEB, Instruction {
@@ -7238,127 +7583,127 @@ impl Cpu {
         });
         all_instructions.insert(0xEE, Instruction {
             opcode: 0xEE,
-            name: "UNIMPLEMENTED_EE",
-            cycles: 0,
-            size: 1,
+            name: "XOR D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xEF, Instruction {
             opcode: 0xEF,
-            name: "UNIMPLEMENTED_EF",
-            cycles: 0,
+            name: "RST 5",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF0, Instruction {
             opcode: 0xF0,
-            name: "UNIMPLEMENTED_F0",
-            cycles: 0,
-            size: 1,
+            name: "LD A (A8)",
+            cycles: 3,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xF1, Instruction {
             opcode: 0xF1,
-            name: "UNIMPLEMENTED_F1",
-            cycles: 0,
+            name: "POP AF",
+            cycles: 3,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF2, Instruction {
             opcode: 0xF2,
-            name: "UNIMPLEMENTED_F2",
-            cycles: 0,
+            name: "LD A (C)",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF3, Instruction {
             opcode: 0xF3,
-            name: "UNIMPLEMENTED_F3",
-            cycles: 0,
+            name: "DI",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF4, Instruction {
             opcode: 0xF4,
-            name: "UNIMPLEMENTED_F4",
+            name: "UNUSED",
             cycles: 0,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF5, Instruction {
             opcode: 0xF5,
-            name: "UNIMPLEMENTED_F5",
-            cycles: 0,
+            name: "PUSH AF",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF6, Instruction {
             opcode: 0xF6,
-            name: "UNIMPLEMENTED_F6",
-            cycles: 0,
-            size: 1,
+            name: "OR D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xF7, Instruction {
             opcode: 0xF7,
-            name: "UNIMPLEMENTED_F7",
-            cycles: 0,
+            name: "RST 30H",
+            cycles: 4,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xF8, Instruction {
             opcode: 0xF8,
-            name: "UNIMPLEMENTED_F8",
-            cycles: 0,
-            size: 1,
+            name: "LD HL SP+S8",
+            cycles: 3,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xF9, Instruction {
             opcode: 0xF9,
-            name: "UNIMPLEMENTED_F9",
-            cycles: 0,
+            name: "LD SP HL",
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xFA, Instruction {
             opcode: 0xFA,
-            name: "UNIMPLEMENTED_FA",
-            cycles: 0,
-            size: 1,
+            name: "LD A (A16)",
+            cycles: 4,
+            size: 3,
             flags: &[],
         });
         all_instructions.insert(0xFB, Instruction {
             opcode: 0xFB,
-            name: "UNIMPLEMENTED_FB",
-            cycles: 0,
+            name: "EI",
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xFC, Instruction {
             opcode: 0xFC,
-            name: "UNIMPLEMENTED_FC",
+            name: "UNUSED",
             cycles: 0,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xFD, Instruction {
             opcode: 0xFD,
-            name: "UNIMPLEMENTED_FD",
+            name: "UNUSED",
             cycles: 0,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0xFE, Instruction {
             opcode: 0xFE,
-            name: "UNIMPLEMENTED_FE",
-            cycles: 0,
-            size: 1,
+            name: "CP D8",
+            cycles: 2,
+            size: 2,
             flags: &[],
         });
         all_instructions.insert(0xFF, Instruction {
             opcode: 0xFF,
-            name: "UNIMPLEMENTED_FF",
-            cycles: 0,
+            name: "RST 38H",
+            cycles: 4,
             size: 1,
             flags: &[],
         });

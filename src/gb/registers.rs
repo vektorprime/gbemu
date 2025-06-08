@@ -199,11 +199,17 @@ impl Registers {
     pub fn inc_a(&mut self) {
         // wrap on overflow 
         self.a = self.a.wrapping_add(1);
+        if self.a == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn dec_a(&mut self) {
        // wrap on underflow
-        self.a = self.a.wrapping_sub(1); 
+        self.a = self.a.wrapping_sub(1);
+        if self.a == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_b(&self) -> u8 {
@@ -217,11 +223,17 @@ impl Registers {
     pub fn inc_b(&mut self) {
         // wrap on overflow 
         self.b = self.b.wrapping_add(1);
+        if self.b == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn dec_b(&mut self) {
         // wrap on underflow
         self.b = self.b.wrapping_sub(1);
+        if self.b == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_c(&self) -> u8 {
@@ -235,11 +247,17 @@ impl Registers {
     pub fn inc_c(&mut self) {
         // wrap on overflow 
         self.c = self.c.wrapping_add(1);
+        if self.c == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn dec_c(&mut self) {
         // wrap on underflow
         self.c = self.c.wrapping_sub(1);
+        if self.c == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_d(&self) -> u8 {
@@ -254,11 +272,17 @@ impl Registers {
     pub fn inc_d(&mut self) {
         // wrap on overflow 
         self.d = self.d.wrapping_add(1);
+        if self.d == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn dec_d(&mut self) {
         // wrap on underflow
         self.d = self.d.wrapping_sub(1);
+        if self.d == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_e(&self) -> u8 {
@@ -272,10 +296,16 @@ impl Registers {
     pub fn inc_e(&mut self) {
         // wrap on overflow 
         self.e = self.e.wrapping_add(1);
+        if self.e == 0 {
+            self.set_z_flag()
+        }
     }
     pub fn dec_e(&mut self) {
         // wrap on underflow
         self.e = self.e.wrapping_sub(1);
+        if self.e == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_f(&self) -> u8 {
@@ -297,11 +327,17 @@ impl Registers {
     pub fn inc_h(&mut self) {
         // wrap on overflow 
         self.h = self.h.wrapping_add(1);
+        if self.h == 0 {
+            self.set_z_flag()
+        }
     }
  
     pub fn dec_h(&mut self) {
         // wrap on overflow 
-        self.h = self.h.wrapping_sub(1); 
+        self.h = self.h.wrapping_sub(1);
+        if self.h == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_l(&self) -> u8 {
@@ -315,11 +351,17 @@ impl Registers {
     pub fn inc_l(&mut self) {
         // wrap on overflow 
         self.l = self.l.wrapping_add(1);
+        if self.l == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn dec_l(&mut self) {
        // wrap on underflow
-        self.l = self.l.wrapping_sub(1); 
+        self.l = self.l.wrapping_sub(1);
+        if self.l == 0 {
+            self.set_z_flag()
+        }
     }
 
     pub fn get_sp(&self) -> u16 {
@@ -453,7 +495,6 @@ impl Registers {
             size -= 1;
             self.pc += size as u16;
         }
-
     }
 
     pub fn inc_pc(&mut self) -> u16 {

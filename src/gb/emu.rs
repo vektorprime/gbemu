@@ -4,6 +4,7 @@ use crate::gb::bios::*;
 use crate::gb::mbc::*;
  use crate::gb::graphics::ppu::*;
  use crate::gb::graphics::lcd::*;
+use crate::gb::hwregisters::HardwareRegisters;
 
 pub struct Emu {
     pub cpu: Cpu,
@@ -39,10 +40,8 @@ impl Emu {
     }
 
     pub fn tick(&mut self) {
-        self.cpu.tick(&mut self.mbc, &self.bios);
-        self.ppu.tick(&self.mbc);
+        let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
+        self.ppu.tick(&mut self.mbc, cycles);
     }
-
-  
 
 }

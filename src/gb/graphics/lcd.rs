@@ -18,7 +18,6 @@ pub struct Lcd {
 }
 
 
-
 impl Lcd {
     /// Create a new `World` instance that can draw a moving box.
     pub fn new() -> Self {
