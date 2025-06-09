@@ -10,6 +10,8 @@ pub const MAX_T_CYCLE_PER_FRAME: u64 = 70224;
 pub struct Cpu {
     pub registers: Registers,
     pub ime: bool, // interrupt master
+    pub pending_enable_ime: bool,
+    pub pending_enable_ime_counter: u8,
     //pub opcode: u8, // opcode of current inst.
     pub cycles: u64, // total m cycle count
     pub last_cycles: u64,
@@ -26,7 +28,9 @@ impl Cpu {
         Cpu {
             registers: Registers::new(),
             ime: false,
-            //opcode: 0, 
+            pending_enable_ime: false,
+            pending_enable_ime_counter: 0,
+            //opcode: 0,
             cycles: 0,
             last_cycles: 0,
             halted: false, 
@@ -44,11 +48,35 @@ impl Cpu {
         self.last_cycles = size as u64;
     }
 
-    
+    pub fn handle_interrupt(&mut self, mem: &mut Mbc) {
+        if self.ime {
+            // check that each interrupt is enabled and requested, then handle
+            if mem.hw_reg.is_vblank_bit0_interrupt_enabled() {
+
+            }
+            if mem.hw_reg.is_lcd_stat_bit1_interrupt_enabled() {
+
+            }
+            if mem.hw_reg.is_timer_bit2_interrupt_enabled() {
+
+            }
+            if mem.hw_reg.is_serial_bit3_interrupt_enabled() {
+
+            }
+            if mem.hw_reg.is_joypad_bit4_interrupt_enabled() {
+
+            }
+        }
+    }
+
     pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
         let pc_print = self.registers.get_pc();
         println!("pc - 0x{:X}", pc_print);
-
+        // debug
+        if self.registers.get_pc() == 0x2820 {
+            println!("pc is 0x2820");
+        }
+        // end debug
         if !self.bios_executed {
             // execute bios until end of data
             if self.registers.get_pc() < bios.data.len() as u16 {
@@ -84,7 +112,7 @@ impl Cpu {
             let mut is_cb_opcode = false;
             if opcode == 0xCB {
                 is_cb_opcode = true;
-                opcode = self.fetch_next_inst(mem);
+                opcode = self.fetch_next_cb_inst(mem);
             }
             let inst = if is_cb_opcode {
                 self.cb_instructions.get(&opcode).unwrap().clone()
@@ -92,6 +120,14 @@ impl Cpu {
                 self.instructions.get(&opcode).unwrap().clone()
             };
             self.execute_inst(inst, mem, is_cb_opcode);
+        }
+
+        if self.pending_enable_ime {
+            self.pending_enable_ime_counter += 1;
+            if self.pending_enable_ime_counter == 2 {
+                self.ime = true;
+                self.pending_enable_ime_counter = 0;
+            }
         }
         self.last_cycles
     }
@@ -101,6 +137,10 @@ impl Cpu {
         mem.read(pc_reg)
     }
 
+    pub fn fetch_next_cb_inst(&mut self, mem: &Mbc) -> u8 {
+        let pc_reg = self.registers.get_pc();
+        mem.read(pc_reg)
+    }
 
     pub fn execute_inst(&mut self,  inst: Instruction, mem: &mut Mbc, is_cb_opcode: bool) {
         // todo
@@ -349,21 +389,27 @@ impl Cpu {
                 },
                 0x19 => {
                     // ADD HL DE
-                    let first_operand = self.registers.get_hl();
-                    let second_operand = self.registers.get_de();
+                    let hl = self.registers.get_hl();
+                    let de = self.registers.get_de();
 
-                    let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
-                    // check for 12 bit overflow and set h flag
-                    let overflowed_12bit_max = 4096;
-                    if new_val > overflowed_12bit_max {
+                    let (result, carry) = hl.overflowing_add(de);
+
+                    // Half-carry: check if bit 11 overflowed
+                    if ((hl & 0x0FFF) + (de & 0x0FFF)) > 0x0FFF {
                         self.registers.set_h_flag();
+                    } else {
+                        self.registers.clear_h_flag();
                     }
-                    // check for 16 bit overflow and set c flag
-                    if overflowed {
+
+                    // Carry flag
+                    if carry {
                         self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
                     }
+
                     // always set val whether overflow or not
-                    self.registers.set_hl(new_val);
+                    self.registers.set_hl(result);
 
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -477,8 +523,8 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x23 => {
-                    // INC DE
-                    self.registers.inc_de();
+                    // INC HL
+                    self.registers.inc_hl();
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -568,17 +614,20 @@ impl Cpu {
                     
                     let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
                     // check for 12 bit overflow and set h flag
-                    let overflowed_12bit_max = 4096;
-                    if new_val > overflowed_12bit_max {
+                    if ((first_operand & 0x0FFF) + (second_operand & 0x0FFF)) > 0x0FFF {
                         self.registers.set_h_flag();
+                    } else {
+                        self.registers.clear_h_flag();
                     }
                     // check for 16 bit overflow and set c flag
                     if overflowed {
                         self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
                     }
                     // always set val whether overflow or not
                     self.registers.set_hl(new_val);
-                    
+
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -751,17 +800,20 @@ impl Cpu {
                     
                     let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
                     // check for 12 bit overflow and set h flag
-                    let overflowed_12bit_max = 4096;
-                    if new_val > overflowed_12bit_max {
+                    if ((first_operand & 0x0FFF) + (second_operand & 0x0FFF)) > 0x0FFF {
                         self.registers.set_h_flag();
+                    } else {
+                        self.registers.clear_h_flag();
                     }
                     // check for 16 bit overflow and set c flag
                     if overflowed {
                         self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
                     }
                     // always set val whether overflow or not
                     self.registers.set_hl(new_val);
-                    
+
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2054,22 +2106,22 @@ impl Cpu {
                 0xCD => {
                     // CALL A16
                     let pc = self.registers.get_pc();
-                    // get 16 bit address in next 2 bytes
                     let lo_call = mem.read(pc);
                     let hi_call = mem.read(pc + 1);
-                    // set new pc
-                    self.registers.set_pc(u16::from_le_bytes([lo_call, hi_call]));
-                    // push old pc to stack
-                    // split 16 bits to 2x 8 bit
-                    let lo_pc = (pc & 0x00FF) as u8;
-                    let hi_pc = (pc >> 8) as u8;
-                    // grow stack down by 2
+                    let target_addr = u16::from_le_bytes([lo_call, hi_call]);
+
+                    // Return address = PC after the operand (2 bytes)
+                    let return_addr = pc + 2;
+                    let lo_pc = (return_addr & 0x00FF) as u8;
+                    let hi_pc = (return_addr >> 8) as u8;
+
                     let new_sp = self.registers.get_sp() - 2;
                     self.registers.set_sp(new_sp);
-                    // store lsb of bc in sp
-                    // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc);          // write low byte
+                    mem.write(new_sp + 1, hi_pc);      // write high byte
+
+                    self.registers.set_pc(target_addr); //
+
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
@@ -2132,24 +2184,6 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
-                0xE5 => {
-                    // PUSH HL
-                    // get the contents of HL
-                    let hl = self.registers.get_hl();
-                    let lo_hl = (hl & 0x00FF) as u8;
-                    let hi_hl = (hl >> 8) as u8;
-                    // grow stack down by 2
-                    let new_sp = self.registers.get_sp() - 2;
-                    self.registers.set_sp(new_sp);
-                    // store lsb of hl in sp
-                    // store msb of hl in sp + 1
-                    mem.write(new_sp, lo_hl);
-                    mem.write(new_sp + 1, hi_hl);
-
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles);
-                    self.registers.inc_pc_by_inst_val(inst.size);
-                },
                 0xDF => {
                     // RST 3
                     // push pc to stack
@@ -2182,6 +2216,17 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xE1 => {
+                    // POP HL
+                    let address = self.registers.get_sp();
+                    let lo = mem.read(address);
+                    let hi = mem.read(address + 1);
+                    self.registers.set_hl_with_two_val(lo, hi);
+                    self.registers.set_sp(address + 2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 0xE2 => {
                     // LD (C) A
                     // get the value in reg A and C
@@ -2196,6 +2241,41 @@ impl Cpu {
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE5 => {
+                    // PUSH HL
+                    // get the contents of HL
+                    let hl = self.registers.get_hl();
+                    let lo_hl = (hl & 0x00FF) as u8;
+                    let hi_hl = (hl >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of hl in sp
+                    // store msb of hl in sp + 1
+                    mem.write(new_sp, lo_hl);
+                    mem.write(new_sp + 1, hi_hl);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE6 => {
+                    //AND D8
+                    let a = self.registers.get_a();
+                    let pc = self.registers.get_pc();
+                    let b = mem.read(pc);
+                    let result = a & b;
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xE9 => {
+                    //JP HL
+                    let hl = self.registers.get_hl();
+                    self.registers.set_pc(hl);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xEA => {
                     // LD (A16) A
@@ -2258,6 +2338,15 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xF3 => {
+                    // DI
+                    // set IME to enable immediately
+                    self.ime = true;
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 0xF5 => {
                     // PUSH AF
                     // get the contents of AF
@@ -2286,6 +2375,15 @@ impl Cpu {
                     let val = mem.read(addr);
                     // store the value in A
                     self.registers.set_a(val);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xFB => {
+                    // IE
+                    // set IME to enable AFTER the next inst. executes
+                    self.pending_enable_ime = true;
+
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6190,28 +6288,28 @@ impl Cpu {
         all_instructions.insert(0x27, Instruction {
             opcode: 0x27,
             name: "DAA",
-            cycles: 4,
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x28, Instruction {
             opcode: 0x28,
             name: "JR Z R8",
-            cycles: 12, // or 8 if condition not met
+            cycles: 3, // or 8 if condition not met
             size: 2,
             flags: &[],
         });
         all_instructions.insert(0x29, Instruction {
             opcode: 0x29,
             name: "ADD HL HL",
-            cycles: 8,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x2A, Instruction {
             opcode: 0x2A,
             name: "LD A (HL+)",
-            cycles: 8,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
@@ -6219,105 +6317,105 @@ impl Cpu {
         all_instructions.insert(0x2B, Instruction {
             opcode: 0x2B,
             name: "DEC HL",
-            cycles: 8,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x2C, Instruction {
             opcode: 0x2C,
             name: "INC L",
-            cycles: 4,
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x2D, Instruction {
             opcode: 0x2D,
             name: "DEC L",
-            cycles: 4,
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x2E, Instruction {
             opcode: 0x2E,
             name: "LD L D8",
-            cycles: 8,
+            cycles: 2,
             size: 2,
             flags: &[],
         });
         all_instructions.insert(0x2F, Instruction {
             opcode: 0x2F,
             name: "CPL",
-            cycles: 4,
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x30, Instruction {
             opcode: 0x30,
-            name: "JR NC R8",
-            cycles: 12,
+            name: "JR NC S8",
+            cycles: 3,
             size: 2,
             flags: &[],
         });
         all_instructions.insert(0x31, Instruction {
             opcode: 0x31,
             name: "LD SP D16",
-            cycles: 12,
+            cycles: 3,
             size: 3,
             flags: &[],
         });
         all_instructions.insert(0x32, Instruction {
             opcode: 0x32,
             name: "LD HLD A",
-            cycles: 8,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x33, Instruction {
             opcode: 0x33,
             name: "INC SP",
-            cycles: 8,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x34, Instruction {
             opcode: 0x34,
             name: "INC HL",
-            cycles: 12,
+            cycles: 3,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x35, Instruction {
             opcode: 0x35,
             name: "DEC HL",
-            cycles: 12,
+            cycles: 3,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x36, Instruction {
             opcode: 0x36,
             name: "LD HL D8",
-            cycles: 12,
+            cycles: 3,
             size: 2,
             flags: &[],
         });
         all_instructions.insert(0x37, Instruction {
             opcode: 0x37,
             name: "SCF",
-            cycles: 4,
+            cycles: 1,
             size: 1,
             flags: &[],
         });
         all_instructions.insert(0x38, Instruction {
             opcode: 0x38,
             name: "JR C R8",
-            cycles: 12,
+            cycles: 3,
             size: 2,
             flags: &[],
         });
         all_instructions.insert(0x39, Instruction {
             opcode: 0x39,
             name: "ADD HL SP",
-            cycles: 8,
+            cycles: 2,
             size: 1,
             flags: &[],
         });
@@ -6862,7 +6960,7 @@ impl Cpu {
         });
         all_instructions.insert(0x87, Instruction {
             opcode: 0x87,
-            name: "ADD A, A",
+            name: "ADD A A",
             cycles: 1,
             size: 1,
             flags: &[],
@@ -7275,7 +7373,7 @@ impl Cpu {
         });
         all_instructions.insert(0xC2, Instruction {
             opcode: 0xC2,
-            name: "JP NZ, A16",
+            name: "JP NZ A16",
             cycles: 3,
             size: 3,
             flags: &[],
@@ -7338,7 +7436,7 @@ impl Cpu {
         });
         all_instructions.insert(0xCB, Instruction {
             opcode: 0xCB,
-            name: "PREFIX",
+            name: "UNIMPLEMENTED_CB",
             cycles: 1,
             size: 1,
             flags: &[],
@@ -7430,7 +7528,7 @@ impl Cpu {
         all_instructions.insert(0xD8, Instruction {
             opcode: 0xD8,
             name: "RET C",
-            cycles: 2,
+            cycles: 5,
             size: 1,
             flags: &[],
         });
@@ -7443,8 +7541,8 @@ impl Cpu {
         });
         all_instructions.insert(0xDA, Instruction {
             opcode: 0xDA,
-            name: "JP C, A16",
-            cycles: 3,
+            name: "JP C A16",
+            cycles: 4,
             size: 3,
             flags: &[],
         });
@@ -7458,7 +7556,7 @@ impl Cpu {
         all_instructions.insert(0xDC, Instruction {
             opcode: 0xDC,
             name: "CALL C, A16",
-            cycles: 3,
+            cycles: 6,
             size: 3,
             flags: &[],
         });
@@ -7492,7 +7590,7 @@ impl Cpu {
         });
         all_instructions.insert(0xE1, Instruction {
             opcode: 0xE1,
-            name: "PO HL",
+            name: "POP HL",
             cycles: 3,
             size: 1,
             flags: &[],
@@ -7759,7 +7857,7 @@ impl Cpu {
         all_instructions.insert(0x06, Instruction {
             opcode: 0x06,
             name: "RLC (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -7815,7 +7913,7 @@ impl Cpu {
         all_instructions.insert(0x0E, Instruction {
             opcode: 0x0E,
             name: "RRC (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -7871,7 +7969,7 @@ impl Cpu {
         all_instructions.insert(0x16, Instruction {
             opcode: 0x16,
             name: "RL (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -7927,7 +8025,7 @@ impl Cpu {
         all_instructions.insert(0x1E, Instruction {
             opcode: 0x1E,
             name: "RR (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -7983,7 +8081,7 @@ impl Cpu {
         all_instructions.insert(0x26, Instruction {
             opcode: 0x26,
             name: "SLA (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8039,7 +8137,7 @@ impl Cpu {
         all_instructions.insert(0x2E, Instruction {
             opcode: 0x2E,
             name: "SRA (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8095,7 +8193,7 @@ impl Cpu {
         all_instructions.insert(0x36, Instruction {
             opcode: 0x36,
             name: "SWAP (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8151,7 +8249,7 @@ impl Cpu {
         all_instructions.insert(0x3E, Instruction {
             opcode: 0x3E,
             name: "SRL (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8655,7 +8753,7 @@ impl Cpu {
         all_instructions.insert(0x86, Instruction {
             opcode: 0x86,
             name: "RES 0 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8711,7 +8809,7 @@ impl Cpu {
         all_instructions.insert(0x8E, Instruction {
             opcode: 0x8E,
             name: "RES 1 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8767,7 +8865,7 @@ impl Cpu {
         all_instructions.insert(0x96, Instruction {
             opcode: 0x96,
             name: "RES 2 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8823,7 +8921,7 @@ impl Cpu {
         all_instructions.insert(0x9E, Instruction {
             opcode: 0x9E,
             name: "RES 3 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8879,7 +8977,7 @@ impl Cpu {
         all_instructions.insert(0xA6, Instruction {
             opcode: 0xA6,
             name: "RES 4 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8935,7 +9033,7 @@ impl Cpu {
         all_instructions.insert(0xAE, Instruction {
             opcode: 0xAE,
             name: "RES 5 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -8991,7 +9089,7 @@ impl Cpu {
         all_instructions.insert(0xB6, Instruction {
             opcode: 0xB6,
             name: "RES 6 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9047,7 +9145,7 @@ impl Cpu {
         all_instructions.insert(0xBE, Instruction {
             opcode: 0xBE,
             name: "RES 7 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9103,7 +9201,7 @@ impl Cpu {
         all_instructions.insert(0xC6, Instruction {
             opcode: 0xC6,
             name: "SET 0 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9159,7 +9257,7 @@ impl Cpu {
         all_instructions.insert(0xCE, Instruction {
             opcode: 0xCE,
             name: "SET 1 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9215,7 +9313,7 @@ impl Cpu {
         all_instructions.insert(0xD6, Instruction {
             opcode: 0xD6,
             name: "SET 2 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9271,7 +9369,7 @@ impl Cpu {
         all_instructions.insert(0xDE, Instruction {
             opcode: 0xDE,
             name: "SET 3 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9327,7 +9425,7 @@ impl Cpu {
         all_instructions.insert(0xE6, Instruction {
             opcode: 0xE6,
             name: "SET 4 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9383,7 +9481,7 @@ impl Cpu {
         all_instructions.insert(0xEE, Instruction {
             opcode: 0xEE,
             name: "SET 5 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9439,7 +9537,7 @@ impl Cpu {
         all_instructions.insert(0xF6, Instruction {
             opcode: 0xF6,
             name: "SET 6 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });
@@ -9495,7 +9593,7 @@ impl Cpu {
         all_instructions.insert(0xFE, Instruction {
             opcode: 0xFE,
             name: "SET 7 (HL)",
-            cycles: 4,
+            cycles: 1,
             size: 2,
             flags: &[],
         });

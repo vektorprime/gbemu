@@ -397,6 +397,11 @@ impl Registers {
         self.f = (val & 0xFF) as u8;
     }
 
+    pub fn set_af_with_two_val(&mut self, val1: u8, val2: u8) {
+        self.a = val2;
+        self.f = val1;
+    }
+
     pub fn get_bc(&self) -> u16 {
         (self.b as u16) << 8 | (self.c as u16)
     }
@@ -471,6 +476,12 @@ impl Registers {
         current = current.wrapping_add(1);
         self.set_hl(current);
     }
+
+    pub fn set_hl_with_two_val(&mut self, val1: u8, val2: u8) {
+        self.h = val2;
+        self.l = val1;
+    }
+
 
     pub fn dec_hl(&mut self) {
         let mut current = (self.h as u16) << 8 | (self.l as u16);

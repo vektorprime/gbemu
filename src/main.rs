@@ -49,12 +49,16 @@ fn main() -> Result<(), Error>  {
     //////////////////////
     // setup emu
     let debug = true;
+    
     let mut emu = Emu::new(ColorMode::Gray, debug);
     // rom is loaded after bios runs
     emu.load_rom_file(String::from("tetris.gb"));
     emu.load_bios();
+    
     let mut lcd = Lcd::new();
-    emu.init_ppu();
+    
+    
+    
 
     // //
     // // uncomment this to temp skip bios

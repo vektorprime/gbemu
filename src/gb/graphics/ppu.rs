@@ -30,6 +30,7 @@ pub struct Ppu {
     // pub bit7_lcd_ppu_enable: bool,
     pub tiles: Vec<Tile>, 
     //bg_tile_map: [u8; 1024],
+    pub ppu_init_complete: bool,
 }
 impl Ppu {
     pub fn new() -> Self {
@@ -55,8 +56,8 @@ impl Ppu {
             // obp1: 0,
             // wy: 0,
             // wx: 0,
-
-            tiles: Vec::new(), 
+            tiles: Vec::new(),
+            ppu_init_complete: false,
         }
     }
     
@@ -76,6 +77,7 @@ impl Ppu {
             let mut temp_tile: [u8; 16] = [0; 16];
             for y in 0..16 {
                 temp_tile[y] = mbc.read(address + x + (y as u16));
+                println!("Tile #{} bit {} is {}", x / 16, y, temp_tile[y] );
             } 
 
             // decode every 2 bytes as a row
@@ -136,6 +138,19 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mbc: &mut Mbc, cycles: u64) {
+        if !mbc.hw_reg.is_lcdc_bit7_enabled() {
+            println!("lcdc bit 7 not enabled yet, skipping ppu tick");
+            return;
+        }
+
+        if !self.ppu_init_complete {
+            self.load_all_tiles(&mbc);
+            self.ppu_init_complete = true;
+            println!("ppu init complete");
+
+
+        }
+
         let trigger_ly_inc = 114;
         let max_ly_value = 153;
         self.ly_inc_cycle += cycles;
@@ -146,7 +161,9 @@ impl Ppu {
             }
             self.ly_inc_cycle = 0;
         }
+
         let bg_map = self.get_bg_tile_map(mbc);
+
         self.mode_2_oam_scan();
         self.mode_3_draw();
         self.mode_0_h_blank();

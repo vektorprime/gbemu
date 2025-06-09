@@ -108,6 +108,9 @@ impl Mbc {
         let rom_type = self.rom.as_ref().unwrap().get_rom_type();
         match rom_type {
             RomType::Rom_Only => {
+                if (0x8000..=0x97FF).contains(&address) {
+                    println!("address in read_rom is 0x{:#x}", address)
+                }
                 return self.ram.read(address);
             },
             RomType::MBC3 => {
@@ -120,45 +123,71 @@ impl Mbc {
     }
     pub fn read(&self, address: u16) -> u8 {
         match address {
-            0xFF40 => {
-                return self.hw_reg.lcdc;
-            },
-            0xFF41 => {
-                return self.hw_reg.stat;
-            },
-            0xFF42 => {
-                return self.hw_reg.scy;
-            },
-            0xFF43 => {
-                return self.hw_reg.scx;
-            },
-            0xFF44 => {
-                return self.hw_reg.ly;
-            },
-            0xFF45 => {
-                return self.hw_reg.lyc;
-            },
-            0xFF46 => {
-                return self.hw_reg.dma;
-            },
-            0xFF47 => {
-                return self.hw_reg.bgp;
-            },
-            0xFF48 => {
-                return self.hw_reg.obp0;
-            },
-            0xFF49 => {
-                return self.hw_reg.obp1;
-            },
-            0xFF4A => {
-                return self.hw_reg.wy;
-            },
-            0xFF4B => {
-                return self.hw_reg.wx;
-            },
-            _ => {
-                return self.read_rom(address);
+            // Joypad and serial
+            0xFF00 => self.hw_reg.joyp,
+            0xFF01 => self.hw_reg.sb,
+            0xFF02 => self.hw_reg.sc,
+
+            // Timer
+            0xFF04 => self.hw_reg.div,
+            0xFF05 => self.hw_reg.tima,
+            0xFF06 => self.hw_reg.tma,
+            0xFF07 => self.hw_reg.tac,
+
+            // Interrupt flags
+            0xFF0F => self.hw_reg.intflags,
+
+            // LCD and scrolling
+            0xFF40 => self.hw_reg.lcdc,
+            0xFF41 => self.hw_reg.stat,
+            0xFF42 => self.hw_reg.scy,
+            0xFF43 => self.hw_reg.scx,
+            0xFF44 => self.hw_reg.ly,
+            0xFF45 => self.hw_reg.lyc,
+            0xFF46 => self.hw_reg.dma,
+            0xFF47 => self.hw_reg.bgp,
+            0xFF48 => self.hw_reg.obp0,
+            0xFF49 => self.hw_reg.obp1,
+            0xFF4A => self.hw_reg.wy,
+            0xFF4B => self.hw_reg.wx,
+
+            // Boot ROM control
+            0xFF50 => self.hw_reg.boot_rom_control,
+
+            // Audio (NR10–NR52)
+            0xFF10 => self.hw_reg.nr10,
+            0xFF11 => self.hw_reg.nr11,
+            0xFF12 => self.hw_reg.nr12,
+            0xFF13 => self.hw_reg.nr13,
+            0xFF14 => self.hw_reg.nr14,
+            0xFF16 => self.hw_reg.nr21,
+            0xFF17 => self.hw_reg.nr22,
+            0xFF18 => self.hw_reg.nr23,
+            0xFF19 => self.hw_reg.nr24,
+            0xFF1A => self.hw_reg.nr30,
+            0xFF1B => self.hw_reg.nr31,
+            0xFF1C => self.hw_reg.nr32,
+            0xFF1D => self.hw_reg.nr33,
+            0xFF1E => self.hw_reg.nr34,
+            0xFF20 => self.hw_reg.nr41,
+            0xFF21 => self.hw_reg.nr42,
+            0xFF22 => self.hw_reg.nr43,
+            0xFF23 => self.hw_reg.nr44,
+            0xFF24 => self.hw_reg.nr50,
+            0xFF25 => self.hw_reg.nr51,
+            0xFF26 => self.hw_reg.nr52,
+
+            // Wave pattern RAM: FF30–FF3F
+            0xFF30..=0xFF3F => {
+                let index = (address - 0xFF30) as usize;
+                self.hw_reg.wave_pattern[index]
             }
+
+            // Interrupt enable
+            0xFFFF => self.hw_reg.ie,
+
+            // Fallback to ROM or other areas
+            _ => self.read_rom(address),
         }
     }
 
@@ -180,45 +209,71 @@ impl Mbc {
 
     pub fn write(&mut self, address: u16, byte: u8) {
         match address {
-            0xFF40 => {
-                self.hw_reg.lcdc = byte;
-            },
-            0xFF41 => {
-                self.hw_reg.stat = byte;
-            },
-            0xFF42 => {
-                self.hw_reg.scy = byte;
-            },
-            0xFF43 => {
-                self.hw_reg.scx = byte;
-            },
-            0xFF44 => {
-                self.hw_reg.ly = byte;
-            },
-            0xFF45 => {
-                self.hw_reg.lyc = byte;
-            },
-            0xFF46 => {
-                self.hw_reg.dma = byte;
-            },
-            0xFF47 => {
-                self.hw_reg.bgp = byte;
-            },
-            0xFF48 => {
-                self.hw_reg.obp0 = byte;
-            },
-            0xFF49 => {
-                self.hw_reg.obp1 = byte;
-            },
-            0xFF4A => {
-                self.hw_reg.wy = byte;
-            },
-            0xFF4B => {
-                self.hw_reg.wx = byte;
-            },
-            _ => {
-                self.write_rom(address, byte);
+            // Joypad and serial
+            0xFF00 => self.hw_reg.joyp = byte,
+            0xFF01 => self.hw_reg.sb = byte,
+            0xFF02 => self.hw_reg.sc = byte,
+
+            // Timer
+            0xFF04 => self.hw_reg.div = 0, // writing to DIV resets it
+            0xFF05 => self.hw_reg.tima = byte,
+            0xFF06 => self.hw_reg.tma = byte,
+            0xFF07 => self.hw_reg.tac = byte,
+
+            // Interrupt flags
+            0xFF0F => self.hw_reg.intflags = byte,
+
+            // LCD and scrolling
+            0xFF40 => self.hw_reg.lcdc = byte,
+            0xFF41 => self.hw_reg.stat = byte,
+            0xFF42 => self.hw_reg.scy = byte,
+            0xFF43 => self.hw_reg.scx = byte,
+            0xFF44 => self.hw_reg.ly = 0, // writing to LY resets it
+            0xFF45 => self.hw_reg.lyc = byte,
+            0xFF46 => self.hw_reg.dma = byte,
+            0xFF47 => self.hw_reg.bgp = byte,
+            0xFF48 => self.hw_reg.obp0 = byte,
+            0xFF49 => self.hw_reg.obp1 = byte,
+            0xFF4A => self.hw_reg.wy = byte,
+            0xFF4B => self.hw_reg.wx = byte,
+
+            // Boot ROM control
+            0xFF50 => self.hw_reg.boot_rom_control = byte,
+
+            // Audio (NR10–NR52)
+            0xFF10 => self.hw_reg.nr10 = byte,
+            0xFF11 => self.hw_reg.nr11 = byte,
+            0xFF12 => self.hw_reg.nr12 = byte,
+            0xFF13 => self.hw_reg.nr13 = byte,
+            0xFF14 => self.hw_reg.nr14 = byte,
+            0xFF16 => self.hw_reg.nr21 = byte,
+            0xFF17 => self.hw_reg.nr22 = byte,
+            0xFF18 => self.hw_reg.nr23 = byte,
+            0xFF19 => self.hw_reg.nr24 = byte,
+            0xFF1A => self.hw_reg.nr30 = byte,
+            0xFF1B => self.hw_reg.nr31 = byte,
+            0xFF1C => self.hw_reg.nr32 = byte,
+            0xFF1D => self.hw_reg.nr33 = byte,
+            0xFF1E => self.hw_reg.nr34 = byte,
+            0xFF20 => self.hw_reg.nr41 = byte,
+            0xFF21 => self.hw_reg.nr42 = byte,
+            0xFF22 => self.hw_reg.nr43 = byte,
+            0xFF23 => self.hw_reg.nr44 = byte,
+            0xFF24 => self.hw_reg.nr50 = byte,
+            0xFF25 => self.hw_reg.nr51 = byte,
+            0xFF26 => self.hw_reg.nr52 = byte,
+
+            // Wave pattern RAM: FF30–FF3F
+            0xFF30..=0xFF3F => {
+                let index = (address - 0xFF30) as usize;
+                self.hw_reg.wave_pattern[index] = byte;
             }
+
+            // Interrupt enable
+            0xFFFF => self.hw_reg.ie = byte,
+
+            // Fallback to ROM or other memory-mapped regions
+            _ => self.write_rom(address, byte),
         }
     }
 }

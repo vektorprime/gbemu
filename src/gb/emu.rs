@@ -35,9 +35,10 @@ impl Emu {
         self.mbc.ram.load_bios_to_mem(&self.bios);
     }
 
-    pub fn init_ppu(&mut self) {
-        self.ppu.load_all_tiles(&self.mbc);
-    }
+    // pub fn init_ppu(&mut self) {
+    //     self.ppu.load_all_tiles(&self.mbc);
+    // }
+
 
     pub fn tick(&mut self) {
         let cycles = self.cpu.tick(&mut self.mbc, &self.bios);

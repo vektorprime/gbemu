@@ -38,6 +38,8 @@ impl Lcd {
     }
 
     pub fn draw(&self, frame: &mut [u8], emu: &mut Emu) {
+        if !emu.ppu.ppu_init_complete { return ;}
+
         let mut pixels_source: Vec<[u8; 4]> = Vec::new();
         for tile in &emu.ppu.tiles {
             // tile.data is an array of 8 arrays that hold 8 PaletteColor
