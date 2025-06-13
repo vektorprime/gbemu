@@ -67,7 +67,7 @@ impl Ppu {
 
 
     pub fn load_all_tiles(&mut self, mbc: &Mbc) {
-        
+        self.tiles.clear();
         let address: u16 = 0x8000;
 
         // the whole tile range
@@ -138,6 +138,12 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mbc: &mut Mbc, cycles: u64) {
+
+        // let addr_trigger = mbc.read(0x8002);
+        // if addr_trigger != 0 {
+        //     println!("lcdc bit 7 not enabled yet, skipping ppu tick");
+        //     return;
+        // }
         if !mbc.hw_reg.is_lcdc_bit7_enabled() {
             println!("lcdc bit 7 not enabled yet, skipping ppu tick");
             return;
@@ -149,6 +155,10 @@ impl Ppu {
             println!("ppu init complete");
 
 
+        }
+        if mbc.need_tile_update {
+            self.load_all_tiles(&mbc);
+            mbc.need_tile_update = false;
         }
 
         let trigger_ly_inc = 114;

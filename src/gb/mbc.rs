@@ -15,6 +15,7 @@ pub struct Mbc {
     ram_bank: u8,
     wr_ram_bank: bool,
     pub rom_ram: RomRam,
+    pub need_tile_update: bool,
 }
 
 impl Mbc {
@@ -28,6 +29,7 @@ impl Mbc {
             ram_bank: 0,
             wr_ram_bank: false,
             rom_ram: RomRam::new(),
+            need_tile_update: false,
         }
     }
 
@@ -108,9 +110,6 @@ impl Mbc {
         let rom_type = self.rom.as_ref().unwrap().get_rom_type();
         match rom_type {
             RomType::Rom_Only => {
-                if (0x8000..=0x97FF).contains(&address) {
-                    println!("address in read_rom is 0x{:#x}", address)
-                }
                 return self.ram.read(address);
             },
             RomType::MBC3 => {
@@ -196,6 +195,10 @@ impl Mbc {
         
         match rom_type {
             RomType::Rom_Only => {
+                if (0x8000..=0x97FF).contains(&address) {
+                    println!("address in write_rom is 0x{:#x}", address);
+                    self.need_tile_update = true;
+                }
                 self.ram.write(address, byte);
             }
             RomType::MBC3 => {
