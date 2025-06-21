@@ -36,8 +36,7 @@ impl Cpu {
             halted: false, 
             instructions: Cpu::setup_inst(),
             cb_instructions: Cpu::setup_cb_inst(),
-            // set to true to test bios bypass
-            bios_executed: true,
+            bios_executed: false,
             rom_loaded: false,
         } 
     } 
@@ -70,38 +69,61 @@ impl Cpu {
     }
 
     pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
-        let pc_print = self.registers.get_pc();
-        println!("pc - 0x{:X}", pc_print);
-        // debug
-        if self.registers.get_pc() == 0x2820 {
-            println!("pc is 0x2820");
+        //debug
+        // let pc_print = self.registers.get_pc();
+        // print!("pc - 0x{:X} \n", pc_print);
+
+        if self.registers.get_pc() == 0x100 {
+            print!("----------- n");
+            print!("pc - 0x100 \n");
+            print!("----------- n");
         }
+        // if self.registers.get_pc() > 0x200 {
+        //     let pc_print = self.registers.get_pc();
+        //     print!("pc - 0x{:X} \n", pc_print);
+        // }
+        // if self.registers.get_pc() == 0x300 {
+        //     panic!("TESTING");
+        // }
+        // if self.registers.get_pc() > 0x68 {
+        //     let pc_print = self.registers.get_pc();
+        //     print!("pc - 0x{:X} \n", pc_print);
+        // }
+        // if self.registers.get_pc() == 0x86 {
+        //     print!("pc is 0x86 \n");
+        // }
+        // if self.registers.get_pc() == 0x8c {
+        //     print!("pc is 0x8c \n");
+        // }
+        // if mem.hw_reg.ly == 0x90 {
+        //     print!("hw reg ly is 0x90 \n");
+        // }
         // end debug
-        if !self.bios_executed {
-            // execute bios until end of data
-            if self.registers.get_pc() < bios.data.len() as u16 {
-                let mut opcode = self.fetch_next_inst(mem);
-                //if CB, read another byte, else decode and execute
-                let mut is_cb_opcode = false;
-                if opcode == 0xCB {
-                    is_cb_opcode = true;
-                    opcode = self.fetch_next_inst(mem);
-                } 
-                let inst = if is_cb_opcode {
-                    self.cb_instructions.get(&opcode).unwrap().clone()
-                } else {
-                    self.instructions.get(&opcode).unwrap().clone()
-                };
-                self.execute_inst(inst, mem, is_cb_opcode);
-            }
-            else {
-                self.bios_executed = true;
-                mem.load_rom_to_mem();
-                self.rom_loaded = true;
-            }
-        }
+        //if !self.bios_executed {
+            // execute bios until boot rom control is set to 1
+            //if mem.hw_reg.boot_rom_control == 0 {
+                // let mut opcode = self.fetch_next_inst(mem);
+                // //if CB, read another byte, else decode and execute
+                // let mut is_cb_opcode = false;
+                // if opcode == 0xCB {
+                //     is_cb_opcode = true;
+                //     opcode = self.fetch_next_inst(mem);
+                // }
+                // let inst = if is_cb_opcode {
+                //     self.cb_instructions.get(&opcode).unwrap().clone()
+                // } else {
+                //     self.instructions.get(&opcode).unwrap().clone()
+                // };
+                // self.execute_inst(inst, mem, is_cb_opcode);
+            // }
+            // else {
+            //     self.bios_executed = true;
+            //     mem.load_rom_to_mem();
+            //     self.rom_loaded = true;
+            // }
+        //}
         // else if !self.halted {
-        else {
+        //else {
             // load rom here in case we want to test skipping bios
             if !self.rom_loaded {
                 mem.load_rom_to_mem();
@@ -120,7 +142,7 @@ impl Cpu {
                 self.instructions.get(&opcode).unwrap().clone()
             };
             self.execute_inst(inst, mem, is_cb_opcode);
-        }
+       // }
 
         if self.pending_enable_ime {
             self.pending_enable_ime_counter += 1;
@@ -1468,6 +1490,103 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0x88 => {
+                    // ADC A B
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_b();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x89 => {
+                    // ADC A C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_c();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8A => {
+                    // ADC A D
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_d();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8B => {
+                    // ADC A E
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_e();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8C => {
+                    // ADC A C
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_h();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8D => {
+                    // ADC A L
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_l();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8E => {
+                    // ADC A (HL)
+                    let a = self.registers.get_a();
+                    let b_addr = self.registers.get_hl();
+                    let b = mem.read(b_addr);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.add_8bit(a, b);
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0x8F => {
+                    // ADC A A
+                    let a = self.registers.get_a();
+                    let b = self.registers.get_a();
+                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                  0x90 => {
                     //SUB A B
                     let a = self.registers.get_a();
@@ -1578,7 +1697,7 @@ impl Cpu {
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
-                },  
+                },
                 0x9B => {
                     // SUBC A E
                     let a = self.registers.get_a();
@@ -2086,6 +2205,28 @@ impl Cpu {
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
+                0xC8 => {
+                    // RET Z
+                    if self.registers.is_z_flag_set() {
+                        // get 16 bit add from SP
+                        let sp = self.registers.get_sp();
+                        let lo_sp = mem.read(sp);
+                        let hi_sp = mem.read(sp + 1);
+                        let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
+                        //set pc to 16 bit add
+                        self.registers.set_pc(ret_addr);
+                        // shrink stack by 2
+                        let new_sp = self.registers.get_sp() + 2;
+                        self.registers.set_sp(new_sp);
+                        // set pc to ret addr
+                        self.registers.set_pc(ret_addr);
+                    } else {
+                        self.registers.inc_pc_by_inst_val(inst.size);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
                 0xC9 => {
                     // RET
                     // get 16 bit add from SP
@@ -2100,6 +2241,47 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // set pc to ret addr
                     self.registers.set_pc(ret_addr);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xCA => {
+                    // JP Z A16
+                    if self.registers.is_z_flag_set() {
+                        let lo = mem.read(self.registers.get_pc());
+                        let hi = mem.read(self.registers.get_pc() + 1);
+                        self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                    }
+                    else {
+                        self.registers.set_pc(self.registers.get_pc() + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                // 0xCB does not exist because it's used as a prefix for next inst. set
+                0xCC => {
+                    // CALL Z A16
+                    if self.registers.is_z_flag_set() {
+                        let pc = self.registers.get_pc();
+                        let lo_call = mem.read(pc);
+                        let hi_call = mem.read(pc + 1);
+                        let target_addr = u16::from_le_bytes([lo_call, hi_call]);
+
+                        // Return address = PC after the operand (2 bytes)
+                        let return_addr = pc + 2;
+                        let lo_pc = (return_addr & 0x00FF) as u8;
+                        let hi_pc = (return_addr >> 8) as u8;
+
+                        let new_sp = self.registers.get_sp() - 2;
+                        self.registers.set_sp(new_sp);
+                        mem.write(new_sp, lo_pc);          // write low byte
+                        mem.write(new_sp + 1, hi_pc);      // write high byte
+
+                        self.registers.set_pc(target_addr); //
+                    } else {
+                        self.registers.inc_pc_by_inst_val(inst.size);
+                    }
+
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
@@ -2125,6 +2307,19 @@ impl Cpu {
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
+                0xCE => {
+                    // ADD A D8
+                    let a = self.registers.get_a();
+                    let b_addr = self.registers.get_pc();
+                    let b = mem.read(b_addr);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.add_8bit(a, b);
+                    let result2 = self.registers.add_8bit(result, c);
+                    self.registers.set_a(result2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 0xCF => {
                     // RST 1
                     // push pc to stack
@@ -2139,7 +2334,7 @@ impl Cpu {
                     // store msb of bc in sp + 1
                     mem.write(new_sp, lo_pc);
                     mem.write(new_sp + 1, hi_pc);
-                    // set pc to 0x08
+                    // set pc
                     self.registers.set_pc(0x08);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2166,6 +2361,48 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xD2 => {
+                    // JP NC A16
+                    if !self.registers.is_c_flag_set() {
+                        let lo = mem.read(self.registers.get_pc());
+                        let hi = mem.read(self.registers.get_pc() + 1);
+                        self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                    }
+                    else {
+                        self.registers.set_pc(self.registers.get_pc() + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xD4 => {
+                    // CALL NC A16
+                    // if c is 0, set pc to a16, and push addr pc + 2 to stack
+                    let ret_addr = self.registers.get_pc() + 2;
+                    if !self.registers.is_c_flag_set() {
+                        // get the called address and set pc to it
+                        let lo = mem.read(self.registers.get_pc());
+                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let called_addr = u16::from_le_bytes([lo, hi]);
+                        self.registers.set_pc(called_addr);
+
+                        // push return address to stack
+                        // grow stack down
+                        let sp_addr = self.registers.get_sp() - 2;
+                        self.registers.set_sp(sp_addr);
+                        // split ret_addr into two
+                        let ret_part_1 = (ret_addr & 0x00FF) as u8;
+                        mem.write(sp_addr, ret_part_1);
+                        let ret_part_2 = (ret_addr >> 8) as u8;
+                        mem.write(sp_addr + 1, ret_part_2);
+                    }
+                    else {
+                        self.registers.set_pc(self.registers.get_pc() + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
                 0xD5 => {
                     // PUSH DE
                     // get the contents of DE
@@ -2180,6 +2417,132 @@ impl Cpu {
                     mem.write(new_sp, lo_de);
                     mem.write(new_sp + 1, hi_de);
 
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD6 => {
+                    // SUB D8
+                    // SUB A D8
+                    let a = self.registers.get_a();
+                    let addr = self.registers.get_pc();
+                    let b = mem.read(addr);
+                    let result = self.registers.sub_8bit(a, b);
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xD7 => {
+                    // RST 2
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc to 0x00
+                    self.registers.set_pc(0x10);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xD8 => {
+                    // RET C
+                    if self.registers.is_c_flag_set() {
+                        // get 16 bit add from SP
+                        let sp = self.registers.get_sp();
+                        let lo_sp = mem.read(sp);
+                        let hi_sp = mem.read(sp + 1);
+                        let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
+                        //set pc to 16 bit add
+                        self.registers.set_pc(ret_addr);
+                        // shrink stack by 2
+                        let new_sp = self.registers.get_sp() + 2;
+                        self.registers.set_sp(new_sp);
+                        // set pc to ret addr
+                        self.registers.set_pc(ret_addr);
+                    } else {
+                        self.registers.inc_pc_by_inst_val(inst.size);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xD9 => {
+                    // RETI
+                    // get 16 bit add from SP
+                    let sp = self.registers.get_sp();
+                    let lo_sp = mem.read(sp);
+                    let hi_sp = mem.read(sp + 1);
+                    let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
+                    //set pc to 16 bit add
+                    self.registers.set_pc(ret_addr);
+                    // shrink stack by 2
+                    let new_sp = self.registers.get_sp() + 2;
+                    self.registers.set_sp(new_sp);
+                    // set pc to ret addr
+                    self.registers.set_pc(ret_addr);
+
+                    self.ime = true;
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xDA => {
+                    // JP Z A16
+                    if self.registers.is_c_flag_set() {
+                        let lo = mem.read(self.registers.get_pc());
+                        let hi = mem.read(self.registers.get_pc() + 1);
+                        self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                    }
+                    else {
+                        self.registers.set_pc(self.registers.get_pc() + 2);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xDC => {
+                    // CALL C A16
+                    if self.registers.is_c_flag_set() {
+                        let pc = self.registers.get_pc();
+                        let lo_call = mem.read(pc);
+                        let hi_call = mem.read(pc + 1);
+                        let target_addr = u16::from_le_bytes([lo_call, hi_call]);
+
+                        // Return address = PC after the operand (2 bytes)
+                        let return_addr = pc + 2;
+                        let lo_pc = (return_addr & 0x00FF) as u8;
+                        let hi_pc = (return_addr >> 8) as u8;
+
+                        let new_sp = self.registers.get_sp() - 2;
+                        self.registers.set_sp(new_sp);
+                        mem.write(new_sp, lo_pc);          // write low byte
+                        mem.write(new_sp + 1, hi_pc);      // write high byte
+
+                        self.registers.set_pc(target_addr); //
+                    } else {
+                        self.registers.inc_pc_by_inst_val(inst.size);
+                    }
+
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xDE => {
+                    // SBC A D8
+                    let a = self.registers.get_a();
+                    let b_addr = self.registers.get_pc();
+                    let b = mem.read(b_addr);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.sub_8bit(a, b);
+                    let result2 = self.registers.sub_8bit(result, c);
+                    self.registers.set_a(result2);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2270,6 +2633,45 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xE7 => {
+                    // RST 4
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc
+                    self.registers.set_pc(0x20);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xE8 => {
+                    // ADD SP S8
+                    let pc = self.registers.get_pc();
+                    let pc_offset_signed = mem.read(pc) as i8;
+                    if pc_offset_signed < 0 {
+                        let neg_offset = pc_offset_signed.abs() as u8;
+
+                        let new_pc = pc - (neg_offset as u16);
+                        self.registers.set_pc(new_pc);
+                    }
+                    else {
+                        let offset = mem.read(pc) as u16;
+                        let new_pc = pc + offset;
+                        self.registers.set_pc(new_pc);
+                    }
+                
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                }
                 0xE9 => {
                     //JP HL
                     let hl = self.registers.get_hl();
@@ -2323,6 +2725,17 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xF1 => {
+                    // POP AF
+                    let address = self.registers.get_sp();
+                    let lo = mem.read(address);
+                    let hi = mem.read(address + 1);
+                    self.registers.set_af_with_two_val(lo, hi);
+                    self.registers.set_sp(address + 2);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 0xF2 => {
                     // LD A, (C)
                     // get the value of register C
@@ -2364,6 +2777,26 @@ impl Cpu {
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                // todo rest of F
+                0xF7 => {
+                    // RST 6
+                    // push pc to stack
+                    let pc = self.registers.get_pc();
+                    // split 16 bits to 2x 8 bit
+                    let lo_pc = (pc & 0x00FF) as u8;
+                    let hi_pc = (pc >> 8) as u8;
+                    // grow stack down by 2
+                    let new_sp = self.registers.get_sp() - 2;
+                    self.registers.set_sp(new_sp);
+                    // store lsb of bc in sp
+                    // store msb of bc in sp + 1
+                    mem.write(new_sp, lo_pc);
+                    mem.write(new_sp + 1, hi_pc);
+                    // set pc
+                    self.registers.set_pc(0x30);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xFA => {
                     // LD A, (a16)
@@ -2423,7 +2856,7 @@ impl Cpu {
                     //todo
                     // panic here later once I've worked out the rest of code
                     let pc = self.registers.get_pc();
-                    println!("current pc is 0x{:X}, unsure of opcode 0x{:X}", pc, inst.opcode);
+                    print!("current pc is 0x{:X}, unsure of opcode {:X} \n", pc, inst.opcode);
                 }
             } // match
         }
@@ -6001,7 +6434,7 @@ impl Cpu {
                     // todo
                     // panic here later once I've worked out the rest of code
                     let pc = self.registers.get_pc();
-                    println!("current pc is 0x{:X}, unsure of opcode 0x{:X}", pc, inst.opcode);
+                    print!("current pc is 0x{:X}, unsure of opcode {:X} \n", pc, inst.opcode);
                 }
             }
         }

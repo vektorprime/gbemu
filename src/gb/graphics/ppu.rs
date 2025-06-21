@@ -1,4 +1,4 @@
-
+use crate::gb::graphics::lcd::RenderState;
 use crate::gb::mbc::*;
 use crate::gb::graphics::palette::*;
 use crate::gb::graphics::tile::*;
@@ -31,6 +31,7 @@ pub struct Ppu {
     pub tiles: Vec<Tile>, 
     //bg_tile_map: [u8; 1024],
     pub ppu_init_complete: bool,
+    // pub active: bool,
 }
 impl Ppu {
     pub fn new() -> Self {
@@ -58,6 +59,7 @@ impl Ppu {
             // wx: 0,
             tiles: Vec::new(),
             ppu_init_complete: false,
+            // active: false,
         }
     }
     
@@ -77,14 +79,32 @@ impl Ppu {
             let mut temp_tile: [u8; 16] = [0; 16];
             for y in 0..16 {
                 temp_tile[y] = mbc.read(address + x + (y as u16));
-                println!("Tile #{} bit {} is {}", x / 16, y, temp_tile[y] );
-            } 
-
-            // decode every 2 bytes as a row
-            for (z, byte) in temp_tile.chunks_exact(2).enumerate() {
-                new_tile.decode_tile_row(byte[0], byte[1], z);
+                if temp_tile[y] != 0 {
+                    print!("Tile #{} byte {} is {:#x} \n", x / 16, y, temp_tile[y] );
+                }
             }
 
+            // decode every 2 bytes as a row
+            // for (z, byte) in temp_tile.chunks_exact(2).enumerate() {
+            //     new_tile.decode_tile_row(byte[0], byte[1], z);
+            //     print!("decoding byte {:#x} and {:#x} in row {} \n", byte[0], byte[1], z);
+            // }
+            
+            //for r in 0..8 {
+                //new_tile.decode_tile_row(temp_tile[r], temp_tile[ r + 1], r);
+                //print!("decoding byte {:#x} and {:#x} in row {} \n", temp_tile[0], temp_tile[1], r);
+            //} 
+
+            new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
+            new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
+            new_tile.decode_tile_row(temp_tile[4], temp_tile[5], 2);
+            new_tile.decode_tile_row(temp_tile[6], temp_tile[7], 3);
+            new_tile.decode_tile_row(temp_tile[8], temp_tile[9], 4);
+            new_tile.decode_tile_row(temp_tile[10], temp_tile[11], 5);
+            new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
+            new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
+                
+            
             // store in self.tiles vec
             self.tiles.push(new_tile);
             
@@ -112,15 +132,14 @@ impl Ppu {
         for x in 0x0..0x3FF {
             bg_tile_map[x] = mbc.read(address); 
         }
-        if mbc.read(address) != 0 {
-            println!("Something inside of tile map");
-        }
+        // if mbc.read(address) != 0 {
+        //     print!("Something inside of tile map \n");
+        // }
         bg_tile_map
     }
 
     pub fn mode_2_oam_scan(&self) {
         // search for obj that are in this scan line pos and add to vec?
-
     }
 
 
@@ -137,25 +156,28 @@ impl Ppu {
         
     }
 
-    pub fn tick(&mut self, mbc: &mut Mbc, cycles: u64) {
+    pub fn tick(&mut self, mbc: &mut Mbc, cycles: u64) -> RenderState {
 
         // let addr_trigger = mbc.read(0x8002);
         // if addr_trigger != 0 {
-        //     println!("lcdc bit 7 not enabled yet, skipping ppu tick");
+        //     print!("lcdc bit 7 not enabled yet, skipping ppu tick");
         //     return;
         // }
+        
+        // don't tick ppu unless the lcdc says ppu is on
+        // i went back and forth here but I left it on because it seems like it may work
+        // the pc counter was inc slow but that was due to other reasons
         if !mbc.hw_reg.is_lcdc_bit7_enabled() {
-            println!("lcdc bit 7 not enabled yet, skipping ppu tick");
-            return;
+           //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
+            return RenderState::no_render;
         }
 
         if !self.ppu_init_complete {
             self.load_all_tiles(&mbc);
             self.ppu_init_complete = true;
-            println!("ppu init complete");
-
-
+            print!("ppu init complete \n");
         }
+
         if mbc.need_tile_update {
             self.load_all_tiles(&mbc);
             mbc.need_tile_update = false;
@@ -166,8 +188,10 @@ impl Ppu {
         self.ly_inc_cycle += cycles;
         if self.ly_inc_cycle >= trigger_ly_inc {
             mbc.hw_reg.ly += 1;
+            //print!("incrementing ly hw reg to {} \n", mbc.hw_reg.ly);
             if mbc.hw_reg.ly >= max_ly_value {
                 mbc.hw_reg.ly = 0;
+                //print!("ly hw reg is max, resetting to 0 \n");
             }
             self.ly_inc_cycle = 0;
         }
@@ -178,6 +202,7 @@ impl Ppu {
         self.mode_3_draw();
         self.mode_0_h_blank();
 
+        RenderState::render
     }
 
 }

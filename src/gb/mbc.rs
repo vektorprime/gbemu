@@ -10,6 +10,7 @@ pub const RAM_BANK_SIZE: u16 = 0x4000;
 pub struct Mbc {
     pub hw_reg: HardwareRegisters,
     pub ram: Ram,
+    pub boot_rom: Ram,
     pub rom: Option<Rom>,
     rom_bank: u8,
     ram_bank: u8,
@@ -24,6 +25,7 @@ impl Mbc {
         Mbc {
             hw_reg: HardwareRegisters::new(),
             ram: Ram::new(),
+            boot_rom: Ram::new(),
             rom: None,
             rom_bank: 0,
             ram_bank: 0,
@@ -120,8 +122,23 @@ impl Mbc {
             }
         }
     }
+    pub fn read_bios(&self, address: u16) -> u8 {
+        //print!("address in read_bios is {:#x} \n", address);
+        return self.boot_rom.read(address);
+    }
+
     pub fn read(&self, address: u16) -> u8 {
+        // handle special reads: BIOS, hw reg, then ROM
         match address {
+            // BIOS
+            0x00..=0xFF=>  {
+                if self.hw_reg.boot_rom_control == 0 {
+                    self.read_bios(address)
+                }
+                else {
+                    self.read_rom(address)
+                }
+            },
             // Joypad and serial
             0xFF00 => self.hw_reg.joyp,
             0xFF01 => self.hw_reg.sb,
@@ -151,7 +168,10 @@ impl Mbc {
             0xFF4B => self.hw_reg.wx,
 
             // Boot ROM control
-            0xFF50 => self.hw_reg.boot_rom_control,
+            0xFF50 => {
+                print!("reading 0xFF50, Boot ROM control hw register \n");
+                self.hw_reg.boot_rom_control
+            },
 
             // Audio (NR10–NR52)
             0xFF10 => self.hw_reg.nr10,
@@ -196,9 +216,13 @@ impl Mbc {
         match rom_type {
             RomType::Rom_Only => {
                 if (0x8000..=0x97FF).contains(&address) {
-                    println!("address in write_rom is 0x{:#x}", address);
+                    print!("address in write_rom is {:#x} \n", address);
                     self.need_tile_update = true;
                 }
+                // if (0x9000..=0x9010).contains(&address) {
+                //     print!("address in write_rom is {:#x} \n", address);
+                //     self.need_tile_update = true;
+                // }
                 self.ram.write(address, byte);
             }
             RomType::MBC3 => {
@@ -210,8 +234,25 @@ impl Mbc {
         }
     }
 
+    pub fn write_bios(&mut self, address: u16, byte: u8) {
+        //print!("address in write_bios is {:#x} \n", address);
+        self.boot_rom.write(address, byte);
+    }
+
     pub fn write(&mut self, address: u16, byte: u8) {
+        // handle special writes: BIOS, hw reg, then ROM
         match address {
+            // BIOS
+            0x00..=0xFF=> {
+                if self.hw_reg.boot_rom_control == 0 {
+                    self.write_bios(address, byte);
+                }
+                else {
+                    self.write(address, byte);
+                }
+            }
+
+
             // Joypad and serial
             0xFF00 => self.hw_reg.joyp = byte,
             0xFF01 => self.hw_reg.sb = byte,
@@ -241,7 +282,10 @@ impl Mbc {
             0xFF4B => self.hw_reg.wx = byte,
 
             // Boot ROM control
-            0xFF50 => self.hw_reg.boot_rom_control = byte,
+            0xFF50 => {
+                print!("writing to 0xFF50, Boot ROM control hw register \n");
+                self.hw_reg.boot_rom_control = byte
+            },
 
             // Audio (NR10–NR52)
             0xFF10 => self.hw_reg.nr10 = byte,
@@ -275,7 +319,7 @@ impl Mbc {
             // Interrupt enable
             0xFFFF => self.hw_reg.ie = byte,
 
-            // Fallback to ROM or other memory-mapped regions
+            // Fallback to ROM or bios
             _ => self.write_rom(address, byte),
         }
     }

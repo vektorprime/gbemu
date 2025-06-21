@@ -210,6 +210,9 @@ impl Registers {
         if self.a == 0 {
             self.set_z_flag()
         }
+        else {
+            self.clear_z_flag();
+        }
     }
 
     pub fn get_b(&self) -> u8 {
@@ -234,6 +237,9 @@ impl Registers {
         if self.b == 0 {
             self.set_z_flag()
         }
+        else {
+            self.clear_z_flag();
+        }
     }
 
     pub fn get_c(&self) -> u8 {
@@ -257,6 +263,9 @@ impl Registers {
         self.c = self.c.wrapping_sub(1);
         if self.c == 0 {
             self.set_z_flag()
+        }
+        else {
+            self.clear_z_flag();
         }
     }
 
@@ -283,6 +292,9 @@ impl Registers {
         if self.d == 0 {
             self.set_z_flag()
         }
+        else {
+            self.clear_z_flag();
+        }
     }
 
     pub fn get_e(&self) -> u8 {
@@ -305,6 +317,9 @@ impl Registers {
         self.e = self.e.wrapping_sub(1);
         if self.e == 0 {
             self.set_z_flag()
+        }
+        else {
+            self.clear_z_flag();
         }
     }
 
@@ -338,6 +353,9 @@ impl Registers {
         if self.h == 0 {
             self.set_z_flag()
         }
+        else {
+            self.clear_z_flag();
+        }
     }
 
     pub fn get_l(&self) -> u8 {
@@ -362,6 +380,9 @@ impl Registers {
         if self.l == 0 {
             self.set_z_flag()
         }
+        else {
+            self.clear_z_flag();
+        }
     }
 
     pub fn get_sp(&self) -> u16 {
@@ -378,7 +399,13 @@ impl Registers {
     }
     pub fn dec_sp(&mut self) {
         // wrap on overflow 
-        self.sp = self.sp.wrapping_sub(1); 
+        self.sp = self.sp.wrapping_sub(1);
+        if self.sp == 0 {
+            self.set_z_flag()
+        }
+        else {
+            self.clear_z_flag();
+        }
     }
     pub fn get_pc(&self) -> u16 {
         self.pc
@@ -426,6 +453,12 @@ impl Registers {
         let mut current = (self.d as u16) << 8 | (self.e as u16);
         //dec should not handle underflows
         current = current.wrapping_sub(1);
+        if self.get_de() == 0 {
+            self.set_z_flag()
+        }
+        else {
+            self.clear_z_flag();
+        }
         self.set_de(current);
     }
 
@@ -433,6 +466,12 @@ impl Registers {
         let mut current = (self.b as u16) << 8 | (self.c as u16);
         //dec should not handle underflows
         current = current.wrapping_sub(1);
+        if self.get_bc() == 0 {
+            self.set_z_flag()
+        }
+        else {
+            self.clear_z_flag();
+        }
         self.set_bc(current);
     }
 
@@ -487,6 +526,12 @@ impl Registers {
         let mut current = (self.h as u16) << 8 | (self.l as u16);
         //dec should not handle underflows
         current = current.wrapping_sub(1);
+        if self.get_hl() == 0 {
+            self.set_z_flag()
+        }
+        else {
+            self.clear_z_flag();
+        }
         self.set_hl(current);
     }
 

@@ -10,3 +10,11 @@ error-iter = "0.4"
 log = "0.4"
 winit = "0.29"
 winit_input_helper = "0.15"
+
+
+[profile.release]
+debug = true
+
+
+#[build]
+#rustflags = ["-C", "force-frame-pointers=yes", "symbol-mangling-version=v0"]

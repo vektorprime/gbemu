@@ -25,14 +25,13 @@ impl PaletteColor {
     }
     pub fn get_rgba_code(&self) -> [u8; 4] {
         match self {
-            PaletteColor::White => [155, 188, 15, 0],
-            PaletteColor::LightGray => [139, 172, 15, 0],
-            PaletteColor::DarkGray => [48, 98, 48, 0],
-            PaletteColor::Black => [15, 56, 15, 0],
-            PaletteColor::Transparent => [0, 0, 0, 255],
+            PaletteColor::White => [255, 255, 255, 255],
+            PaletteColor::LightGray => [192, 192, 192, 255],
+            PaletteColor::DarkGray => [96, 96, 96, 255],
+            PaletteColor::Black => [0, 0, 0, 255],
+            PaletteColor::Transparent => [255, 0, 255, 255],
         }
     }
-
 }
 
 pub struct BGPalette {

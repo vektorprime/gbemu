@@ -32,7 +32,7 @@ impl Emu {
     }
 
     pub fn load_bios(&mut self) {
-        self.mbc.ram.load_bios_to_mem(&self.bios);
+        self.mbc.boot_rom.load_bios_to_mem(&self.bios);
     }
 
     // pub fn init_ppu(&mut self) {
@@ -40,9 +40,9 @@ impl Emu {
     // }
 
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self) -> RenderState {
         let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-        self.ppu.tick(&mut self.mbc, cycles);
+        self.ppu.tick(&mut self.mbc, cycles)
     }
 
 }
