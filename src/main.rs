@@ -9,6 +9,8 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode;
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
+
+use crate::gb::graphics::ppu::RenderState;
 // use std::thread;
 // use std::sync::{Arc, Mutex};
 
@@ -28,7 +30,7 @@ use crate::gb::graphics::lcd::*;
 
 
 
-fn main() -> Result<(), Error>  {
+fn main() {
 
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
@@ -45,27 +47,27 @@ fn main() -> Result<(), Error>  {
 
 
     // Create pixel canvas/frame to be modified later
-    let mut frame = {
+    let mut frame: Pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH, HEIGHT, surface_texture)?
+        Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap()
     };
 
     // Representation of the object we're drawing
-    let lcd = Lcd::new();
+    //let lcd = Lcd::new();
 
     // setup emu
     let debug = true;
 
-    let mut emu = Box::new(Emu::new(ColorMode::Gray, debug));
+    let mut emu = Emu::new(ColorMode::Gray, debug);
     //let emu_arc = Arc::new(Mutex::new(Box::new(Emu::new(ColorMode::Gray, debug))));
     //let mut emu_arc_clone = Arc::clone(&emu_arc);
     // rom is loaded after bios runs
-    {
+    //{
         //let mut emu = emu_arc.lock().unwrap();
         emu.load_rom_file(String::from("tetris.gb"));
         emu.load_bios();
-    }
+    //}
 
 
     // thread::spawn(move|| {
@@ -79,7 +81,7 @@ fn main() -> Result<(), Error>  {
     // RUN event loop
     let res = event_loop.run(|event, elwt| {
         // Tick
-        let render_state = emu.tick();
+        let render_state = emu.tick(frame.frame_mut());
 
         // Draw the current frame
         if let Event::WindowEvent {
@@ -90,22 +92,12 @@ fn main() -> Result<(), Error>  {
             if render_state == RenderState::render {
                 // todo need to modify the code so that emu is not used here, then I can move emu to thread
                 //let mut emu = emu_arc.lock().unwrap();
-                lcd.draw(frame.frame_mut(), &mut emu);
-
-                // for pixel in frame.frame_mut().chunks_exact_mut(4) {
-                //     pixel[0] = 0x00; // R
-                //     pixel[1] = 0x00; // G
-                //     pixel[2] = 0xff; // B
-                //     pixel[3] = 0xff; // A
-                // }
-                //frame.render().unwrap();
-                if let Err(err) = frame.render() {
-                    Lcd::log_error("frame.render", err);
-                    elwt.exit();
-                    return;
-                }
-            }
+                //lcd.draw(frame.frame_mut(), &mut emu);
             
+                frame.render().unwrap();
+
+            }
+
         }
 
 
@@ -121,7 +113,7 @@ fn main() -> Result<(), Error>  {
             // Resize the window
             if let Some(size) = input.window_resized() {
                 if let Err(err) = frame.resize_surface(size.width, size.height) {
-                    Lcd::log_error("frame.resize_surface", err);
+                    //Lcd::log_error("frame.resize_surface", err);
                     elwt.exit();
                     return;
                 }
@@ -133,6 +125,5 @@ fn main() -> Result<(), Error>  {
         }
     });
 
-    res.map_err(|e| Error::UserDefined(Box::new(e)))
 
 }

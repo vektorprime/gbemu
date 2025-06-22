@@ -9,7 +9,7 @@ use crate::gb::hwregisters::HardwareRegisters;
 pub struct Emu {
     pub cpu: Cpu,
     bios: Bios,
-    pub mbc: Mbc, // mbc includes rom and ram
+    pub mbc: Box<Mbc>, // mbc includes rom and ram
     pub ppu: Ppu,
     // pub lcd: Lcd,
     pub debug: bool,
@@ -19,7 +19,7 @@ impl Emu {
     pub fn new(color_mode: ColorMode, debug: bool) -> Self {
         Emu {
             cpu: Cpu::new(),
-            mbc: Mbc::new(), // mbc has rom and ram
+            mbc: Box::new(Mbc::new()), // mbc has rom and ram
             bios: Bios::new(color_mode), 
             ppu: Ppu::new(),
             // lcd: Lcd::new(),
@@ -40,9 +40,9 @@ impl Emu {
     // }
 
 
-    pub fn tick(&mut self) -> RenderState {
+    pub fn tick(&mut self, frame: &mut [u8]) -> RenderState {
         let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-        self.ppu.tick(&mut self.mbc, cycles)
+        self.ppu.tick(&mut self.mbc, frame, cycles)
     }
 
 }

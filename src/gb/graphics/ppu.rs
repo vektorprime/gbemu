@@ -1,8 +1,14 @@
-use crate::gb::graphics::lcd::RenderState;
+use crate::gb::emu::Emu;
 use crate::gb::mbc::*;
 use crate::gb::graphics::palette::*;
 use crate::gb::graphics::tile::*;
 use crate::gb::hwregisters::*;
+
+#[derive(PartialEq)]
+pub enum RenderState {
+    render,
+    no_render
+}
 
 pub struct Ppu {
    ly_inc_cycle: u64,
@@ -143,9 +149,55 @@ impl Ppu {
     }
 
 
-    pub fn mode_3_draw(&self) {
-        // draw bg
-        // 32 x 32 tiles
+    pub fn mode_3_draw(&self, frame: &mut [u8], cycles: &u64) {
+        if !self.ppu_init_complete { return; }
+        let mut pixels_source: Vec<[u8; 4]> = Vec::new();
+        // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
+        
+        let mut tile_in_grid_count: usize = 0;
+        let rows_per_grid: usize = 8;
+        let mut tile_in_row_count = 0;
+        let tiles_per_row: usize = 16;
+        let rows_per_tile = 8;
+        let pixels_per_row = 8;
+        let num_of_pixels_to_pad: usize = 32;
+
+        for row_of_tiles_in_grid in 0..rows_per_grid {
+            for row in 0..rows_per_tile {
+                tile_in_grid_count = 0;
+                for tile in &self.tiles {
+                    if row_of_tiles_in_grid > 0 {
+                        if tile_in_grid_count < row_of_tiles_in_grid * tiles_per_row {
+                            tile_in_grid_count += 1;
+                            continue;
+                        }
+                    }
+                    // pad some bytes because the tiles don't take the whole screen
+                    if tile_in_row_count == tiles_per_row {
+                        for i in 0..num_of_pixels_to_pad {
+                            pixels_source.push([255, 255, 255, 255]);
+                        }
+                        tile_in_row_count = 0;
+                        break;
+                    } else {
+                        // tile.data is an array of 8 arrays that each hold 8 PaletteColor
+                        for pixel in 0..pixels_per_row {
+                            //put each pixel into a vec so we can move it to the frame later
+                            pixels_source.push(tile.data[row][pixel].get_rgba_code());
+                        }
+                        tile_in_row_count += 1;
+                    }
+                }
+            }
+        }
+        // copy each pixel into the frame
+        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+            if i < pixels_source.len() {
+                //let test_slice = [0x00, 0x00, 0xFF, 0xFFu8];
+                //pixel.copy_from_slice(&test_slice);
+                pixel.copy_from_slice(&pixels_source[i]);
+            }
+        }
     }
 
     pub fn mode_0_h_blank(&self) {
@@ -156,7 +208,7 @@ impl Ppu {
         
     }
 
-    pub fn tick(&mut self, mbc: &mut Mbc, cycles: u64) -> RenderState {
+    pub fn tick(&mut self, mbc: &mut Mbc, frame: &mut [u8], cycles: u64) -> RenderState {
 
         // let addr_trigger = mbc.read(0x8002);
         // if addr_trigger != 0 {
@@ -168,7 +220,7 @@ impl Ppu {
         // i went back and forth here but I left it on because it seems like it may work
         // the pc counter was inc slow but that was due to other reasons
         if !mbc.hw_reg.is_lcdc_bit7_enabled() {
-           //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
+           print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
             return RenderState::no_render;
         }
 
@@ -199,7 +251,7 @@ impl Ppu {
         let bg_map = self.get_bg_tile_map(mbc);
 
         self.mode_2_oam_scan();
-        self.mode_3_draw();
+        self.mode_3_draw(frame, &cycles);
         self.mode_0_h_blank();
 
         RenderState::render
