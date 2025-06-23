@@ -27,6 +27,7 @@ mod gb;
 use gb::bios::ColorMode;
 use crate::gb::emu::*;
 use crate::gb::graphics::lcd::*;
+use crate::gb::gbwindow::*;
 
 
 
@@ -34,96 +35,107 @@ fn main() {
 
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
+
     let mut input = WinitInputHelper::new();
-    let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        WindowBuilder::new()
-            .with_title("REMYUH")
-            .with_inner_size(size)
-            .with_min_inner_size(size)
-            .build(&event_loop)
-            .unwrap()
-    };
 
 
-    // Create pixel canvas/frame to be modified later
-    let mut frame: Pixels = {
-        let window_size = window.inner_size();
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap()
-    };
-
-    // Representation of the object we're drawing
-    //let lcd = Lcd::new();
 
     // setup emu
     let debug = true;
-
     let mut emu = Emu::new(ColorMode::Gray, debug);
-    //let emu_arc = Arc::new(Mutex::new(Box::new(Emu::new(ColorMode::Gray, debug))));
-    //let mut emu_arc_clone = Arc::clone(&emu_arc);
+
     // rom is loaded after bios runs
-    //{
-        //let mut emu = emu_arc.lock().unwrap();
-        emu.load_rom_file(String::from("tetris.gb"));
-        emu.load_bios();
-    //}
+    emu.load_rom_file(String::from("tetris.gb"));
+    emu.load_bios();
+
+    let mut game_window = GBWindow::new(WindowType::Game, &event_loop);
+    let mut tile_viewer_window = GBWindow::new(WindowType::Tile, &event_loop);
+
+    let tile_viewer_window_id = tile_viewer_window.window.id();
+    let game_window_id = game_window.window.id();
+
+    event_loop.run(|event, elwt| {
 
 
-    // thread::spawn(move|| {
-    //     let mut emu_thread = emu_arc_clone.lock().unwrap();
-    //     loop {
-    //         emu_thread.tick();
-    //     }
-    // });
+        let cloned_event = event.clone();
+        match cloned_event {
+            // Event::AboutToWait => {
+            //
+            // },
+            Event::WindowEvent {window_id, event: window_event} => {
+                match window_id {
+                    tile_viewer_window_id => {
+                        // Draw the current frame
+                        //if render_state == RenderState::Render {
+                            tile_viewer_window.frame.render().unwrap();
+                        //}
 
+                        // Handle input events
+                        if input.update(&event) {
+                            // Close events
+                            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
+                                elwt.exit();
+                                return;
+                            }
 
-    // RUN event loop
-    let res = event_loop.run(|event, elwt| {
-        // Tick
-        let render_state = emu.tick(frame.frame_mut());
+                            // Resize the window
+                            if let Some(size) = input.window_resized() {
+                                if let Err(err) = tile_viewer_window.frame.resize_surface(size.width, size.height) {
+                                    //Lcd::log_error("frame.resize_surface", err);
+                                    elwt.exit();
+                                    return;
+                                }
+                            }
 
-        // Draw the current frame
-        if let Event::WindowEvent {
-            event: WindowEvent::RedrawRequested,
-            ..
-        } = event
-        {
-            if render_state == RenderState::render {
-                // todo need to modify the code so that emu is not used here, then I can move emu to thread
-                //let mut emu = emu_arc.lock().unwrap();
-                //lcd.draw(frame.frame_mut(), &mut emu);
-            
-                frame.render().unwrap();
+                            tile_viewer_window.window.request_redraw();
 
-            }
+                        }
+                    },
+                    game_window_id => {
+                        // Draw the current frame
+                        // todo need to somehow get the frame into one tick outside of this loop
+                        //let render_state = emu.tick(tile_viewer_window.frame.frame_mut());
+                        //if render_state == RenderState::Render {
+                            game_window.frame.render().unwrap();
+                        //}
 
-        }
+                        // Handle input events
+                        if input.update(&event) {
+                            // Close events
+                            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
+                                elwt.exit();
+                                return;
+                            }
 
+                            // Resize the window
+                            if let Some(size) = input.window_resized() {
+                                if let Err(err) = game_window.frame.resize_surface(size.width, size.height) {
+                                    //Lcd::log_error("frame.resize_surface", err);
+                                    elwt.exit();
+                                    return;
+                                }
+                            }
 
+                            game_window.window.request_redraw();
 
-        // Handle input events
-        if input.update(&event) {
-            // Close events
-            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
-                elwt.exit();
-                return;
-            }
+                        }
+                    },
+                    _ => {
 
-            // Resize the window
-            if let Some(size) = input.window_resized() {
-                if let Err(err) = frame.resize_surface(size.width, size.height) {
-                    //Lcd::log_error("frame.resize_surface", err);
-                    elwt.exit();
-                    return;
+                    }
                 }
-            }
+            },
+            _=> {
+                emu.tick(tile_viewer_window.frame.frame_mut());
+                tile_viewer_window.window.request_redraw();
+                game_window.window.request_redraw();
 
-            // Update internal state and request a redraw
-            //lcd.update();
-            window.request_redraw();
+            },
+
         }
-    });
+
+    }).expect("Unable to run event loop in GBWindow");
+
 
 
 }

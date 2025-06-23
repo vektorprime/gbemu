@@ -10,4 +10,4 @@ pub mod mbc;
 
 
 pub mod graphics;
-mod gbwindow;
+pub mod gbwindow;

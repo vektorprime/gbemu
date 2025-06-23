@@ -6,8 +6,8 @@ use crate::gb::hwregisters::*;
 
 #[derive(PartialEq)]
 pub enum RenderState {
-    render,
-    no_render
+    Render,
+    NoRender
 }
 
 pub struct Ppu {
@@ -220,8 +220,8 @@ impl Ppu {
         // i went back and forth here but I left it on because it seems like it may work
         // the pc counter was inc slow but that was due to other reasons
         if !mbc.hw_reg.is_lcdc_bit7_enabled() {
-           print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
-            return RenderState::no_render;
+           //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
+            return RenderState::NoRender;
         }
 
         if !self.ppu_init_complete {
@@ -254,7 +254,7 @@ impl Ppu {
         self.mode_3_draw(frame, &cycles);
         self.mode_0_h_blank();
 
-        RenderState::render
+        RenderState::Render
     }
 
 }
