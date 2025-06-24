@@ -219,6 +219,9 @@ impl Mbc {
                     print!("address in write_rom is {:#x} \n", address);
                     self.need_tile_update = true;
                 }
+                if (0x9800..=0x9BFF).contains(&address) {
+                    print!("address in write_rom is {:#x} \n", address);
+                }
                 // if (0x9000..=0x9010).contains(&address) {
                 //     print!("address in write_rom is {:#x} \n", address);
                 //     self.need_tile_update = true;

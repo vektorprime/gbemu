@@ -12,6 +12,7 @@ pub enum RenderState {
 
 pub struct Ppu {
    ly_inc_cycle: u64,
+    frame_cycle: u64,
     // LCD and scrolling
     // pub lcdc: u8,  // FF40
     // pub stat: u8,  // FF41
@@ -51,6 +52,7 @@ impl Ppu {
             // bit6_win_tile_map: false,
             // bit7_lcd_ppu_enable: false,
             ly_inc_cycle: 0,
+            frame_cycle: 0,
             // lcdc: 0,
             // stat: 0,
             // scy: 0,
@@ -129,18 +131,18 @@ impl Ppu {
 
     pub fn get_bg_tile_map(&self, mbc: &Mbc) -> [u8; 1024] {
         let mut bg_tile_map: [u8; 1024] = [0; 1024];
-        let address = if self.is_lcdc_bit3_bg_tile_map_set(&mbc) {
-            0x9800
-        } else {
+        let address = if self.is_lcdc_bit3_bg_tile_map_set(&mbc) { 
             0x9C00
+        } else {
+            0x9800
         };
 
         for x in 0x0..0x3FF {
             bg_tile_map[x] = mbc.read(address); 
         }
-        // if mbc.read(address) != 0 {
-        //     print!("Something inside of tile map \n");
-        // }
+        if mbc.read(address) != 0 {
+            print!("Something inside of tile map \n");
+        }
         bg_tile_map
     }
 
@@ -149,11 +151,11 @@ impl Ppu {
     }
 
 
-    pub fn mode_3_draw(&self, tile_frame: &mut [u8], game_frame: &mut [u8], cycles: &u64) {
+    pub fn draw_tiles_in_viewer(&self, tile_frame: &mut [u8], cycles: &u64) {
         if !self.ppu_init_complete { return; }
         let mut pixels_source: Vec<[u8; 4]> = Vec::new();
         // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
-        
+
         let mut tile_in_grid_count: usize = 0;
         let rows_per_grid: usize = 8;
         let mut tile_in_row_count = 0;
@@ -198,6 +200,53 @@ impl Ppu {
                 pixel.copy_from_slice(&pixels_source[i]);
             }
         }
+    }
+
+    pub fn draw_tiles_in_game(&self, bg_map: [u8; 1024], game_frame: &mut [u8], cycles: &u64) {
+        if !self.ppu_init_complete { return; }
+        let mut pixels_source: Vec<[u8; 4]> = Vec::new();
+        // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
+        
+        let mut tile_in_grid_count: usize = 0;
+        let rows_per_grid: usize = 32;
+        let mut tile_in_row_count = 0;
+        let tiles_per_row: usize = 32;
+        let rows_per_tile = 8;
+        let pixels_per_row = 8;
+        let mut current_tile: usize = 0;
+        for row_of_tiles_in_grid in 0..rows_per_grid {
+            for row in 0..rows_per_tile {
+                tile_in_grid_count = 0;
+                let mut tile_index = bg_map[current_tile] as usize;
+                if row_of_tiles_in_grid > 0 {
+                    if tile_in_grid_count < row_of_tiles_in_grid * tiles_per_row {
+                        tile_in_grid_count += 1;
+                        continue;
+                    }
+                }
+                // tile.data is an array of 8 arrays that each hold 8 PaletteColor
+                for pixel in 0..pixels_per_row {
+                    //put each pixel into a vec so we can move it to the frame later
+                    pixels_source.push(self.tiles[tile_index].data[row][pixel].get_rgba_code());
+                }
+                tile_in_row_count += 1;
+                current_tile += 1;
+
+            }
+        }
+        // copy each pixel into the frame
+        for (i, pixel) in game_frame.chunks_exact_mut(4).enumerate() {
+            if i < pixels_source.len() {
+                //let test_slice = [0x00, 0x00, 0xFF, 0xFFu8];
+                //pixel.copy_from_slice(&test_slice);
+                pixel.copy_from_slice(&pixels_source[i]);
+            }
+        }
+    }
+
+    pub fn mode_3_draw(&self, bg_map: [u8; 1024], tile_frame: &mut [u8], game_frame: &mut [u8], cycles: &u64) {
+        self.draw_tiles_in_viewer(tile_frame, cycles);
+        self.draw_tiles_in_game(bg_map, game_frame, cycles);
     }
 
     pub fn mode_0_h_blank(&self) {
@@ -247,14 +296,25 @@ impl Ppu {
             }
             self.ly_inc_cycle = 0;
         }
+        
+        let m_cycle_per_frame = 289 / 4; //4 dots per mcycle and there are 289 dots
+        let trigger_frame_count = m_cycle_per_frame;
+        self.frame_cycle += cycles;
+        if self.frame_cycle >= trigger_frame_count {
+            //print!("triggering frame \n");
+            self.frame_cycle = 0;
+            let bg_map = self.get_bg_tile_map(mbc);
 
-        let bg_map = self.get_bg_tile_map(mbc);
+            self.mode_2_oam_scan();
+            self.mode_3_draw(bg_map, tile_frame, game_frame, &cycles);
+            self.mode_0_h_blank();
 
-        self.mode_2_oam_scan();
-        self.mode_3_draw(tile_frame, game_frame, &cycles);
-        self.mode_0_h_blank();
-
-        RenderState::Render
+            RenderState::Render
+        }
+        else {
+            RenderState::NoRender
+        }
+        
     }
 
 }

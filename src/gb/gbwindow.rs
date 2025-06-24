@@ -9,11 +9,10 @@ use winit_input_helper::WinitInputHelper;
 
 use std::sync::Arc;
 
+use crate::gb::constants::*;
 use crate::gb::graphics::ppu::RenderState;
 //screen
 
-const WIDTH: u32 = 160;
-const HEIGHT: u32 = 144;
 
 pub enum WindowType {
     Tile,
@@ -31,7 +30,7 @@ pub struct GBWindow<'a> {
 
 impl<'a> GBWindow<'a> {
 
-    pub fn new(win_type: WindowType, event_loop: &EventLoop<()>) -> Self {
+    pub fn new(win_type: WindowType, event_loop: &EventLoop<()>, width: u32, height: u32) -> Self {
 
         //let event_loop = EventLoop::new().unwrap();
         let mut input = WinitInputHelper::new();
@@ -47,7 +46,7 @@ impl<'a> GBWindow<'a> {
 
 
 
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let size = LogicalSize::new(width as f64, height as f64);
         let inner_window = WindowBuilder::new()
                 .with_title(window_title)
                 .with_inner_size(size)
@@ -59,7 +58,7 @@ impl<'a> GBWindow<'a> {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, window_clone);
         // Create pixel canvas/frame to be modified later
-        let mut frame = Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap();
+        let mut frame = Pixels::new(width, height, surface_texture).unwrap();
 
         let input = WinitInputHelper::new();
         
@@ -70,6 +69,7 @@ impl<'a> GBWindow<'a> {
         }
 
     }
+    
     //pub fn tick(&mut self, event_loop: &EventLoop<()>, render_state: &RenderState) {
 
     //}

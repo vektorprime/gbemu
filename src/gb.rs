@@ -8,6 +8,7 @@ pub mod emu;
 pub mod bios;
 pub mod mbc;
 
+pub mod constants;
 
 pub mod graphics;
 pub mod gbwindow;

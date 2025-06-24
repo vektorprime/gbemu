@@ -85,10 +85,10 @@ impl Cpu {
         // if self.registers.get_pc() == 0x300 {
         //     panic!("TESTING");
         // }
-        // if self.registers.get_pc() > 0x68 {
-        //     let pc_print = self.registers.get_pc();
-        //     print!("pc - 0x{:X} \n", pc_print);
-        // }
+        if self.registers.get_pc() >= 0x60 {
+            let pc_print = self.registers.get_pc();
+            print!("pc - 0x{:X} \n", pc_print);
+        }
         // if self.registers.get_pc() == 0x86 {
         //     print!("pc is 0x86 \n");
         // }
@@ -193,7 +193,8 @@ impl Cpu {
                 0x03 => {
                     // INC BC
                     self.registers.inc_bc();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -275,7 +276,8 @@ impl Cpu {
                 0x0B => {
                     // DEC BC
                     self.registers.dec_bc();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -350,7 +352,8 @@ impl Cpu {
                 0x13 => {
                     // INC DE
                     self.registers.inc_de();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -449,7 +452,8 @@ impl Cpu {
                 0x1B => {
                     // DEC DE
                     self.registers.dec_de();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },    
@@ -547,7 +551,8 @@ impl Cpu {
                 0x23 => {
                     // INC HL
                     self.registers.inc_hl();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -667,7 +672,8 @@ impl Cpu {
                 0x2B => {
                     // DEC HL
                     self.registers.dec_hl();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -750,7 +756,8 @@ impl Cpu {
                 0x33 => {
                     // INC SP
                     self.registers.inc_sp();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -853,7 +860,8 @@ impl Cpu {
                 0x3B => {
                     // DEC SP
                     self.registers.dec_sp();
-                    self.registers.handle_flags(inst.name);
+                    // skip flags because the 16 bit ops don't touch them
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -6449,182 +6457,182 @@ impl Cpu {
             name: "NOP",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x01, Instruction {
             opcode: 0x01,
             name: "LD BC D16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0x02, Instruction {
             opcode: 0x02,
             name: "LD (BC) A",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x03, Instruction {
             opcode: 0x03,
             name: "INC BC",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x04, Instruction {
             opcode: 0x04,
             name: "INC B",
             cycles: 1,
             size: 1,
-            flags: &[FlagBits::H],
+            //flags: &[FlagBits::H],
         });
         all_instructions.insert(0x05, Instruction {
             opcode: 0x05,
             name: "DEC B",
             cycles: 1,
             size: 1,
-            flags: &[FlagBits::Z, FlagBits::H],
+            //flags: &[FlagBits::Z, FlagBits::H],
         });
         all_instructions.insert(0x06, Instruction {
             opcode: 0x06,
             name: "LD B D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x07, Instruction {
             opcode: 0x07,
             name: "RLCA",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x08, Instruction {
             opcode: 0x08,
             name: "LD (A16) SP",
             cycles: 5,
             size: 3,
-            flags: &[FlagBits::C],
+            //flags: &[FlagBits::C],
         });
         all_instructions.insert(0x09, Instruction {
             opcode: 0x09,
             name: "ADD HL BC",
             cycles: 2,
             size: 1,
-            flags: &[FlagBits::C],
+            //flags: &[FlagBits::C],
         });
         all_instructions.insert(0x0A, Instruction {
             opcode: 0x0A,
             name: "LD A (BC)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0B, Instruction {
             opcode: 0x0B,
             name: "DEC BC",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0C, Instruction {
             opcode: 0x0C,
             name: "INC C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0D, Instruction {
             opcode: 0x0D,
             name: "DEC C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0E, Instruction {
             opcode: 0x0E,
             name: "LD C D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0F, Instruction {
             opcode: 0x0F,
             name: "RRCA",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x10, Instruction {
             opcode: 0x10,
             name: "STOP 0",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x11, Instruction {
             opcode: 0x11,
             name: "LD DE D16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0x12, Instruction {
             opcode: 0x12,
             name: "LD (DE) A",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x13, Instruction {
             opcode: 0x13,
             name: "INC DE",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x14, Instruction {
             opcode: 0x14,
             name: "INC D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x15, Instruction {
             opcode: 0x15,
             name: "DEC D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x16, Instruction {
             opcode: 0x16,
             name: "LD D D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x17, Instruction {
             opcode: 0x17,
             name: "RLA",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x18, Instruction {
             opcode: 0x18,
             name: "JR R8",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x19, Instruction {
             opcode: 0x19,
             name: "ADD HL DE",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
 
         all_instructions.insert(0x1A, Instruction {
@@ -6632,119 +6640,119 @@ impl Cpu {
             name: "LD A (DE)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1B, Instruction {
             opcode: 0x1B,
             name: "DEC DE",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1C, Instruction {
             opcode: 0x1C,
             name: "INC E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1D, Instruction {
             opcode: 0x1D,
             name: "DEC E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1E, Instruction {
             opcode: 0x1E,
             name: "LD E D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1F, Instruction {
             opcode: 0x1F,
             name: "RRA",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x20, Instruction {
             opcode: 0x20,
             name: "JR NZ R8",
             cycles: 3, //tbd how to handle or 2 if not jump, maybe second cycle as option and handle in func
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x21, Instruction {
             opcode: 0x21,
             name: "LD HL D16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0x22, Instruction {
             opcode: 0x22,
             name: "LD (HL+) A",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x23, Instruction {
             opcode: 0x23,
             name: "INC HL",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x24, Instruction {
             opcode: 0x24,
             name: "INC H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x25, Instruction {
             opcode: 0x25,
             name: "DEC H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x26, Instruction {
             opcode: 0x26,
             name: "LD H D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x27, Instruction {
             opcode: 0x27,
             name: "DAA",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x28, Instruction {
             opcode: 0x28,
             name: "JR Z R8",
             cycles: 3, // or 8 if condition not met
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x29, Instruction {
             opcode: 0x29,
             name: "ADD HL HL",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2A, Instruction {
             opcode: 0x2A,
             name: "LD A (HL+)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
 
         all_instructions.insert(0x2B, Instruction {
@@ -6752,1491 +6760,1491 @@ impl Cpu {
             name: "DEC HL",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2C, Instruction {
             opcode: 0x2C,
             name: "INC L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2D, Instruction {
             opcode: 0x2D,
             name: "DEC L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2E, Instruction {
             opcode: 0x2E,
             name: "LD L D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2F, Instruction {
             opcode: 0x2F,
             name: "CPL",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x30, Instruction {
             opcode: 0x30,
             name: "JR NC S8",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x31, Instruction {
             opcode: 0x31,
             name: "LD SP D16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0x32, Instruction {
             opcode: 0x32,
             name: "LD HLD A",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x33, Instruction {
             opcode: 0x33,
             name: "INC SP",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x34, Instruction {
             opcode: 0x34,
             name: "INC HL",
             cycles: 3,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x35, Instruction {
             opcode: 0x35,
             name: "DEC HL",
             cycles: 3,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x36, Instruction {
             opcode: 0x36,
             name: "LD HL D8",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x37, Instruction {
             opcode: 0x37,
             name: "SCF",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x38, Instruction {
             opcode: 0x38,
             name: "JR C R8",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x39, Instruction {
             opcode: 0x39,
             name: "ADD HL SP",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3A, Instruction {
             opcode: 0x3A,
             name: "LD A (DE)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3B, Instruction {
             opcode: 0x3B,
             name: "DEC SP",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3C, Instruction {
             opcode: 0x3C,
             name: "INC A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3D, Instruction {
             opcode: 0x3D,
             name: "DEC A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3E, Instruction {
             opcode: 0x3E,
             name: "LD A d8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3F, Instruction {
             opcode: 0x3F,
             name: "CCF",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x40, Instruction {
             opcode: 0x40,
             name: "LD B B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x41, Instruction {
             opcode: 0x41,
             name: "LD B C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x42, Instruction {
             opcode: 0x42,
             name: "LD B D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x43, Instruction {
             opcode: 0x43,
             name: "LD B E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x44, Instruction {
             opcode: 0x44,
             name: "LD B H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x45, Instruction {
             opcode: 0x45,
             name: "LD B L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x46, Instruction {
             opcode: 0x46,
             name: "LD B (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x47, Instruction {
             opcode: 0x47,
             name: "LD B A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x48, Instruction {
             opcode: 0x48,
             name: "LD C B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x49, Instruction {
             opcode: 0x49,
             name: "LD C C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4A, Instruction {
             opcode: 0x4A,
             name: "LD C D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4B, Instruction {
             opcode: 0x4B,
             name: "LD C E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4C, Instruction {
             opcode: 0x4C,
             name: "LD C H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4D, Instruction {
             opcode: 0x4D,
             name: "LD C L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4E, Instruction {
             opcode: 0x4E,
             name: "LD C (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4F, Instruction {
             opcode: 0x4F,
             name: "LD C A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x50, Instruction {
             opcode: 0x50,
             name: "LD D B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x51, Instruction {
             opcode: 0x51,
             name: "LD D C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x52, Instruction {
             opcode: 0x52,
             name: "LD D D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x53, Instruction {
             opcode: 0x53,
             name: "LD D E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x54, Instruction {
             opcode: 0x54,
             name: "LD D H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x55, Instruction {
             opcode: 0x55,
             name: "LD D L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x56, Instruction {
             opcode: 0x56,
             name: "LD D (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x57, Instruction {
             opcode: 0x57,
             name: "LD D A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x58, Instruction {
             opcode: 0x58,
             name: "LD E B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x59, Instruction {
             opcode: 0x59,
             name: "LD E C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5A, Instruction {
             opcode: 0x5A,
             name: "LD E D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5B, Instruction {
             opcode: 0x5B,
             name: "LD E E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5C, Instruction {
             opcode: 0x5C,
             name: "LD E H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5D, Instruction {
             opcode: 0x5D,
             name: "LD E L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5E, Instruction {
             opcode: 0x5E,
             name: "LD E (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5F, Instruction {
             opcode: 0x5F,
             name: "LD E A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x60, Instruction {
             opcode: 0x60,
             name: "LD H B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x61, Instruction {
             opcode: 0x61,
             name: "LD H C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x62, Instruction {
             opcode: 0x62,
             name: "LD H D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x63, Instruction {
             opcode: 0x63,
             name: "LD H E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x64, Instruction {
             opcode: 0x64,
             name: "LD H H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x65, Instruction {
             opcode: 0x65,
             name: "LD H L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x66, Instruction {
             opcode: 0x66,
             name: "LD H (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x67, Instruction {
             opcode: 0x67,
             name: "LD H A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x68, Instruction {
             opcode: 0x68,
             name: "LD L B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x69, Instruction {
             opcode: 0x69,
             name: "LD L C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6A, Instruction {
             opcode: 0x6A,
             name: "LD L D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6B, Instruction {
             opcode: 0x6B,
             name: "LD L E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6C, Instruction {
             opcode: 0x6C,
             name: "LD L H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6D, Instruction {
             opcode: 0x6D,
             name: "LD L L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6E, Instruction {
             opcode: 0x6E,
             name: "LD L (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6F, Instruction {
             opcode: 0x6F,
             name: "LD L A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x70, Instruction {
             opcode: 0x70,
             name: "LD (HL) B",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x71, Instruction {
             opcode: 0x71,
             name: "LD (HL)  C",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x72, Instruction {
             opcode: 0x72,
             name: "LD (HL) D",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x73, Instruction {
             opcode: 0x73,
             name: "LD (HL) E",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x74, Instruction {
             opcode: 0x74,
             name: "LD (HL) H",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x75, Instruction {
             opcode: 0x75,
             name: "LD (HL) L",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x76, Instruction {
             opcode: 0x76,
             name: "HALT",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x77, Instruction {
             opcode: 0x77,
             name: "LD (HL) A",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x78, Instruction {
             opcode: 0x78,
             name: "LD A B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x79, Instruction {
             opcode: 0x79,
             name: "LD A C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7A, Instruction {
             opcode: 0x7A,
             name: "LD A D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7B, Instruction {
             opcode: 0x7B,
             name: "LD A E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7C, Instruction {
             opcode: 0x7C,
             name: "LD A H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7D, Instruction {
             opcode: 0x7D,
             name: "LD A L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7E, Instruction {
             opcode: 0x7E,
             name: "LD A (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7F, Instruction {
             opcode: 0x7F,
             name: "LD A A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x80, Instruction {
             opcode: 0x80,
             name: "ADD A B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x81, Instruction {
             opcode: 0x81,
             name: "ADD A C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x82, Instruction {
             opcode: 0x82,
             name: "ADD A D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x83, Instruction {
             opcode: 0x83,
             name: "ADD A E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x84, Instruction {
             opcode: 0x84,
             name: "ADD A H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x85, Instruction {
             opcode: 0x85,
             name: "ADD A L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x86, Instruction {
             opcode: 0x86,
             name: "ADD A (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x87, Instruction {
             opcode: 0x87,
             name: "ADD A A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x88, Instruction {
             opcode: 0x88,
             name: "ADC A B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x89, Instruction {
             opcode: 0x89,
             name: "ADC A C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8A, Instruction {
             opcode: 0x8A,
             name: "ADC A D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8B, Instruction {
             opcode: 0x8B,
             name: "ADC A E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8C, Instruction {
             opcode: 0x8C,
             name: "ADC A H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8D, Instruction {
             opcode: 0x8D,
             name: "ADC A L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8E, Instruction {
             opcode: 0x8E,
             name: "ADC A (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8F, Instruction {
             opcode: 0x8F,
             name: "ADC A A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x90, Instruction {
             opcode: 0x90,
             name: "SUB B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x91, Instruction {
             opcode: 0x91,
             name: "SUB C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x92, Instruction {
             opcode: 0x92,
             name: "SUB D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x93, Instruction {
             opcode: 0x93,
             name: "SUB E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x94, Instruction {
             opcode: 0x94,
             name: "SUB H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x95, Instruction {
             opcode: 0x95,
             name: "SUB L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x96, Instruction {
             opcode: 0x96,
             name: "SUB (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x97, Instruction {
             opcode: 0x97,
             name: "SUB A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x98, Instruction {
             opcode: 0x98,
             name: "SBC A, B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x99, Instruction {
             opcode: 0x99,
             name: "SBC A, C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9A, Instruction {
             opcode: 0x9A,
             name: "SBC A, D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9B, Instruction {
             opcode: 0x9B,
             name: "SBC A, E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9C, Instruction {
             opcode: 0x9C,
             name: "SBC A, H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9D, Instruction {
             opcode: 0x9D,
             name: "SBC A, L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9E, Instruction {
             opcode: 0x9E,
             name: "SBC A, (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9F, Instruction {
             opcode: 0x9F,
             name: "SBC A, A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA0, Instruction {
             opcode: 0xA0,
             name: "AND B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA1, Instruction {
             opcode: 0xA1,
             name: "AND C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA2, Instruction {
             opcode: 0xA2,
             name: "AND D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA3, Instruction {
             opcode: 0xA3,
             name: "AND E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA4, Instruction {
             opcode: 0xA4,
             name: "AND H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA5, Instruction {
             opcode: 0xA5,
             name: "AND L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA6, Instruction {
             opcode: 0xA6,
             name: "AND (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA7, Instruction {
             opcode: 0xA7,
             name: "AND A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA8, Instruction {
             opcode: 0xA8,
             name: "XOR B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA9, Instruction {
             opcode: 0xA9,
             name: "XOR C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAA, Instruction {
             opcode: 0xAA,
             name: "XOR D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAB, Instruction {
             opcode: 0xAB,
             name: "XOR E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAC, Instruction {
             opcode: 0xAC,
             name: "XOR H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAD, Instruction {
             opcode: 0xAD,
             name: "XOR L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAE, Instruction {
             opcode: 0xAE,
             name: "XOR (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAF, Instruction {
             opcode: 0xAF,
             name: "XOR A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB0, Instruction {
             opcode: 0xB0,
             name: "OR B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB1, Instruction {
             opcode: 0xB1,
             name: "OR C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB2, Instruction {
             opcode: 0xB2,
             name: "OR D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB3, Instruction {
             opcode: 0xB3,
             name: "OR E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB4, Instruction {
             opcode: 0xB4,
             name: "OR H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB5, Instruction {
             opcode: 0xB5,
             name: "OR L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB6, Instruction {
             opcode: 0xB6,
             name: "OR (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB7, Instruction {
             opcode: 0xB7,
             name: "OR A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB8, Instruction {
             opcode: 0xB8,
             name: "CP B",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB9, Instruction {
             opcode: 0xB9,
             name: "CP C",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBA, Instruction {
             opcode: 0xBA,
             name: "CP D",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBB, Instruction {
             opcode: 0xBB,
             name: "CP E",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBC, Instruction {
             opcode: 0xBC,
             name: "CP H",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBD, Instruction {
             opcode: 0xBD,
             name: "CP L",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBE, Instruction {
             opcode: 0xBE,
             name: "CP (HL)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBF, Instruction {
             opcode: 0xBF,
             name: "CP A",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC0, Instruction {
             opcode: 0xC0,
             name: "RET NZ",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC1, Instruction {
             opcode: 0xC1,
             name: "POP BC",
             cycles: 3,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC2, Instruction {
             opcode: 0xC2,
             name: "JP NZ A16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC3, Instruction {
             opcode: 0xC3,
             name: "JP A16",
             cycles: 4,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC4, Instruction {
             opcode: 0xC4,
             name: "CALL NZ, A16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC5, Instruction {
             opcode: 0xC5,
             name: "PUSH BC",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC6, Instruction {
             opcode: 0xC6,
             name: "ADD A, D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC7, Instruction {
             opcode: 0xC7,
             name: "RST 00H",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC8, Instruction {
             opcode: 0xC8,
             name: "RET Z",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC9, Instruction {
             opcode: 0xC9,
             name: "RET",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCA, Instruction {
             opcode: 0xCA,
             name: "JP Z, A16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCB, Instruction {
             opcode: 0xCB,
             name: "UNIMPLEMENTED_CB",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCC, Instruction {
             opcode: 0xCC,
             name: "CALL Z, A16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCD, Instruction {
             opcode: 0xCD,
             name: "CALL A16",
             cycles: 6,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCE, Instruction {
             opcode: 0xCE,
             name: "ADC A, D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCF, Instruction {
             opcode: 0xCF,
             name: "RST 08H",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD0, Instruction {
             opcode: 0xD0,
             name: "RET NC",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD1, Instruction {
             opcode: 0xD1,
             name: "POP DE",
             cycles: 3,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD2, Instruction {
             opcode: 0xD2,
             name: "JP NC, A16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD3, Instruction {
             opcode: 0xD3,
             name: "UNUSED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD4, Instruction {
             opcode: 0xD4,
             name: "CALL NC, A16",
             cycles: 3,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD5, Instruction {
             opcode: 0xD5,
             name: "PUSH DE",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD6, Instruction {
             opcode: 0xD6,
             name: "SUB D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD7, Instruction {
             opcode: 0xD7,
             name: "RST 10H",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD8, Instruction {
             opcode: 0xD8,
             name: "RET C",
             cycles: 5,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD9, Instruction {
             opcode: 0xD9,
             name: "RETI",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDA, Instruction {
             opcode: 0xDA,
             name: "JP C A16",
             cycles: 4,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDB, Instruction {
             opcode: 0xDB,
             name: "UNUSED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDC, Instruction {
             opcode: 0xDC,
             name: "CALL C, A16",
             cycles: 6,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDD, Instruction {
             opcode: 0xDD,
             name: "UNUSED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDE, Instruction {
             opcode: 0xDE,
             name: "SBC D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDF, Instruction {
             opcode: 0xDF,
             name: "RST 18H",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE0, Instruction {
             opcode: 0xE0,
             name: "LD (A8) A",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE1, Instruction {
             opcode: 0xE1,
             name: "POP HL",
             cycles: 3,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE2, Instruction {
             opcode: 0xE2,
             name: "LD (C) A",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE3, Instruction {
             opcode: 0xE3,
             name: "UNIMPLEMENTED_E3",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE4, Instruction {
             opcode: 0xE4,
             name: "UNIMPLEMENTED_E4",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE5, Instruction {
             opcode: 0xE5,
             name: "PUSH HL",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE6, Instruction {
             opcode: 0xE6,
             name: "AND D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE7, Instruction {
             opcode: 0xE7,
             name: "RST 4",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE8, Instruction {
             opcode: 0xE8,
             name: "ADD SP S8",
             cycles: 4,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE9, Instruction {
             opcode: 0xE9,
             name: "JP HL",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEA, Instruction {
             opcode: 0xEA,
             name: "LD (A16) A",
             cycles: 4,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEB, Instruction {
             opcode: 0xEB,
             name: "UNIMPLEMENTED_EB",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEC, Instruction {
             opcode: 0xEC,
             name: "UNIMPLEMENTED_EC",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xED, Instruction {
             opcode: 0xED,
             name: "UNIMPLEMENTED_ED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEE, Instruction {
             opcode: 0xEE,
             name: "XOR D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEF, Instruction {
             opcode: 0xEF,
             name: "RST 5",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF0, Instruction {
             opcode: 0xF0,
             name: "LD A (A8)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF1, Instruction {
             opcode: 0xF1,
             name: "POP AF",
             cycles: 3,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF2, Instruction {
             opcode: 0xF2,
             name: "LD A (C)",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF3, Instruction {
             opcode: 0xF3,
             name: "DI",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF4, Instruction {
             opcode: 0xF4,
             name: "UNUSED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF5, Instruction {
             opcode: 0xF5,
             name: "PUSH AF",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF6, Instruction {
             opcode: 0xF6,
             name: "OR D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF7, Instruction {
             opcode: 0xF7,
             name: "RST 30H",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF8, Instruction {
             opcode: 0xF8,
             name: "LD HL SP+S8",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF9, Instruction {
             opcode: 0xF9,
             name: "LD SP HL",
             cycles: 2,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFA, Instruction {
             opcode: 0xFA,
             name: "LD A (A16)",
             cycles: 4,
             size: 3,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFB, Instruction {
             opcode: 0xFB,
             name: "EI",
             cycles: 1,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFC, Instruction {
             opcode: 0xFC,
             name: "UNUSED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFD, Instruction {
             opcode: 0xFD,
             name: "UNUSED",
             cycles: 0,
             size: 1,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFE, Instruction {
             opcode: 0xFE,
             name: "CP D8",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFF, Instruction {
             opcode: 0xFF,
             name: "RST 38H",
             cycles: 4,
             size: 1,
-            flags: &[],
+            
         });
     
         all_instructions
@@ -8250,1792 +8258,1792 @@ impl Cpu {
             name: "RLC B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x01, Instruction {
             opcode: 0x01,
             name: "RLC C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x02, Instruction {
             opcode: 0x02,
             name: "RLC D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x03, Instruction {
             opcode: 0x03,
             name: "RLC E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x04, Instruction {
             opcode: 0x04,
             name: "RLC H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x05, Instruction {
             opcode: 0x05,
             name: "RLC L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x06, Instruction {
             opcode: 0x06,
             name: "RLC (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x07, Instruction {
             opcode: 0x07,
             name: "RLC A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x08, Instruction {
             opcode: 0x08,
             name: "RRC B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x09, Instruction {
             opcode: 0x09,
             name: "RRC C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0A, Instruction {
             opcode: 0x0A,
             name: "RRC D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0B, Instruction {
             opcode: 0x0B,
             name: "RRC E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0C, Instruction {
             opcode: 0x0C,
             name: "RRC H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0D, Instruction {
             opcode: 0x0D,
             name: "RRC L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0E, Instruction {
             opcode: 0x0E,
             name: "RRC (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x0F, Instruction {
             opcode: 0x0F,
             name: "RRC A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x10, Instruction {
             opcode: 0x10,
             name: "RL B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x11, Instruction {
             opcode: 0x11,
             name: "RL C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x12, Instruction {
             opcode: 0x12,
             name: "RL D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x13, Instruction {
             opcode: 0x13,
             name: "RL E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x14, Instruction {
             opcode: 0x14,
             name: "RL H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x15, Instruction {
             opcode: 0x15,
             name: "RL L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x16, Instruction {
             opcode: 0x16,
             name: "RL (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x17, Instruction {
             opcode: 0x17,
             name: "RL A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x18, Instruction {
             opcode: 0x18,
             name: "RR B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x19, Instruction {
             opcode: 0x19,
             name: "RR C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1A, Instruction {
             opcode: 0x1A,
             name: "RR D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1B, Instruction {
             opcode: 0x1B,
             name: "RR E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1C, Instruction {
             opcode: 0x1C,
             name: "RR H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1D, Instruction {
             opcode: 0x1D,
             name: "RR L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1E, Instruction {
             opcode: 0x1E,
             name: "RR (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x1F, Instruction {
             opcode: 0x1F,
             name: "RR A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x20, Instruction {
             opcode: 0x20,
             name: "SLA B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x21, Instruction {
             opcode: 0x21,
             name: "SLA C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x22, Instruction {
             opcode: 0x22,
             name: "SLA D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x23, Instruction {
             opcode: 0x23,
             name: "SLA E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x24, Instruction {
             opcode: 0x24,
             name: "SLA H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x25, Instruction {
             opcode: 0x25,
             name: "SLA L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x26, Instruction {
             opcode: 0x26,
             name: "SLA (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x27, Instruction {
             opcode: 0x27,
             name: "SLA A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x28, Instruction {
             opcode: 0x28,
             name: "SRA B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x29, Instruction {
             opcode: 0x29,
             name: "SRA C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2A, Instruction {
             opcode: 0x2A,
             name: "SRA D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2B, Instruction {
             opcode: 0x2B,
             name: "SRA E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2C, Instruction {
             opcode: 0x2C,
             name: "SRA H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2D, Instruction {
             opcode: 0x2D,
             name: "SRA L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2E, Instruction {
             opcode: 0x2E,
             name: "SRA (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x2F, Instruction {
             opcode: 0x2F,
             name: "SRA A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x30, Instruction {
             opcode: 0x30,
             name: "SWAP B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x31, Instruction {
             opcode: 0x31,
             name: "SWAP C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x32, Instruction {
             opcode: 0x32,
             name: "SWAP D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x33, Instruction {
             opcode: 0x33,
             name: "SWAP E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x34, Instruction {
             opcode: 0x34,
             name: "SWAP H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x35, Instruction {
             opcode: 0x35,
             name: "SWAP L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x36, Instruction {
             opcode: 0x36,
             name: "SWAP (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x37, Instruction {
             opcode: 0x37,
             name: "SWAP A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x38, Instruction {
             opcode: 0x38,
             name: "SRL B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x39, Instruction {
             opcode: 0x39,
             name: "SRL C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3A, Instruction {
             opcode: 0x3A,
             name: "SRL D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3B, Instruction {
             opcode: 0x3B,
             name: "SRL E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3C, Instruction {
             opcode: 0x3C,
             name: "SRL H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3D, Instruction {
             opcode: 0x3D,
             name: "SRL L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3E, Instruction {
             opcode: 0x3E,
             name: "SRL (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x3F, Instruction {
             opcode: 0x3F,
             name: "SRL A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x40, Instruction {
             opcode: 0x40,
             name: "BIT 0 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x41, Instruction {
             opcode: 0x41,
             name: "BIT 0 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x42, Instruction {
             opcode: 0x42,
             name: "BIT 0 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x43, Instruction {
             opcode: 0x43,
             name: "BIT 0 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x44, Instruction {
             opcode: 0x44,
             name: "BIT 0 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x45, Instruction {
             opcode: 0x45,
             name: "BIT 0 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x46, Instruction {
             opcode: 0x46,
             name: "BIT 0 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x47, Instruction {
             opcode: 0x47,
             name: "BIT 0 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x48, Instruction {
             opcode: 0x48,
             name: "BIT 1 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x49, Instruction {
             opcode: 0x49,
             name: "BIT 1 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4A, Instruction {
             opcode: 0x4A,
             name: "BIT 1 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4B, Instruction {
             opcode: 0x4B,
             name: "BIT 1 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4C, Instruction {
             opcode: 0x4C,
             name: "BIT 1 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4D, Instruction {
             opcode: 0x4D,
             name: "BIT 1 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4E, Instruction {
             opcode: 0x4E,
             name: "BIT 1 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x4F, Instruction {
             opcode: 0x4F,
             name: "BIT 1 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x50, Instruction {
             opcode: 0x50,
             name: "BIT 2 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x51, Instruction {
             opcode: 0x51,
             name: "BIT 2 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x52, Instruction {
             opcode: 0x52,
             name: "BIT 2 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x53, Instruction {
             opcode: 0x53,
             name: "BIT 2 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x54, Instruction {
             opcode: 0x54,
             name: "BIT 2 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x55, Instruction {
             opcode: 0x55,
             name: "BIT 2 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x56, Instruction {
             opcode: 0x56,
             name: "BIT 2 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x57, Instruction {
             opcode: 0x57,
             name: "BIT 2 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x58, Instruction {
             opcode: 0x58,
             name: "BIT 3 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x59, Instruction {
             opcode: 0x59,
             name: "BIT 3 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5A, Instruction {
             opcode: 0x5A,
             name: "BIT 3 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5B, Instruction {
             opcode: 0x5B,
             name: "BIT 3 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5C, Instruction {
             opcode: 0x5C,
             name: "BIT 3 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5D, Instruction {
             opcode: 0x5D,
             name: "BIT 3 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5E, Instruction {
             opcode: 0x5E,
             name: "BIT 3 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x5F, Instruction {
             opcode: 0x5F,
             name: "BIT 3 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x60, Instruction {
             opcode: 0x60,
             name: "BIT 4 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x61, Instruction {
             opcode: 0x61,
             name: "BIT 4 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x62, Instruction {
             opcode: 0x62,
             name: "BIT 4 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x63, Instruction {
             opcode: 0x63,
             name: "BIT 4 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x64, Instruction {
             opcode: 0x64,
             name: "BIT 4 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x65, Instruction {
             opcode: 0x65,
             name: "BIT 4 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x66, Instruction {
             opcode: 0x66,
             name: "BIT 4 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x67, Instruction {
             opcode: 0x67,
             name: "BIT 4 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x68, Instruction {
             opcode: 0x68,
             name: "BIT 5 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x69, Instruction {
             opcode: 0x69,
             name: "BIT 5 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6A, Instruction {
             opcode: 0x6A,
             name: "BIT 5 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6B, Instruction {
             opcode: 0x6B,
             name: "BIT 5 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6C, Instruction {
             opcode: 0x6C,
             name: "BIT 5 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6D, Instruction {
             opcode: 0x6D,
             name: "BIT 5 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6E, Instruction {
             opcode: 0x6E,
             name: "BIT 5 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x6F, Instruction {
             opcode: 0x6F,
             name: "BIT 5 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x70, Instruction {
             opcode: 0x70,
             name: "BIT 6 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x71, Instruction {
             opcode: 0x71,
             name: "BIT 6 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x72, Instruction {
             opcode: 0x72,
             name: "BIT 6 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x73, Instruction {
             opcode: 0x73,
             name: "BIT 6 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x74, Instruction {
             opcode: 0x74,
             name: "BIT 6 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x75, Instruction {
             opcode: 0x75,
             name: "BIT 6 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x76, Instruction {
             opcode: 0x76,
             name: "BIT 6 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x77, Instruction {
             opcode: 0x77,
             name: "BIT 6 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x78, Instruction {
             opcode: 0x78,
             name: "BIT 7 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x79, Instruction {
             opcode: 0x79,
             name: "BIT 7 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7A, Instruction {
             opcode: 0x7A,
             name: "BIT 7 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7B, Instruction {
             opcode: 0x7B,
             name: "BIT 7 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7C, Instruction {
             opcode: 0x7C,
             name: "BIT 7 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7D, Instruction {
             opcode: 0x7D,
             name: "BIT 7 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7E, Instruction {
             opcode: 0x7E,
             name: "BIT 7 (HL)",
             cycles: 3,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x7F, Instruction {
             opcode: 0x7F,
             name: "BIT 7 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x80, Instruction {
             opcode: 0x80,
             name: "RES 0 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x81, Instruction {
             opcode: 0x81,
             name: "RES 0 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x82, Instruction {
             opcode: 0x82,
             name: "RES 0 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x83, Instruction {
             opcode: 0x83,
             name: "RES 0 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x84, Instruction {
             opcode: 0x84,
             name: "RES 0 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x85, Instruction {
             opcode: 0x85,
             name: "RES 0 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x86, Instruction {
             opcode: 0x86,
             name: "RES 0 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x87, Instruction {
             opcode: 0x87,
             name: "RES 0 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x88, Instruction {
             opcode: 0x88,
             name: "RES 1 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x89, Instruction {
             opcode: 0x89,
             name: "RES 1 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8A, Instruction {
             opcode: 0x8A,
             name: "RES 1 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8B, Instruction {
             opcode: 0x8B,
             name: "RES 1 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8C, Instruction {
             opcode: 0x8C,
             name: "RES 1 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8D, Instruction {
             opcode: 0x8D,
             name: "RES 1 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8E, Instruction {
             opcode: 0x8E,
             name: "RES 1 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x8F, Instruction {
             opcode: 0x8F,
             name: "RES 1 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x90, Instruction {
             opcode: 0x90,
             name: "RES 2 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x91, Instruction {
             opcode: 0x91,
             name: "RES 2 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x92, Instruction {
             opcode: 0x92,
             name: "RES 2 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x93, Instruction {
             opcode: 0x93,
             name: "RES 2 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x94, Instruction {
             opcode: 0x94,
             name: "RES 2 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x95, Instruction {
             opcode: 0x95,
             name: "RES 2 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x96, Instruction {
             opcode: 0x96,
             name: "RES 2 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x97, Instruction {
             opcode: 0x97,
             name: "RES 2 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x98, Instruction {
             opcode: 0x98,
             name: "RES 3 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x99, Instruction {
             opcode: 0x99,
             name: "RES 3 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9A, Instruction {
             opcode: 0x9A,
             name: "RES 3 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9B, Instruction {
             opcode: 0x9B,
             name: "RES 3 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9C, Instruction {
             opcode: 0x9C,
             name: "RES 3 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9D, Instruction {
             opcode: 0x9D,
             name: "RES 3 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9E, Instruction {
             opcode: 0x9E,
             name: "RES 3 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0x9F, Instruction {
             opcode: 0x9F,
             name: "RES 3 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA0, Instruction {
             opcode: 0xA0,
             name: "RES 4 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA1, Instruction {
             opcode: 0xA1,
             name: "RES 4 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA2, Instruction {
             opcode: 0xA2,
             name: "RES 4 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA3, Instruction {
             opcode: 0xA3,
             name: "RES 4 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA4, Instruction {
             opcode: 0xA4,
             name: "RES 4 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA5, Instruction {
             opcode: 0xA5,
             name: "RES 4 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA6, Instruction {
             opcode: 0xA6,
             name: "RES 4 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA7, Instruction {
             opcode: 0xA7,
             name: "RES 4 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA8, Instruction {
             opcode: 0xA8,
             name: "RES 5 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xA9, Instruction {
             opcode: 0xA9,
             name: "RES 5 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAA, Instruction {
             opcode: 0xAA,
             name: "RES 5 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAB, Instruction {
             opcode: 0xAB,
             name: "RES 5 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAC, Instruction {
             opcode: 0xAC,
             name: "RES 5 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAD, Instruction {
             opcode: 0xAD,
             name: "RES 5 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAE, Instruction {
             opcode: 0xAE,
             name: "RES 5 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xAF, Instruction {
             opcode: 0xAF,
             name: "RES 5 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB0, Instruction {
             opcode: 0xB0,
             name: "RES 6 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB1, Instruction {
             opcode: 0xB1,
             name: "RES 6 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB2, Instruction {
             opcode: 0xB2,
             name: "RES 6 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB3, Instruction {
             opcode: 0xB3,
             name: "RES 6 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB4, Instruction {
             opcode: 0xB4,
             name: "RES 6 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB5, Instruction {
             opcode: 0xB5,
             name: "RES 6 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB6, Instruction {
             opcode: 0xB6,
             name: "RES 6 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB7, Instruction {
             opcode: 0xB7,
             name: "RES 6 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB8, Instruction {
             opcode: 0xB8,
             name: "RES 7 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xB9, Instruction {
             opcode: 0xB9,
             name: "RES 7 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBA, Instruction {
             opcode: 0xBA,
             name: "RES 7 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBB, Instruction {
             opcode: 0xBB,
             name: "RES 7 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBC, Instruction {
             opcode: 0xBC,
             name: "RES 7 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBD, Instruction {
             opcode: 0xBD,
             name: "RES 7 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBE, Instruction {
             opcode: 0xBE,
             name: "RES 7 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xBF, Instruction {
             opcode: 0xBF,
             name: "RES 7 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC0, Instruction {
             opcode: 0xC0,
             name: "SET 0 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC1, Instruction {
             opcode: 0xC1,
             name: "SET 0 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC2, Instruction {
             opcode: 0xC2,
             name: "SET 0 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC3, Instruction {
             opcode: 0xC3,
             name: "SET 0 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC4, Instruction {
             opcode: 0xC4,
             name: "SET 0 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC5, Instruction {
             opcode: 0xC5,
             name: "SET 0 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC6, Instruction {
             opcode: 0xC6,
             name: "SET 0 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC7, Instruction {
             opcode: 0xC7,
             name: "SET 0 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC8, Instruction {
             opcode: 0xC8,
             name: "SET 1 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xC9, Instruction {
             opcode: 0xC9,
             name: "SET 1 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCA, Instruction {
             opcode: 0xCA,
             name: "SET 1 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCB, Instruction {
             opcode: 0xCB,
             name: "SET 1 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCC, Instruction {
             opcode: 0xCC,
             name: "SET 1 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCD, Instruction {
             opcode: 0xCD,
             name: "SET 1 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCE, Instruction {
             opcode: 0xCE,
             name: "SET 1 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xCF, Instruction {
             opcode: 0xCF,
             name: "SET 1 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD0, Instruction {
             opcode: 0xD0,
             name: "SET 2 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD1, Instruction {
             opcode: 0xD1,
             name: "SET 2 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD2, Instruction {
             opcode: 0xD2,
             name: "SET 2 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD3, Instruction {
             opcode: 0xD3,
             name: "SET 2 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD4, Instruction {
             opcode: 0xD4,
             name: "SET 2 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD5, Instruction {
             opcode: 0xD5,
             name: "SET 2 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD6, Instruction {
             opcode: 0xD6,
             name: "SET 2 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD7, Instruction {
             opcode: 0xD7,
             name: "SET 2 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD8, Instruction {
             opcode: 0xD8,
             name: "SET 3 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xD9, Instruction {
             opcode: 0xD9,
             name: "SET 3 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDA, Instruction {
             opcode: 0xDA,
             name: "SET 3 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDB, Instruction {
             opcode: 0xDB,
             name: "SET 3 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDC, Instruction {
             opcode: 0xDC,
             name: "SET 3 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDD, Instruction {
             opcode: 0xDD,
             name: "SET 3 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDE, Instruction {
             opcode: 0xDE,
             name: "SET 3 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xDF, Instruction {
             opcode: 0xDF,
             name: "SET 3 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE0, Instruction {
             opcode: 0xE0,
             name: "SET 4 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE1, Instruction {
             opcode: 0xE1,
             name: "SET 4 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE2, Instruction {
             opcode: 0xE2,
             name: "SET 4 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE3, Instruction {
             opcode: 0xE3,
             name: "SET 4 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE4, Instruction {
             opcode: 0xE4,
             name: "SET 4 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE5, Instruction {
             opcode: 0xE5,
             name: "SET 4 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE6, Instruction {
             opcode: 0xE6,
             name: "SET 4 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE7, Instruction {
             opcode: 0xE7,
             name: "SET 4 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE8, Instruction {
             opcode: 0xE8,
             name: "SET 5 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xE9, Instruction {
             opcode: 0xE9,
             name: "SET 5 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEA, Instruction {
             opcode: 0xEA,
             name: "SET 5 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEB, Instruction {
             opcode: 0xEB,
             name: "SET 5 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEC, Instruction {
             opcode: 0xEC,
             name: "SET 5 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xED, Instruction {
             opcode: 0xED,
             name: "SET 5 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEE, Instruction {
             opcode: 0xEE,
             name: "SET 5 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xEF, Instruction {
             opcode: 0xEF,
             name: "SET 5 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF0, Instruction {
             opcode: 0xF0,
             name: "SET 6 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF1, Instruction {
             opcode: 0xF1,
             name: "SET 6 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF2, Instruction {
             opcode: 0xF2,
             name: "SET 6 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF3, Instruction {
             opcode: 0xF3,
             name: "SET 6 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF4, Instruction {
             opcode: 0xF4,
             name: "SET 6 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF5, Instruction {
             opcode: 0xF5,
             name: "SET 6 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF6, Instruction {
             opcode: 0xF6,
             name: "SET 6 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF7, Instruction {
             opcode: 0xF7,
             name: "SET 6 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF8, Instruction {
             opcode: 0xF8,
             name: "SET 7 B",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xF9, Instruction {
             opcode: 0xF9,
             name: "SET 7 C",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFA, Instruction {
             opcode: 0xFA,
             name: "SET 7 D",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFB, Instruction {
             opcode: 0xFB,
             name: "SET 7 E",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFC, Instruction {
             opcode: 0xFC,
             name: "SET 7 H",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFD, Instruction {
             opcode: 0xFD,
             name: "SET 7 L",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFE, Instruction {
             opcode: 0xFE,
             name: "SET 7 (HL)",
             cycles: 1,
             size: 2,
-            flags: &[],
+            
         });
         all_instructions.insert(0xFF, Instruction {
             opcode: 0xFF,
             name: "SET 7 A",
             cycles: 2,
             size: 2,
-            flags: &[],
+            
         });
 		
 		all_instructions

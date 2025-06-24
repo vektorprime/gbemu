@@ -10,15 +10,16 @@ use winit::keyboard::KeyCode;
 use winit::window::WindowBuilder;
 use winit_input_helper::WinitInputHelper;
 
+use crate::gb::constants::*;
 use crate::gb::graphics::ppu::RenderState;
 // use std::thread;
 // use std::sync::{Arc, Mutex};
 
 //screen
-// const WIDTH: u32 = 256;
-// const HEIGHT: u32 = 256;
-const WIDTH: u32 = 160;
-const HEIGHT: u32 = 144;
+
+// const WIDTH: u32 = 160;
+// const HEIGHT: u32 = 144;
+
 
 
 
@@ -28,15 +29,13 @@ use gb::bios::ColorMode;
 use crate::gb::emu::*;
 use crate::gb::graphics::lcd::*;
 use crate::gb::gbwindow::*;
-
+use crate::gb::constants::*;
 
 
 fn main() {
 
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
-
-    //let mut tile_viewer_input = WinitInputHelper::new();
     
     // setup emu
     let debug = true;
@@ -46,8 +45,9 @@ fn main() {
     emu.load_rom_file(String::from("tetris.gb"));
     emu.load_bios();
 
-    let mut game_window = GBWindow::new(WindowType::Game, &event_loop);
-    let mut tile_window = GBWindow::new(WindowType::Tile, &event_loop);
+    let mut game_window = GBWindow::new(WindowType::Game, &event_loop, 1024, 1024);
+    
+    let mut tile_window = GBWindow::new(WindowType::Tile, &event_loop, 160, 144);
 
     let tile_window_id = tile_window.window.id();
     let game_window_id = game_window.window.id();
@@ -69,17 +69,14 @@ fn main() {
                             tile_window.frame.render().unwrap();
                         }
 
-
                     },
-                    
+
                     game_window_id => {
                         // Draw the current frame
-                        // todo need to somehow get the frame into one tick outside of this loop
-                        //let render_state = emu.tick(tile_window.frame.frame_mut());
                         if render_state == RenderState::Render {
                             game_window.frame.render().unwrap();
                         }
-                        
+
                     },
                     _ => {
 
@@ -104,6 +101,9 @@ fn main() {
                             return;
                         }
                     }
+
+                    tile_window.window.request_redraw();
+
                 }
                 // process game window inputs
                 // Handle input events
@@ -127,7 +127,7 @@ fn main() {
 
                 }
                 render_state = emu.tick(tile_window.frame.frame_mut(), game_window.frame.frame_mut());
-                tile_window.window.request_redraw();
+                //tile_window.window.request_redraw();
                 //game_window.window.request_redraw();
 
             },
@@ -135,7 +135,6 @@ fn main() {
         }
 
     }).expect("Unable to run event loop in GBWindow");
-
 
 
 }

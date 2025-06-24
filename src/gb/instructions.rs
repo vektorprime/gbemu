@@ -10,5 +10,5 @@ pub struct Instruction {
     pub name: &'static str, // name of the instruction for easy reading
     pub cycles: u8,
     pub size: u8, // some instructions are in more than one byte
-    pub flags: &'static [FlagBits], // which flags were modified
+    //pub flags: &'static [FlagBits], // which flags were modified
 }

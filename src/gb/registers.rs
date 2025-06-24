@@ -59,10 +59,10 @@ impl Registers {
     }
 
     pub fn handle_flags(&mut self, inst_name: &str) {
-        if inst_name.contains("ADD") {
+        if inst_name.contains("ADD") || inst_name.contains("INC") || inst_name.contains("ADC") || inst_name.contains("OR ") || inst_name.contains("AND") {
             self.clear_n_flag();
         }
-        else if inst_name.contains("SUB") {
+        else if inst_name.contains("SUB") || inst_name.contains("DEC") || inst_name.contains("SBC") || inst_name.contains("CP") {
             self.set_n_flag();
         }
         else if inst_name.contains("RLCA") || inst_name.contains("RLA") || inst_name.contains("RRCA") || inst_name.contains("RRA") {
@@ -289,10 +289,13 @@ impl Registers {
     pub fn dec_d(&mut self) {
         // wrap on underflow
         self.d = self.d.wrapping_sub(1);
+        print!("reg d is {}\n", self.d);
         if self.d == 0 {
+            print!("setting z flag");
             self.set_z_flag()
         }
         else {
+            print!("clearing z flag\n");
             self.clear_z_flag();
         }
     }
