@@ -40,9 +40,9 @@ impl Emu {
     // }
 
 
-    pub fn tick(&mut self, frame: &mut [u8]) -> RenderState {
+    pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
         let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-        self.ppu.tick(&mut self.mbc, frame, cycles)
+        self.ppu.tick(&mut self.mbc, tile_frame, game_frame, cycles)
     }
 
 }

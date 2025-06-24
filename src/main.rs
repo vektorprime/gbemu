@@ -36,10 +36,8 @@ fn main() {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
 
-    let mut input = WinitInputHelper::new();
-
-
-
+    //let mut tile_viewer_input = WinitInputHelper::new();
+    
     // setup emu
     let debug = true;
     let mut emu = Emu::new(ColorMode::Gray, debug);
@@ -49,76 +47,39 @@ fn main() {
     emu.load_bios();
 
     let mut game_window = GBWindow::new(WindowType::Game, &event_loop);
-    let mut tile_viewer_window = GBWindow::new(WindowType::Tile, &event_loop);
+    let mut tile_window = GBWindow::new(WindowType::Tile, &event_loop);
 
-    let tile_viewer_window_id = tile_viewer_window.window.id();
+    let tile_window_id = tile_window.window.id();
     let game_window_id = game_window.window.id();
 
+    let mut render_state = RenderState::NoRender;
     event_loop.run(|event, elwt| {
 
-
-        let cloned_event = event.clone();
-        match cloned_event {
+        // event is shadowed but th at's ok
+        //let cloned_event = event.clone();
+        match event {
             // Event::AboutToWait => {
             //
             // },
-            Event::WindowEvent {window_id, event: window_event} => {
+            Event::WindowEvent {window_id, event: WindowEvent::RedrawRequested} => {
                 match window_id {
-                    tile_viewer_window_id => {
+                    tile_window_id => {
                         // Draw the current frame
-                        //if render_state == RenderState::Render {
-                            tile_viewer_window.frame.render().unwrap();
-                        //}
-
-                        // Handle input events
-                        if input.update(&event) {
-                            // Close events
-                            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
-                                elwt.exit();
-                                return;
-                            }
-
-                            // Resize the window
-                            if let Some(size) = input.window_resized() {
-                                if let Err(err) = tile_viewer_window.frame.resize_surface(size.width, size.height) {
-                                    //Lcd::log_error("frame.resize_surface", err);
-                                    elwt.exit();
-                                    return;
-                                }
-                            }
-
-                            tile_viewer_window.window.request_redraw();
-
+                        if render_state == RenderState::Render {
+                            tile_window.frame.render().unwrap();
                         }
+
+
                     },
+                    
                     game_window_id => {
                         // Draw the current frame
                         // todo need to somehow get the frame into one tick outside of this loop
-                        //let render_state = emu.tick(tile_viewer_window.frame.frame_mut());
-                        //if render_state == RenderState::Render {
+                        //let render_state = emu.tick(tile_window.frame.frame_mut());
+                        if render_state == RenderState::Render {
                             game_window.frame.render().unwrap();
-                        //}
-
-                        // Handle input events
-                        if input.update(&event) {
-                            // Close events
-                            if input.key_pressed(KeyCode::Escape) || input.close_requested() {
-                                elwt.exit();
-                                return;
-                            }
-
-                            // Resize the window
-                            if let Some(size) = input.window_resized() {
-                                if let Err(err) = game_window.frame.resize_surface(size.width, size.height) {
-                                    //Lcd::log_error("frame.resize_surface", err);
-                                    elwt.exit();
-                                    return;
-                                }
-                            }
-
-                            game_window.window.request_redraw();
-
                         }
+                        
                     },
                     _ => {
 
@@ -126,9 +87,48 @@ fn main() {
                 }
             },
             _=> {
-                emu.tick(tile_viewer_window.frame.frame_mut());
-                tile_viewer_window.window.request_redraw();
-                game_window.window.request_redraw();
+                // process tile window inputs
+                // Handle input events
+                if tile_window.input.update(&event) {
+                    // Close events
+                    if tile_window.input.key_pressed(KeyCode::Escape) || tile_window.input.close_requested() {
+                        elwt.exit();
+                        return;
+                    }
+
+                    // Resize the window
+                    if let Some(size) = tile_window.input.window_resized() {
+                        if let Err(err) = tile_window.frame.resize_surface(size.width, size.height) {
+                            //Lcd::log_error("frame.resize_surface", err);
+                            elwt.exit();
+                            return;
+                        }
+                    }
+                }
+                // process game window inputs
+                // Handle input events
+                if game_window.input.update(&event) {
+                    // Close events
+                    if game_window.input.key_pressed(KeyCode::Escape) || game_window.input.close_requested() {
+                        elwt.exit();
+                        return;
+                    }
+
+                    // Resize the window
+                    if let Some(size) = game_window.input.window_resized() {
+                        if let Err(err) = game_window.frame.resize_surface(size.width, size.height) {
+                            //Lcd::log_error("frame.resize_surface", err);
+                            elwt.exit();
+                            return;
+                        }
+                    }
+
+                    game_window.window.request_redraw();
+
+                }
+                render_state = emu.tick(tile_window.frame.frame_mut(), game_window.frame.frame_mut());
+                tile_window.window.request_redraw();
+                //game_window.window.request_redraw();
 
             },
 

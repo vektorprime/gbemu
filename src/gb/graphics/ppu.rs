@@ -149,7 +149,7 @@ impl Ppu {
     }
 
 
-    pub fn mode_3_draw(&self, frame: &mut [u8], cycles: &u64) {
+    pub fn mode_3_draw(&self, tile_frame: &mut [u8], game_frame: &mut [u8], cycles: &u64) {
         if !self.ppu_init_complete { return; }
         let mut pixels_source: Vec<[u8; 4]> = Vec::new();
         // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
@@ -191,7 +191,7 @@ impl Ppu {
             }
         }
         // copy each pixel into the frame
-        for (i, pixel) in frame.chunks_exact_mut(4).enumerate() {
+        for (i, pixel) in tile_frame.chunks_exact_mut(4).enumerate() {
             if i < pixels_source.len() {
                 //let test_slice = [0x00, 0x00, 0xFF, 0xFFu8];
                 //pixel.copy_from_slice(&test_slice);
@@ -208,7 +208,7 @@ impl Ppu {
         
     }
 
-    pub fn tick(&mut self, mbc: &mut Mbc, frame: &mut [u8], cycles: u64) -> RenderState {
+    pub fn tick(&mut self, mbc: &mut Mbc, tile_frame: &mut [u8], game_frame: &mut [u8], cycles: u64) -> RenderState {
 
         // let addr_trigger = mbc.read(0x8002);
         // if addr_trigger != 0 {
@@ -251,7 +251,7 @@ impl Ppu {
         let bg_map = self.get_bg_tile_map(mbc);
 
         self.mode_2_oam_scan();
-        self.mode_3_draw(frame, &cycles);
+        self.mode_3_draw(tile_frame, game_frame, &cycles);
         self.mode_0_h_blank();
 
         RenderState::Render

@@ -24,6 +24,7 @@ pub enum WindowType {
 pub struct GBWindow<'a> {
     pub window: Arc<Window>,
     pub frame: Pixels<'a>,
+    pub input: WinitInputHelper,
 
 }
 
@@ -60,10 +61,12 @@ impl<'a> GBWindow<'a> {
         // Create pixel canvas/frame to be modified later
         let mut frame = Pixels::new(WIDTH, HEIGHT, surface_texture).unwrap();
 
-
+        let input = WinitInputHelper::new();
+        
         GBWindow {
             window,
             frame,
+            input,
         }
 
     }
