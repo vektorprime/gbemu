@@ -49,7 +49,8 @@ impl Emu {
     pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
         let mcycle_per_sec: u64 = 17556;
         let one_sec: u64 = 1;
-        if self.current_time.elapsed().as_secs() < one_sec {
+        let elapsed_time = self.current_time.elapsed().as_secs();
+        if elapsed_time < one_sec {
             if self.sec_cycles < mcycle_per_sec {
                 let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
                 self.sec_cycles += cycles;
@@ -57,11 +58,21 @@ impl Emu {
             } else {
                 RenderState::NoRender
             }
-        }   else {
-            print!("sec has elapsed\n");
-            self.sec_cycles = 0;
-            self.current_time = Instant::now();
-            RenderState::NoRender
+        }  else {
+            if elapsed_time > one_sec {
+                panic!("ERROR: Elapsed time greater than one sick in EMU tick");
+            } else {
+                if self.sec_cycles < mcycle_per_sec {
+                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_cycles);
+                }
+                else {
+                    print!("sec has elapsed and reached max mcycle\n");
+                }
+                self.sec_cycles = 0;
+                self.current_time = Instant::now();
+                RenderState::NoRender
+            }
+
         }
         // if self.sec_cycles < mcycle_per_sec && self.current_time.elapsed().as_secs() < one_sec {
         //     let cycles = self.cpu.tick(&mut self.mbc, &self.bios);

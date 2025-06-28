@@ -6742,7 +6742,7 @@ impl Cpu {
         all_instructions.insert(0x28, Instruction {
             opcode: 0x28,
             name: "JR Z R8",
-            cycles: 3, // or 8 if condition not met
+            cycles: 3, // or 2 if condition not met
             size: 2,
             
         });

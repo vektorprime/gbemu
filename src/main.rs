@@ -79,7 +79,7 @@ fn main() {
 
                     },
                     _ => {
-
+                        panic!("Unable to handle unknown window id in event_loop");
                     }
                 }
             },

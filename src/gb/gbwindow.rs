@@ -43,9 +43,7 @@ impl<'a> GBWindow<'a> {
                 String::from("REMYUH")
             },
         };
-
-
-
+        
         let size = LogicalSize::new(width as f64, height as f64);
         let inner_window = WindowBuilder::new()
                 .with_title(window_title)

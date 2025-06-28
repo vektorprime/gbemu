@@ -291,6 +291,7 @@ impl Ppu {
 
         if mbc.need_tile_update {
             self.load_all_tiles(&mbc);
+            //print!("need tile_update \n");
             mbc.need_tile_update = false;
         }
 
