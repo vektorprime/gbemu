@@ -67,10 +67,7 @@ impl<'a> GBWindow<'a> {
         }
 
     }
-    
-    //pub fn tick(&mut self, event_loop: &EventLoop<()>, render_state: &RenderState) {
 
-    //}
 }
 
 

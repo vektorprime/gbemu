@@ -47,7 +47,7 @@ impl Emu {
 
 
     pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
-        let mcycle_per_sec: u64 = 17556;
+        let mcycle_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
         if elapsed_time < one_sec {

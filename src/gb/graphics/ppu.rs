@@ -306,9 +306,12 @@ impl Ppu {
         self.tcycle_in_frame += tcycle;
         let mode_1_v_blank_first_scan_line = 144;
         let current_scanline = mbc.hw_reg.ly;
+        //print!("current scan line is {}\n", current_scanline);
+        //print!("current tcycle_in_scanline is {}\n", self.tcycle_in_scanline);
         if current_scanline < mode_1_v_blank_first_scan_line {
             // mode 2 is dot 0-80
             let mode_2_oam_scan_last_tcycle = 79;
+
             if self.tcycle_in_scanline < mode_2_oam_scan_last_tcycle && !self.finished_mode_2_in_frame {
                 self.mode_2_oam_scan();
                 print!("entering mode_2_oam_scan \n");
@@ -343,9 +346,18 @@ impl Ppu {
             }
         }
 
+        if self.finished_mode_2_in_frame && self.finished_mode_3_in_frame &&
+                self.finished_mode_0_in_frame && self.finished_mode_1_in_frame {
+            self.finished_mode_2_in_frame = false;
+            self.finished_mode_3_in_frame = false;
+            self.finished_mode_0_in_frame = false;
+            self.finished_mode_1_in_frame = false;
+        }
+
         // reset tcycle in scan line because max is 456
         // also inc LY
         if self.tcycle_in_scanline >= 456 {
+            // this print is very freq
             //print!("tcycle_in_scanline >= 456, incrementing LY \n");
             self.tcycle_in_scanline = 0;
             mbc.hw_reg.ly += 1;
@@ -355,6 +367,7 @@ impl Ppu {
         let max_ly_value = 153;
         if mbc.hw_reg.ly >= max_ly_value {
             mbc.hw_reg.ly = 0;
+            // this print freq is the same as the 1 sec pausing, that means the ppu and cpu are in sync
             //print!("ly hw reg is max, resetting to 0 \n");
         }
 

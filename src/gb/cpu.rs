@@ -91,10 +91,10 @@ impl Cpu {
         // if self.registers.get_pc() == 0x300 {
         //     panic!("TESTING");
         // }
-        // if self.registers.get_pc() >= 0x86 {
-        //     let pc_print = self.registers.get_pc();
-        //     print!("pc - 0x{:X} \n", pc_print);
-        // }
+        if self.registers.get_pc() >= 0x8e {
+            let pc_print = self.registers.get_pc();
+            print!("pc - 0x{:X} \n", pc_print);
+        }
         // if self.registers.get_pc() == 0x86 {
         //     print!("pc is 0x86 \n");
         // }
@@ -6686,7 +6686,7 @@ impl Cpu {
         all_instructions.insert(0x20, Instruction {
             opcode: 0x20,
             name: "JR NZ R8",
-            cycles: 3, //tbd how to handle or 2 if not jump, maybe second cycle as option and handle in func
+            cycles: 3, //todo handle different cycles if not jump taken inside the inst code
             size: 2,
             
         });

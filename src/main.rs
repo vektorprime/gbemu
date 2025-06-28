@@ -36,7 +36,10 @@ fn main() {
 
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
-    
+
+    // this is purely for quick debugging
+    let skip_render = true;
+
     // setup emu
     let debug = true;
     let mut emu = Emu::new(ColorMode::Gray, debug);
@@ -65,7 +68,7 @@ fn main() {
                 match window_id {
                     tile_window_id => {
                         // Draw the current frame
-                        if render_state == RenderState::Render {
+                        if render_state == RenderState::Render && !skip_render {
                             tile_window.frame.render().unwrap();
                         }
 
@@ -73,7 +76,7 @@ fn main() {
 
                     game_window_id => {
                         // Draw the current frame
-                        if render_state == RenderState::Render {
+                        if render_state == RenderState::Render && !skip_render {
                             game_window.frame.render().unwrap();
                         }
 
@@ -101,7 +104,7 @@ fn main() {
                             return;
                         }
                     }
-
+                    // warning - skipping the request significantly slows down the program
                     tile_window.window.request_redraw();
 
                 }
@@ -122,13 +125,12 @@ fn main() {
                             return;
                         }
                     }
-
+                    // warning - skipping the request significantly slows down the program
                     game_window.window.request_redraw();
 
                 }
+
                 render_state = emu.tick(tile_window.frame.frame_mut(), game_window.frame.frame_mut());
-                //tile_window.window.request_redraw();
-                //game_window.window.request_redraw();
 
             },
 
