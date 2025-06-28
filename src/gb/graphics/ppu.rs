@@ -11,8 +11,14 @@ pub enum RenderState {
 }
 
 pub struct Ppu {
-   ly_inc_cycle: u64,
-    frame_cycle: u64,
+    //ly_inc_cycle: u64,
+    //frame_cycle: u64,
+    tcycle_in_frame: u64,
+    tcycle_in_scanline: u64,
+    finished_mode_0_in_frame: bool,
+    finished_mode_1_in_frame: bool,
+    finished_mode_2_in_frame: bool,
+    finished_mode_3_in_frame: bool,
     // LCD and scrolling
     // pub lcdc: u8,  // FF40
     // pub stat: u8,  // FF41
@@ -51,8 +57,12 @@ impl Ppu {
             // bit5_win_enable: false,
             // bit6_win_tile_map: false,
             // bit7_lcd_ppu_enable: false,
-            ly_inc_cycle: 0,
-            frame_cycle: 0,
+            tcycle_in_frame: 0,
+            tcycle_in_scanline: 0,
+            finished_mode_0_in_frame: false,
+            finished_mode_1_in_frame: false,
+            finished_mode_2_in_frame: false,
+            finished_mode_3_in_frame: false,
             // lcdc: 0,
             // stat: 0,
             // scy: 0,
@@ -141,13 +151,16 @@ impl Ppu {
             bg_tile_map[x] = mbc.read(address); 
         }
         if mbc.read(address) != 0 {
-            print!("Something inside of tile map \n");
+            let pr = mbc.read(address);
+            print!("Tile map entry is {} \n", pr);
         }
         bg_tile_map
     }
 
-    pub fn mode_2_oam_scan(&self) {
+    pub fn mode_2_oam_scan(&mut self) {
+
         // search for obj that are in this scan line pos and add to vec?
+        
     }
 
 
@@ -244,8 +257,8 @@ impl Ppu {
         }
     }
 
-    pub fn mode_3_draw(&self, bg_map: [u8; 1024], tile_frame: &mut [u8], game_frame: &mut [u8], cycles: &u64) {
-        self.draw_tiles_in_viewer(tile_frame, cycles);
+    pub fn mode_3_draw(&mut self, bg_map: [u8; 1024], tile_frame: &mut [u8], game_frame: &mut [u8], cycles: &u64) {
+
         self.draw_tiles_in_game(bg_map, game_frame, cycles);
     }
 
@@ -253,17 +266,14 @@ impl Ppu {
         
     }
 
-    pub fn mode_1_v_blank(&self) {
-        
+    pub fn mode_1_v_blank(&mut self, mbc: &mut Mbc) {
+        // end the drawing of pixels in the ppu
+
     }
 
     pub fn tick(&mut self, mbc: &mut Mbc, tile_frame: &mut [u8], game_frame: &mut [u8], cycles: u64) -> RenderState {
 
-        // let addr_trigger = mbc.read(0x8002);
-        // if addr_trigger != 0 {
-        //     print!("lcdc bit 7 not enabled yet, skipping ppu tick");
-        //     return;
-        // }
+        let tcycle = cycles * 4;
         
         // don't tick ppu unless the lcdc says ppu is on
         // i went back and forth here but I left it on because it seems like it may work
@@ -284,36 +294,105 @@ impl Ppu {
             mbc.need_tile_update = false;
         }
 
-        let trigger_ly_inc = 114;
-        let max_ly_value = 153;
-        self.ly_inc_cycle += cycles;
-        if self.ly_inc_cycle >= trigger_ly_inc {
-            mbc.hw_reg.ly += 1;
-            //print!("incrementing ly hw reg to {} \n", mbc.hw_reg.ly);
-            if mbc.hw_reg.ly >= max_ly_value {
-                mbc.hw_reg.ly = 0;
-                //print!("ly hw reg is max, resetting to 0 \n");
+        self.draw_tiles_in_viewer(tile_frame, &tcycle);
+
+        //
+        let bg_map = self.get_bg_tile_map(mbc);
+
+        // go through all PPU modes
+        // mode 2 + 3 + 0 stop after scan line 143
+        self.tcycle_in_scanline += tcycle;
+        self.tcycle_in_frame += tcycle;
+        let mode_1_v_blank_first_scan_line = 144;
+        let current_scanline = mbc.hw_reg.ly;
+        if current_scanline < mode_1_v_blank_first_scan_line {
+            // mode 2 is dot 0-80
+            let mode_2_oam_scan_last_tcycle = 79;
+            if self.tcycle_in_scanline < mode_2_oam_scan_last_tcycle && !self.finished_mode_2_in_frame {
+                self.mode_2_oam_scan();
+                print!("entering mode_2_oam_scan \n");
+                // not updating tycle manually because I want the cpu and ppu in sync
+                // self.tcycle_in_scanline = 79;
+                self.finished_mode_2_in_frame = true;
             }
-            self.ly_inc_cycle = 0;
+            
+            let mode_3_drawing_first_tcycle = 80;
+            if self.tcycle_in_scanline >= mode_3_drawing_first_tcycle  && !self.finished_mode_3_in_frame {
+                // Mode 3 is between 172 and 289 dots, let's call it 172
+                print!("entering mode_3_drawing \n");
+                self.mode_3_draw(bg_map, tile_frame, game_frame, &cycles);
+                self.finished_mode_3_in_frame = true;
+            }
+
+            let mode_0_h_blank_first_tcycle = 252;
+            if self.tcycle_in_scanline >= mode_0_h_blank_first_tcycle && !self.finished_mode_0_in_frame {
+                print!("entering mode_0_h_blank \n");
+                // Mode 0 is the remainder of the dots left in the scan line (final dot is 456)
+                self.mode_0_h_blank();
+                self.finished_mode_0_in_frame = true;
+            }
+        } else {
+            // last 10 scan lines are mode 1
+            // 4560 dots or 10 scan lines (each scan line is 456 dots)
+            let mode_1_v_blank_first_tcycle = 65664;
+            if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.finished_mode_1_in_frame {
+                print!("entering mode_1_v_blank \n");
+                self.mode_1_v_blank(mbc);
+                self.finished_mode_1_in_frame = true;
+            }
         }
-        
-        let m_cycle_per_frame = 289 / 4; //4 dots per mcycle and there are 289 dots
-        let trigger_frame_count = m_cycle_per_frame;
-        self.frame_cycle += cycles;
-        if self.frame_cycle >= trigger_frame_count {
-            //print!("triggering frame \n");
-            self.frame_cycle = 0;
-            let bg_map = self.get_bg_tile_map(mbc);
 
-            self.mode_2_oam_scan();
-            self.mode_3_draw(bg_map, tile_frame, game_frame, &cycles);
-            self.mode_0_h_blank();
+        // reset tcycle in scan line because max is 456
+        // also inc LY
+        if self.tcycle_in_scanline >= 456 {
+            //print!("tcycle_in_scanline >= 456, incrementing LY \n");
+            self.tcycle_in_scanline = 0;
+            mbc.hw_reg.ly += 1;
+        }
 
+        // max ly is 155
+        let max_ly_value = 153;
+        if mbc.hw_reg.ly >= max_ly_value {
+            mbc.hw_reg.ly = 0;
+            //print!("ly hw reg is max, resetting to 0 \n");
+        }
+
+        let max_tcycle_in_frame = 70224;
+        if self.tcycle_in_frame >= max_tcycle_in_frame {
+            //print!("tcycle_in_frame is >= 70224, generating frame \n");
+            self.tcycle_in_frame = 0;
+            self.tcycle_in_scanline = 0;
             RenderState::Render
-        }
-        else {
+        } else {
             RenderState::NoRender
         }
+
+
+
+        // let trigger_ly_inc = 114;
+        // let max_ly_value = 153;
+        // self.ly_inc_cycle += cycles;
+        // if self.ly_inc_cycle >= trigger_ly_inc {
+        //     mbc.hw_reg.ly += 1;
+        //     //print!("incrementing ly hw reg to {} \n", mbc.hw_reg.ly);
+        //     if mbc.hw_reg.ly >= max_ly_value {
+        //         mbc.hw_reg.ly = 0;
+        //         //print!("ly hw reg is max, resetting to 0 \n");
+        //     }
+        //     self.ly_inc_cycle = 0;
+        // }
+        //
+        // let m_cycle_per_frame = 289 / 4; //4 dots per mcycle and there are 289 dots
+        // let trigger_frame_count = m_cycle_per_frame;
+        // self.frame_cycle += cycles;
+        // if self.frame_cycle >= trigger_frame_count {
+        //     //print!("triggering frame \n");
+        //     self.frame_cycle = 0;
+
+        //}
+        //else {
+        //    RenderState::NoRender
+        //}
         
     }
 

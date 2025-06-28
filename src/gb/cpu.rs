@@ -4,6 +4,7 @@ use crate::gb::instructions::Instruction;
 use crate::gb::mbc::*;
 use crate::gb::bios::*;
 use std::collections::HashMap;
+//use std::time::{Duration, Instant};
 
 pub const MAX_T_CYCLE_PER_FRAME: u64 = 70224;
 
@@ -14,7 +15,9 @@ pub struct Cpu {
     pub pending_enable_ime_counter: u8,
     //pub opcode: u8, // opcode of current inst.
     pub cycles: u64, // total m cycle count
-    pub last_cycles: u64,
+    pub last_cycles: u64, // mcycles pe tick to pass to ppu
+    //pub sec_cycles: u64, // tracking max mcycles per sec
+    //pub current_time: Instant,
     pub halted: bool,
     pub instructions: HashMap<u8, Instruction>,
     pub cb_instructions: HashMap<u8, Instruction>,
@@ -31,8 +34,10 @@ impl Cpu {
             pending_enable_ime: false,
             pending_enable_ime_counter: 0,
             //opcode: 0,
-            cycles: 0,
-            last_cycles: 0,
+            cycles: 0, // total mcyces
+            last_cycles: 0, // mcycles pe tick to pass to ppu
+            //sec_cycles: 0, // tracking max mcycles per sec
+            //current_time: Instant::now(),
             halted: false, 
             instructions: Cpu::setup_inst(),
             cb_instructions: Cpu::setup_cb_inst(),
@@ -45,6 +50,7 @@ impl Cpu {
         
         self.cycles += size as u64;
         self.last_cycles = size as u64;
+
     }
 
     pub fn handle_interrupt(&mut self, mem: &mut Mbc) {
@@ -85,10 +91,10 @@ impl Cpu {
         // if self.registers.get_pc() == 0x300 {
         //     panic!("TESTING");
         // }
-        if self.registers.get_pc() >= 0x60 {
-            let pc_print = self.registers.get_pc();
-            print!("pc - 0x{:X} \n", pc_print);
-        }
+        // if self.registers.get_pc() >= 0x86 {
+        //     let pc_print = self.registers.get_pc();
+        //     print!("pc - 0x{:X} \n", pc_print);
+        // }
         // if self.registers.get_pc() == 0x86 {
         //     print!("pc is 0x86 \n");
         // }

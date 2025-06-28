@@ -289,13 +289,13 @@ impl Registers {
     pub fn dec_d(&mut self) {
         // wrap on underflow
         self.d = self.d.wrapping_sub(1);
-        print!("reg d is {}\n", self.d);
+        //print!("reg d is {}\n", self.d);
         if self.d == 0 {
-            print!("setting z flag");
+            //print!("setting z flag");
             self.set_z_flag()
         }
         else {
-            print!("clearing z flag\n");
+            //print!("clearing z flag\n");
             self.clear_z_flag();
         }
     }

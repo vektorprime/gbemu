@@ -6,6 +6,8 @@ use crate::gb::mbc::*;
  use crate::gb::graphics::lcd::*;
 use crate::gb::hwregisters::HardwareRegisters;
 
+use std::time::{Duration, Instant};
+
 pub struct Emu {
     pub cpu: Cpu,
     bios: Bios,
@@ -13,6 +15,8 @@ pub struct Emu {
     pub ppu: Ppu,
     // pub lcd: Lcd,
     pub debug: bool,
+    pub sec_cycles: u64, // tracking max mcycles per sec
+    pub current_time: Instant,
 }
 
 impl Emu {
@@ -24,6 +28,8 @@ impl Emu {
             ppu: Ppu::new(),
             // lcd: Lcd::new(),
             debug,
+            sec_cycles: 0, // tracking max mcycles per sec
+            current_time: Instant::now(),
         }
     }
 
@@ -41,8 +47,30 @@ impl Emu {
 
 
     pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
-        let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-        self.ppu.tick(&mut self.mbc, tile_frame, game_frame, cycles)
+        let mcycle_per_sec: u64 = 17556;
+        let one_sec: u64 = 1;
+        if self.current_time.elapsed().as_secs() < one_sec {
+            if self.sec_cycles < mcycle_per_sec {
+                let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
+                self.sec_cycles += cycles;
+                self.ppu.tick(&mut self.mbc, tile_frame, game_frame, cycles)
+            } else {
+                RenderState::NoRender
+            }
+        }   else {
+            print!("sec has elapsed\n");
+            self.sec_cycles = 0;
+            self.current_time = Instant::now();
+            RenderState::NoRender
+        }
+        // if self.sec_cycles < mcycle_per_sec && self.current_time.elapsed().as_secs() < one_sec {
+        //     let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
+        //     self.sec_cycles += cycles;
+        //     self.ppu.tick(&mut self.mbc, tile_frame, game_frame, cycles)
+        // }
+
+
+
     }
 
 }
