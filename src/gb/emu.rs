@@ -5,8 +5,12 @@ use crate::gb::mbc::*;
  use crate::gb::graphics::ppu::*;
  use crate::gb::graphics::lcd::*;
 use crate::gb::hwregisters::HardwareRegisters;
+use crate::gb::gbwindow::*;
 
 use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::sync::mpsc::{Sender, Receiver};
+use pixels::Pixels;
 
 pub struct Emu {
     pub cpu: Cpu,
@@ -45,8 +49,8 @@ impl Emu {
     //     self.ppu.load_all_tiles(&self.mbc);
     // }
 
-
-    pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
+    //pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
+    pub fn tick(&mut self, tw_tx: &Arc<Mutex<Vec<u8>>>, gw_tx: &Arc<Mutex<Vec<u8>>>) -> RenderState {
         let mcycle_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
@@ -54,7 +58,39 @@ impl Emu {
             if self.sec_cycles < mcycle_per_sec {
                 let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
                 self.sec_cycles += cycles;
-                self.ppu.tick(&mut self.mbc, tile_frame, game_frame, cycles)
+                self.ppu.tick(&mut self.mbc, tw_tx, gw_tx, cycles)
+            } else {
+                RenderState::NoRender
+            }
+        }  else {
+            if elapsed_time > one_sec && self.debug == false {
+                panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
+            } else {
+                if self.sec_cycles < mcycle_per_sec {
+                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_cycles);
+                }
+                else {
+                    print!("sec has elapsed and reached max mcycle\n");
+                }
+                self.sec_cycles = 0;
+                self.current_time = Instant::now();
+                RenderState::NoRender
+            }
+
+        }
+
+    }
+
+    pub fn tick_no_window(&mut self) -> RenderState {
+        let mcycle_per_sec: u64 = 1_053_360;
+        let one_sec: u64 = 1;
+        let elapsed_time = self.current_time.elapsed().as_secs();
+        if elapsed_time < one_sec {
+            if self.sec_cycles < mcycle_per_sec {
+                let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
+                self.sec_cycles += cycles;
+                RenderState::NoRender
+                //self.ppu.tick_no_window(&mut self.mbc, cycles)
             } else {
                 RenderState::NoRender
             }

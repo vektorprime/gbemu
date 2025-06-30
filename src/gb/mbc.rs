@@ -4,6 +4,9 @@ use crate::gb::rom::*;
 use crate::gb::bios::*;
 use crate::gb::hwregisters::HardwareRegisters;
 
+use std::thread::sleep;
+use std::time::Duration;
+
 pub const ROM_BANK_SIZE: u16 = 0x4000;
 pub const RAM_BANK_SIZE: u16 = 0x4000;
 
@@ -17,6 +20,7 @@ pub struct Mbc {
     wr_ram_bank: bool,
     pub rom_ram: RomRam,
     pub need_tile_update: bool,
+    pub need_bg_map_update: bool,
 }
 
 impl Mbc {
@@ -32,6 +36,7 @@ impl Mbc {
             wr_ram_bank: false,
             rom_ram: RomRam::new(),
             need_tile_update: false,
+            need_bg_map_update: false,
         }
     }
 
@@ -160,7 +165,10 @@ impl Mbc {
             0xFF43 => self.hw_reg.scx,
             0xFF44 => self.hw_reg.ly,
             0xFF45 => self.hw_reg.lyc,
-            0xFF46 => self.hw_reg.dma,
+            0xFF46 => {
+                // print!("reading 0xFF46, DMA hw register \n");
+                self.hw_reg.dma
+            },
             0xFF47 => self.hw_reg.bgp,
             0xFF48 => self.hw_reg.obp0,
             0xFF49 => self.hw_reg.obp1,
@@ -216,12 +224,21 @@ impl Mbc {
         match rom_type {
             RomType::Rom_Only => {
                 if (0x8000..=0x97FF).contains(&address) {
-                    print!("address in write_rom is {:#x} \n", address);
+                    //print!("address in write_rom is {:#x} \n", address);
                     self.need_tile_update = true;
                 }
                 if (0x9800..=0x9BFF).contains(&address) {
-                    print!("address in write_rom is {:#x} \n", address);
+                    self.need_bg_map_update = true;
+                    if byte != 0 {
+                        print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+                    }
                 }
+                // if address == 0x9820 {
+                //     if byte == 0x9B {
+                //         std::thread::sleep(std::time::Duration::from_secs(10));
+                //         print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+                //     }
+                // }
                 // if (0x9000..=0x9010).contains(&address) {
                 //     print!("address in write_rom is {:#x} \n", address);
                 //     self.need_tile_update = true;
@@ -273,16 +290,32 @@ impl Mbc {
             // LCD and scrolling
             0xFF40 => self.hw_reg.lcdc = byte,
             0xFF41 => self.hw_reg.stat = byte,
-            0xFF42 => self.hw_reg.scy = byte,
-            0xFF43 => self.hw_reg.scx = byte,
+            0xFF42 => {
+                //print!("writing {} to SCY\n", self.hw_reg.scy);
+                self.hw_reg.scy = byte;
+            },
+            0xFF43 => {
+                //print!("writing {} to SCX\n", self.hw_reg.scx);
+                self.hw_reg.scx = byte;
+            },
             0xFF44 => self.hw_reg.ly = 0, // writing to LY resets it
             0xFF45 => self.hw_reg.lyc = byte,
-            0xFF46 => self.hw_reg.dma = byte,
+            0xFF46 => {
+                print!("writing to 0xFF46, DMA hw register \n");
+                self.hw_reg.dma = byte;
+            },
             0xFF47 => self.hw_reg.bgp = byte,
             0xFF48 => self.hw_reg.obp0 = byte,
             0xFF49 => self.hw_reg.obp1 = byte,
-            0xFF4A => self.hw_reg.wy = byte,
-            0xFF4B => self.hw_reg.wx = byte,
+            0xFF4A => {
+                print!("writing to WY\n");
+                self.hw_reg.wy = byte;
+            },
+            0xFF4B => {
+                print!("writing to WX\n");
+                self.hw_reg.wx = byte;
+            },
+
 
             // Boot ROM control
             0xFF50 => {
