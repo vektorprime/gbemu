@@ -74,34 +74,35 @@ impl Cpu {
         }
     }
 
-    pub fn handle_oam_dma_transfer(&mut self, mem: &mut Mbc, dma_add: u16) -> u64 {
-
-        // todo oam dma transfer code
-        // copy 0x0000 - 0xDF9F to FE00 - FE9F
-        // tick cpu 160 mcycles
-
-
-        // clear DMA so this doesn't loop
-        mem.write(dma_add, 0);
-
-        // update mcycles
-        self.last_cycles = 160;
-        self.last_cycles
-
-    }
+    // pub fn handle_oam_dma_transfer(&mut self, mem: &mut Mbc, dma_add: u16) -> u64 {
+    //
+    //     // todo oam dma transfer code
+    //     // copy 0x0000 - 0xDF9F to FE00 - FE9F
+    //     // tick cpu 160 mcycles
+    //
+    //
+    //     // clear DMA so this doesn't loop
+    //     mem.write(dma_add, 0);
+    //
+    //     // update mcycles
+    //     self.last_cycles = 160;
+    //     self.last_cycles
+    //
+    // }
     pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
         //debug
         // let pc_print = self.registers.get_pc();
         // print!("pc - 0x{:X} \n", pc_print);
-        let dma_add: u16 = 0xFF46;
-        if mem.read(dma_add) != 0 {
-             return self.handle_oam_dma_transfer(mem, dma_add);
-        }
+        // oam transfer is handled by game code, no need for this
+        // let dma_add: u16 = 0xFF46;
+        // if mem.read(dma_add) != 0 {
+        //      return self.handle_oam_dma_transfer(mem, dma_add);
+        // }
 
         if self.registers.get_pc() == 0x100 {
-            print!("----------- n");
+            print!("----------- \n");
             print!("pc - 0x100 \n");
-            print!("----------- n");
+            print!("----------- \n");
         }
         // if self.registers.get_pc() > 0x200 {
         //     let pc_print = self.registers.get_pc();
@@ -110,10 +111,10 @@ impl Cpu {
         // if self.registers.get_pc() == 0x300 {
         //     panic!("TESTING");
         // }
-        if self.registers.get_pc() == 0x2A0 {
-            let pc_print = self.registers.get_pc();
-            print!("pc - 0x{:X} \n", pc_print);
-        }
+        // if self.registers.get_pc() == 0x2A0 {
+        //     let pc_print = self.registers.get_pc();
+        //     print!("pc - 0x{:X} \n", pc_print);
+        // }
         // if self.registers.get_pc() == 0x86 {
         //     print!("pc is 0x86 \n");
         // }

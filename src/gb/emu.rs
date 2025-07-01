@@ -50,7 +50,7 @@ impl Emu {
     // }
 
     //pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
-    pub fn tick(&mut self, tw_tx: &Arc<Mutex<Vec<u8>>>, gw_tx: &Arc<Mutex<Vec<u8>>>) -> RenderState {
+    pub fn tick(&mut self, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>) -> RenderState {
         let mcycle_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
@@ -58,7 +58,7 @@ impl Emu {
             if self.sec_cycles < mcycle_per_sec {
                 let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
                 self.sec_cycles += cycles;
-                self.ppu.tick(&mut self.mbc, tw_tx, gw_tx, cycles)
+                self.ppu.tick(&mut self.mbc, tw, bgmw, gw, cycles)
             } else {
                 RenderState::NoRender
             }

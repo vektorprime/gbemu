@@ -17,6 +17,7 @@ use crate::gb::graphics::ppu::RenderState;
 pub enum WindowType {
     Tile,
     Game,
+    BGMap,
 }
 
 
@@ -37,10 +38,13 @@ impl<'a> GBWindow<'a> {
 
         let window_title =  match win_type {
             WindowType::Tile => {
-                String::from("REMYUH Tiles")
+                String::from("GBEMU Tiles")
             },
             WindowType::Game => {
-                String::from("REMYUH")
+                String::from("GBEMU Game")
+            },
+            WindowType::BGMap => {
+                String::from("GBEMU BGMap")
             },
         };
         

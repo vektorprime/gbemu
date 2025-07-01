@@ -229,9 +229,13 @@ impl Mbc {
                 }
                 if (0x9800..=0x9BFF).contains(&address) {
                     self.need_bg_map_update = true;
-                    if byte != 0 {
-                        print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-                    }
+                    // if byte != 0x0 && byte != 0x2F {
+                    //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+                    // }
+                    // if address == 0x9820 {
+                    //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+                    //
+                    // }
                 }
                 // if address == 0x9820 {
                 //     if byte == 0x9B {
@@ -308,11 +312,11 @@ impl Mbc {
             0xFF48 => self.hw_reg.obp0 = byte,
             0xFF49 => self.hw_reg.obp1 = byte,
             0xFF4A => {
-                print!("writing to WY\n");
+                //print!("writing to WY\n");
                 self.hw_reg.wy = byte;
             },
             0xFF4B => {
-                print!("writing to WX\n");
+                //print!("writing to WX\n");
                 self.hw_reg.wx = byte;
             },
 
