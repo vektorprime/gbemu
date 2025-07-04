@@ -8,7 +8,7 @@ use crate::gb::mbc::*;
 // need to dynamically load the banks based on the rom
 // 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RomType {
     None,
     Rom_Only,
@@ -30,7 +30,13 @@ pub enum RomType {
     // https://gbdk.org/docs/api/docs_rombanking_mbcs.html
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum RomBankMode {
+    Simple,
+    Advanced,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RomSize {
     Zero,
     KB_32,
@@ -45,7 +51,7 @@ pub enum RomSize {
     MB_16,
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RamSize {
     Zero,
     KB_2,
@@ -129,5 +135,8 @@ impl Rom {
 
     pub fn read(&self, address: u32) -> u8 {
         self.data[address as usize]
+    }
+    pub fn write(&mut self, address: u32, byte: u8) {
+        self.data[address as usize] = byte;
     }
 }

@@ -3,14 +3,14 @@ use crate::gb::bios::*;
 
 
 pub struct Ram {
-    pub memory: [u8; 65536],
+    pub memory: Vec<u8>,
 }
 
 
 impl Ram {
     pub fn new() -> Self {
         Ram {
-            memory: [0; 65536],
+            memory: vec![0; 65536],
         }
     }
 
@@ -28,8 +28,6 @@ impl Ram {
         self.memory[address as usize] = byte;
     }
 }
-
-
 
 
 pub struct RomRam {

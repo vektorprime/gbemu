@@ -118,6 +118,78 @@ impl HardwareRegisters {
         }
     }
 
+    pub fn set_stat_ppu_mode_bit0_1(&mut self) {
+        self.stat |= 0b0000_0011;
+    }
+    pub fn clear_stat_ppu_mode_bit0_1(&mut self) {
+        self.stat &= 0b1111_1100;
+    }
+    pub fn get_stat_ppu_mode_bit_0_1(&mut self) -> u8 {
+        self.stat & 0b0000_0011
+    }
+
+    pub fn set_stat_lyc_eq_ly_bit2(&mut self) {
+        self.stat |= 0b0000_0100;
+    }
+    pub fn clear_stat_lyc_eq_ly_bit2(&mut self) {
+        self.stat &= 0b1111_1011;
+    }
+    pub fn is_stat_lyc_eq_ly_bit2_set(&mut self) -> bool {
+        let res = self.stat & 0b0000_0100;
+        res >= 2;
+        if res == 1 { true } else { false }
+    }
+
+
+    pub fn set_stat_mode_0_int_sel_bit3(&mut self) {
+        self.stat |= 0b0000_1000;
+    }
+    pub fn clear_stat_mode_0_int_sel_bit3(&mut self) {
+        self.stat &= 0b1111_0111;
+    }
+    pub fn is_stat_mode_0_int_sel_bit3_set(&mut self) -> bool {
+        let res = self.stat & 0b0000_1000;
+        res >= 3;
+        if res == 1 { true } else { false }
+    }
+
+    pub fn set_stat_mode_1_int_sel_bit4(&mut self) {
+        self.stat |= 0b0001_0000;
+    }
+    pub fn clear_stat_mode_1_int_sel_bit4(&mut self) {
+        self.stat &= 0b1110_1111;
+    }
+    pub fn is_stat_mode_1_int_sel_bit4_set(&mut self) -> bool {
+        let res = self.stat & 0b0001_0000;
+        res >= 4;
+        if res == 1 { true } else { false }
+    }
+
+
+    pub fn set_stat_mode_2_int_sel_bit5(&mut self) {
+        self.stat |= 0b0010_0000;
+    }
+    pub fn clear_stat_mode_2_int_sel_bit5(&mut self) {
+        self.stat &= 0b1101_1111;
+    }
+    pub fn is_stat_mode_2_int_sel_bit5_set(&mut self) -> bool {
+        let res = self.stat & 0b0010_0000;
+        res >= 5;
+        if res == 1 { true } else { false }
+    }
+
+    pub fn set_stat_lyc_int_sel_bit6(&mut self) {
+        self.stat |= 0b0100_0000;
+    }
+    pub fn clear_stat_lyc_int_sel_bit6(&mut self) {
+        self.stat &= 0b1011_1111;
+    }
+    pub fn is_stat_lyc_int_sel_bit6_set(&mut self) -> bool {
+        let res = self.stat & 0b0100_0000;
+        res >= 6;
+        if res == 1 { true } else { false }
+    }
+    
     //lcd
     pub fn is_lcdc_bit7_enabled(&self) -> bool {
     if self.lcdc & 0b1000_0000 == 0b1000_0000 { true } else { false }

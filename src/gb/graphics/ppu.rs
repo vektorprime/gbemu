@@ -10,11 +10,32 @@ use std::sync::{Arc, Mutex};
 use std::sync::mpsc::Sender;
 use pixels::Pixels;
 
-#[derive(PartialEq)]
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum Interrupt {
+    Stat_48,
+    Timer_50,
+    Serial_58,
+    Joypad_60,
+}
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum PPUEvent {
+    RenderEvent(RenderState),
+    InterruptEvent(Interrupt),
+}
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RenderState {
     Render,
     NoRender
 }
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum PPUMode {
+    H_Blank,
+    V_Blank,
+    OAM_Scan,
+    Draw,
+}
+
 
 pub struct Ppu {
     //ly_inc_cycle: u64,
@@ -138,7 +159,22 @@ impl Ppu {
         }
 
     }
-
+    pub fn set_stat_ppu_mode(&mut self, mbc: &mut Mbc, ppu_mode: PPUMode) {
+        match ppu_mode {
+            PPUMode::H_Blank => {
+                mbc.hw_reg.stat &= 0b1111_1110;
+            },
+            PPUMode::V_Blank => {
+                mbc.hw_reg.stat |= 0b0000_0001;
+            },
+            PPUMode::OAM_Scan => {
+                mbc.hw_reg.stat |= 0b0000_0010;
+            },
+            PPUMode::Draw => {
+                mbc.hw_reg.stat |= 0b0000_0011;
+            },
+        }
+    }
     pub fn is_lcdc_bit3_bg_tile_map_set(&self, mbc: &Mbc) -> bool {
         if mbc.hw_reg.lcdc & 0b0000_1000 == 0b0000_1000 {
             true
@@ -166,7 +202,7 @@ impl Ppu {
     }
 
     pub fn mode_2_oam_scan(&mut self) {
-
+    
         // search for obj that are in this scan line pos and add to vec?
         
     }
@@ -229,8 +265,43 @@ impl Ppu {
 
     pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
 
-        if !self.ppu_init_complete { return; }
         // todo merge all the pixels from the pipe line here
+        if !self.ppu_init_complete { return; }
+        let mut temp_buffer = vec![0u8; 92_160];
+        //let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
+        // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
+        let mut pixel_count: usize = 0;
+        let mut tile_in_grid_count: usize = 0;
+        let rows_per_grid: usize = 18;
+        let tiles_per_row: usize = 20;
+        let rows_per_tile = 8;
+        let pixels_per_row_in_tile = 8;
+        for row_of_tiles_in_grid in 0..rows_per_grid {
+            // take the first row of each tile, then second, etc
+            for row_in_tile in 0..rows_per_tile {
+                // loop 32 times so we get the index for each tile in the row of the grid
+                for tpr in 0..tiles_per_row {
+                    let mut tile_index = self.bg_tile_map[tile_in_grid_count + tpr] as usize;
+                    // tile.data is an array of 8 arrays that each hold 8 PaletteColor
+                    for pixel in 0..pixels_per_row_in_tile {
+                        //put each pixel into a vec so we can move it to the frame later
+                        let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
+                        // if rgba != [255, 255, 255, 255] {
+                        //print!("rgba is {:?} \n", rgba);
+                        // }
+                        //rgba = [255, 0, 0, 255]; // testing if this will render
+                        temp_buffer[pixel_count..pixel_count+4].copy_from_slice(&rgba);
+                        pixel_count += 4;
+                    }
+                }
+            }
+            // inc every row in grid so we don't get the same tiles
+            tile_in_grid_count += 20;
+        }
+        {
+            let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
+            *gw_buffer_unlocked = temp_buffer;
+        }
     }
 
     pub fn draw_bgmap(&self, bgmw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
@@ -273,6 +344,9 @@ impl Ppu {
         }
     }
 
+    pub fn start_interrupt_48() {
+
+    }
     pub fn mode_0_h_blank(&self) {
         
     }
@@ -282,7 +356,7 @@ impl Ppu {
 
     }
 
-    pub fn tick(&mut self, mbc: &mut Mbc, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>, cycles: u64) -> RenderState {
+    pub fn tick(&mut self, mbc: &mut Mbc, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>, cycles: u64) -> PPUEvent {
         let tcycle = cycles * 4;
         
         // don't tick ppu unless the lcdc says ppu is on
@@ -290,8 +364,21 @@ impl Ppu {
         // the pc counter was inc slow but that was due to other reasons
         if !mbc.hw_reg.is_lcdc_bit7_enabled() {
            //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
-            return RenderState::NoRender;
+            return PPUEvent::RenderEvent(RenderState::NoRender);
         }
+
+        if mbc.hw_reg.lyc == mbc.hw_reg.ly {
+            // set bit 2 when ly == lyc constantly
+            mbc.hw_reg.set_stat_lyc_eq_ly_bit2();
+            if mbc.hw_reg.is_stat_lyc_int_sel_bit6_set() {
+                mbc.hw_reg.set_if_lcd_stat_bit1();
+            }
+        }
+        else {
+            // clear all except bit 2
+            mbc.hw_reg.clear_stat_lyc_eq_ly_bit2();
+        }
+
 
         if !self.ppu_init_complete {
             self.load_all_tiles(&mbc);
@@ -312,20 +399,24 @@ impl Ppu {
             mbc.need_bg_map_update = false;
         }
 
-
-
         // go through all PPU modes
         // mode 2 + 3 + 0 stop after scan line 143
         self.tcycle_in_scanline += tcycle;
         self.tcycle_in_frame += tcycle;
         let mode_1_v_blank_first_scan_line = 144;
         let current_scanline = mbc.hw_reg.ly;
+        let mode_0_h_blank_first_tcycle = 252;
+        let mode_3_drawing_first_tcycle = 80;
+        let mode_2_oam_scan_last_tcycle = 80;
+
+        //let mode_2_oam_scan_last_cycle: u64 = 80;
         //print!("current scan line is {}\n", current_scanline);
         //print!("current tcycle_in_scanline is {}\n", self.tcycle_in_scanline);
         if current_scanline < mode_1_v_blank_first_scan_line {
             // mode 2 is dot 0-80
-            let mode_2_oam_scan_last_tcycle = 79;
-
+            if self.tcycle_in_scanline <  mode_2_oam_scan_last_tcycle {
+                self.set_stat_ppu_mode(mbc, PPUMode::OAM_Scan);
+            }
             if self.tcycle_in_scanline < mode_2_oam_scan_last_tcycle && !self.finished_mode_2_in_frame {
                 self.mode_2_oam_scan();
                 //print!("entering mode_2_oam_scan \n");
@@ -334,7 +425,9 @@ impl Ppu {
                 self.finished_mode_2_in_frame = true;
             }
             
-            let mode_3_drawing_first_tcycle = 80;
+            if self.tcycle_in_scanline >  mode_3_drawing_first_tcycle && self.tcycle_in_scanline < mode_0_h_blank_first_tcycle {
+                self.set_stat_ppu_mode(mbc, PPUMode::Draw);
+            }
             if self.tcycle_in_scanline >= mode_3_drawing_first_tcycle  && !self.finished_mode_3_in_frame {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
                 //print!("entering mode_3_drawing \n");
@@ -344,8 +437,9 @@ impl Ppu {
 
                 self.finished_mode_3_in_frame = true;
             }
-
-            let mode_0_h_blank_first_tcycle = 252;
+            if self.tcycle_in_scanline >  mode_0_h_blank_first_tcycle {
+                self.set_stat_ppu_mode(mbc, PPUMode::H_Blank);
+            }
             if self.tcycle_in_scanline >= mode_0_h_blank_first_tcycle && !self.finished_mode_0_in_frame {
                 //print!("entering mode_0_h_blank \n");
                 // Mode 0 is the remainder of the dots left in the scan line (final dot is 456)
@@ -353,11 +447,15 @@ impl Ppu {
                 self.finished_mode_0_in_frame = true;
             }
         } else {
+
+            self.set_stat_ppu_mode(mbc, PPUMode::V_Blank);
+
             // last 10 scan lines are mode 1
             // 4560 dots or 10 scan lines (each scan line is 456 dots)
 
             let mode_1_v_blank_first_tcycle = 65664;
             if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.finished_mode_1_in_frame {
+                //mbc.hw_reg.set_ie_vblank_bit0();
                 //print!("entering mode_1_v_blank \n");
                 self.mode_1_v_blank(mbc);
                 self.finished_mode_1_in_frame = true;
@@ -395,69 +493,12 @@ impl Ppu {
             //print!("tcycle_in_frame is >= 70224, generating frame \n");
             self.tcycle_in_frame = 0;
             self.tcycle_in_scanline = 0;
-            RenderState::Render
+            return PPUEvent::RenderEvent(RenderState::Render);
+
         } else {
-            RenderState::NoRender
-        }
-    }
-}
+            return PPUEvent::RenderEvent(RenderState::NoRender);
 
-
-#[derive(Default)]
-pub struct Oam {
-    byte0_y_pos: u8,
-    byte1_x_pos: u8,
-    byte2_tile_num: u8,
-    byte3_sprite_flags: u8,
-}
-
-impl Oam {
-    pub fn get_byte3_bit_4(&self) -> bool {
-        if self.byte3_sprite_flags & 0b0001_0000 == 0b0001_0000 {
-            true
         }
-        else {
-            false
-        }
-    }
-    pub fn set_byte3_bit_4(&mut self) {
-        self.byte3_sprite_flags = self.byte3_sprite_flags | 0b0001_0000;
-    }
-
-    pub fn get_byte3_bit_5(&self) -> bool {
-        if self.byte3_sprite_flags & 0b0010_0000 == 0b0010_0000 {
-            true
-        }
-        else {
-            false
-        }
-    }
-    pub fn set_byte3_bit_5(&mut self) {
-        self.byte3_sprite_flags = self.byte3_sprite_flags | 0b0010_0000;
-    }
-
-    pub fn get_byte3_bit_6(&self) -> bool {
-        if self.byte3_sprite_flags & 0b0100_0000 == 0b0100_0000 {
-            true
-        }
-        else {
-            false
-        }
-    }
-    pub fn set_byte3_bit_6(&mut self) {
-        self.byte3_sprite_flags = self.byte3_sprite_flags | 0b0100_0000;
-    }
-
-    pub fn get_byte3_bit_7(&self) -> bool {
-        if self.byte3_sprite_flags & 0b1000_0000 == 0b1000_0000 {
-            true
-        }
-        else {
-            false
-        }
-    }
-    pub fn set_byte3_bit_7(&mut self) {
-        self.byte3_sprite_flags = self.byte3_sprite_flags | 0b1000_0000;
     }
 }
 

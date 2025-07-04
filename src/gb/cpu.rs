@@ -1,3 +1,4 @@
+use crate::gb::graphics::ppu::Interrupt;
 use crate::gb::registers::{Registers, InverseFlagBits, FlagBits, INVERSE_C_FLAG_BITS, INVERSE_H_FLAG_BITS, INVERSE_N_FLAG_BITS, INVERSE_Z_FLAG_BITS};
 use crate::gb::hwregisters::*;
 use crate::gb::instructions::Instruction; 
@@ -53,22 +54,37 @@ impl Cpu {
 
     }
 
-    pub fn handle_interrupt(&mut self, mem: &mut Mbc) {
+    pub fn handle_interrupts(&mut self, mbc: &mut Mbc) {
         if self.ime {
             // check that each interrupt is enabled and requested, then handle
-            if mem.hw_reg.is_vblank_bit0_interrupt_enabled() {
+            if mbc.hw_reg.is_vblank_bit0_interrupt_enabled() {
 
             }
-            if mem.hw_reg.is_lcd_stat_bit1_interrupt_enabled() {
+            if mbc.hw_reg.is_lcd_stat_bit1_interrupt_enabled() {
+                print!("lcd stat bit 1 interrupt enabled");
+                // push pc to stack
+                let pc = self.registers.get_pc();
+                // split 16 bits to 2x 8 bit
+                let lo_pc = (pc & 0x00FF) as u8;
+                let hi_pc = (pc >> 8) as u8;
+                // grow stack down by 2
+                let new_sp = self.registers.get_sp() - 2;
+                self.registers.set_sp(new_sp);
+                // store lsb of bc in sp
+                // store msb of bc in sp + 1
+                mbc.write(new_sp, lo_pc);
+                mbc.write(new_sp + 1, hi_pc);
+                // set pc
+                self.registers.set_pc(0x48);
+                self.inc_cycles_by_inst_val(4);
+            }
+            if mbc.hw_reg.is_timer_bit2_interrupt_enabled() {
 
             }
-            if mem.hw_reg.is_timer_bit2_interrupt_enabled() {
+            if mbc.hw_reg.is_serial_bit3_interrupt_enabled() {
 
             }
-            if mem.hw_reg.is_serial_bit3_interrupt_enabled() {
-
-            }
-            if mem.hw_reg.is_joypad_bit4_interrupt_enabled() {
+            if mbc.hw_reg.is_joypad_bit4_interrupt_enabled() {
 
             }
         }
@@ -104,10 +120,11 @@ impl Cpu {
             print!("pc - 0x100 \n");
             print!("----------- \n");
         }
-        // if self.registers.get_pc() > 0x200 {
-        //     let pc_print = self.registers.get_pc();
-        //     print!("pc - 0x{:X} \n", pc_print);
-        // }
+
+        if self.registers.get_pc() > 0xE000 {
+            let pc_print = self.registers.get_pc();
+            print!("pc - {:X} \n", pc_print);
+        }
         // if self.registers.get_pc() == 0x300 {
         //     panic!("TESTING");
         // }
@@ -125,50 +142,28 @@ impl Cpu {
         //     print!("hw reg ly is 0x90 \n");
         // }
         // end debug
-        //if !self.bios_executed {
-            // execute bios until boot rom control is set to 1
-            //if mem.hw_reg.boot_rom_control == 0 {
-                // let mut opcode = self.fetch_next_inst(mem);
-                // //if CB, read another byte, else decode and execute
-                // let mut is_cb_opcode = false;
-                // if opcode == 0xCB {
-                //     is_cb_opcode = true;
-                //     opcode = self.fetch_next_inst(mem);
-                // }
-                // let inst = if is_cb_opcode {
-                //     self.cb_instructions.get(&opcode).unwrap().clone()
-                // } else {
-                //     self.instructions.get(&opcode).unwrap().clone()
-                // };
-                // self.execute_inst(inst, mem, is_cb_opcode);
-            // }
-            // else {
-            //     self.bios_executed = true;
-            //     mem.load_rom_to_mem();
-            //     self.rom_loaded = true;
-            // }
-        //}
-        // else if !self.halted {
-        //else {
-            // load rom here in case we want to test skipping bios
-            if !self.rom_loaded {
-                mem.load_rom_to_mem();
-                self.rom_loaded = true;
-            }
-            let mut opcode = self.fetch_next_inst(mem);
-            //if CB, read another byte, else decode and execute
-            let mut is_cb_opcode = false;
-            if opcode == 0xCB {
-                is_cb_opcode = true;
-                opcode = self.fetch_next_cb_inst(mem);
-            }
-            let inst = if is_cb_opcode {
-                self.cb_instructions.get(&opcode).unwrap().clone()
-            } else {
-                self.instructions.get(&opcode).unwrap().clone()
-            };
-            self.execute_inst(inst, mem, is_cb_opcode);
-       // }
+
+        self.handle_interrupts(mem);
+
+        // load rom here in case we want to test skipping bios
+        if !self.rom_loaded {
+            mem.load_rom_to_mem();
+            self.rom_loaded = true;
+        }
+        let mut opcode = self.fetch_next_inst(mem);
+        //if CB, read another byte, else decode and execute
+        let mut is_cb_opcode = false;
+        if opcode == 0xCB {
+            is_cb_opcode = true;
+            opcode = self.fetch_next_cb_inst(mem);
+        }
+        let inst = if is_cb_opcode {
+            self.cb_instructions.get(&opcode).unwrap().clone()
+        } else {
+            self.instructions.get(&opcode).unwrap().clone()
+        };
+        self.execute_inst(inst, mem, is_cb_opcode);
+
 
         if self.pending_enable_ime {
             self.pending_enable_ime_counter += 1;
@@ -730,6 +725,8 @@ impl Cpu {
                     let reg = self.registers.get_a();
                     let mut val  =  !reg;
                     self.registers.set_a(val);
+                    self.registers.set_h_flag();
+                    self.registers.set_n_flag();
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2662,6 +2659,12 @@ impl Cpu {
                     let pc = self.registers.get_pc();
                     let b = mem.read(pc);
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_h_flag();
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);

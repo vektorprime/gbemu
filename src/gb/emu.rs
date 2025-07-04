@@ -3,7 +3,7 @@ use crate::gb::rom::*;
 use crate::gb::bios::*;
 use crate::gb::mbc::*;
  use crate::gb::graphics::ppu::*;
- use crate::gb::graphics::lcd::*;
+
 use crate::gb::hwregisters::HardwareRegisters;
 use crate::gb::gbwindow::*;
 
@@ -50,7 +50,7 @@ impl Emu {
     // }
 
     //pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
-    pub fn tick(&mut self, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>) -> RenderState {
+    pub fn tick(&mut self, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>) -> PPUEvent {
         let mcycle_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
@@ -60,7 +60,7 @@ impl Emu {
                 self.sec_cycles += cycles;
                 self.ppu.tick(&mut self.mbc, tw, bgmw, gw, cycles)
             } else {
-                RenderState::NoRender
+                return PPUEvent::RenderEvent(RenderState::NoRender);
             }
         }  else {
             if elapsed_time > one_sec && self.debug == false {
@@ -74,14 +74,14 @@ impl Emu {
                 }
                 self.sec_cycles = 0;
                 self.current_time = Instant::now();
-                RenderState::NoRender
+                return PPUEvent::RenderEvent(RenderState::NoRender);
             }
 
         }
 
     }
 
-    pub fn tick_no_window(&mut self) -> RenderState {
+    pub fn tick_no_window(&mut self) -> PPUEvent {
         let mcycle_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
@@ -89,10 +89,10 @@ impl Emu {
             if self.sec_cycles < mcycle_per_sec {
                 let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
                 self.sec_cycles += cycles;
-                RenderState::NoRender
+                PPUEvent::RenderEvent(RenderState::NoRender)
                 //self.ppu.tick_no_window(&mut self.mbc, cycles)
             } else {
-                RenderState::NoRender
+                PPUEvent::RenderEvent(RenderState::NoRender)
             }
         }  else {
             if elapsed_time > one_sec {
@@ -106,7 +106,7 @@ impl Emu {
                 }
                 self.sec_cycles = 0;
                 self.current_time = Instant::now();
-                RenderState::NoRender
+                PPUEvent::RenderEvent(RenderState::NoRender)
             }
 
         }
