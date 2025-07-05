@@ -406,9 +406,7 @@ impl Ppu {
         let mode_0_h_blank_first_tcycle = 252;
         let mode_3_drawing_first_tcycle = 80;
         let mode_2_oam_scan_last_tcycle = 80;
-        self.draw_tiles(tw, &tcycle);
-        self.draw_bgmap(bgmw, &cycles);
-        self.mode_3_draw(gw, &cycles);
+
         //let mode_2_oam_scan_last_cycle: u64 = 80;
         //print!("current scan line is {}\n", current_scanline);
         //print!("current tcycle_in_scanline is {}\n", self.tcycle_in_scanline);
@@ -431,9 +429,9 @@ impl Ppu {
             if self.tcycle_in_scanline >= mode_3_drawing_first_tcycle  && !self.finished_mode_3_in_frame {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
                 //print!("entering mode_3_drawing \n");
-                // self.draw_tiles(tw, &tcycle);
-                // self.draw_bgmap(bgmw, &cycles);
-                // self.mode_3_draw(gw, &cycles);
+                self.draw_tiles(tw, &tcycle);
+                self.draw_bgmap(bgmw, &cycles);
+                self.mode_3_draw(gw, &cycles);
 
                 self.finished_mode_3_in_frame = true;
             }
