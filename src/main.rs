@@ -10,12 +10,9 @@ use winit::keyboard::KeyCode;
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 
-use crate::gb::constants::*;
 use crate::gb::graphics::ppu::{PPUEvent, RenderState};
  use std::thread;
  use std::sync::{Arc, Mutex, mpsc};
- use std::sync::mpsc::{Sender, Receiver};
-use std::boxed::Box;
 use std::time::{Duration, Instant};
 //screen
 
@@ -104,7 +101,7 @@ fn main() {
         event_loop.run(|event, elwt| {
             let mut render_state_cloned = PPUEvent::RenderEvent(RenderState::Render);
             {
-                let mut rs = render_state.lock().unwrap();
+                //let mut rs = render_state.lock().unwrap();
                 //render_state_cloned = *rs;
             }
             let cloned_event = event.clone();

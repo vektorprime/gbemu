@@ -126,11 +126,10 @@ impl Ppu {
             let mut temp_tile: [u8; 16] = [0; 16];
             for y in 0..16 {
                 temp_tile[y] = mbc.read(address + x + (y as u16));
-                // if temp_tile[y] != 0 {
+                // if temp_tile[y] != 0 && x < 10 {
                 //     print!("Tile #{} byte {} is {:#x} \n", x / 16, y, temp_tile[y] );
                 // }
             }
-
             // todo need to redo these so the output is those 8 commands about decoding
             // decode every 2 bytes as a row
             // for (z, byte) in temp_tile.chunks_exact(2).enumerate() {
@@ -264,7 +263,6 @@ impl Ppu {
 
 
     pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
-
         // todo merge all the pixels from the pipe line here
         if !self.ppu_init_complete { return; }
         let mut temp_buffer = vec![0u8; 92_160];
@@ -382,7 +380,7 @@ impl Ppu {
 
         if !self.ppu_init_complete {
             self.load_all_tiles(&mbc);
-            self.load_bg_tile_map(mbc);
+            self.load_bg_tile_map(&mbc);
             self.ppu_init_complete = true;
             print!("ppu init complete \n");
         }
@@ -394,7 +392,7 @@ impl Ppu {
         }
 
         if mbc.need_bg_map_update {
-            self.load_bg_tile_map(mbc);
+            self.load_bg_tile_map(&mbc);
             //print!("need bg_tile_map update \n");
             mbc.need_bg_map_update = false;
         }
@@ -408,7 +406,9 @@ impl Ppu {
         let mode_0_h_blank_first_tcycle = 252;
         let mode_3_drawing_first_tcycle = 80;
         let mode_2_oam_scan_last_tcycle = 80;
-
+        self.draw_tiles(tw, &tcycle);
+        self.draw_bgmap(bgmw, &cycles);
+        self.mode_3_draw(gw, &cycles);
         //let mode_2_oam_scan_last_cycle: u64 = 80;
         //print!("current scan line is {}\n", current_scanline);
         //print!("current tcycle_in_scanline is {}\n", self.tcycle_in_scanline);
@@ -431,9 +431,9 @@ impl Ppu {
             if self.tcycle_in_scanline >= mode_3_drawing_first_tcycle  && !self.finished_mode_3_in_frame {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
                 //print!("entering mode_3_drawing \n");
-                self.draw_tiles(tw, &tcycle);
-                self.draw_bgmap(bgmw, &cycles);
-                self.mode_3_draw(gw, &cycles);
+                // self.draw_tiles(tw, &tcycle);
+                // self.draw_bgmap(bgmw, &cycles);
+                // self.mode_3_draw(gw, &cycles);
 
                 self.finished_mode_3_in_frame = true;
             }

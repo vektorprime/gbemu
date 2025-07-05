@@ -59,7 +59,7 @@ impl Registers {
     }
 
     pub fn handle_flags(&mut self, inst_name: &str) {
-        if inst_name.contains("ADD") || inst_name.contains("INC") || inst_name.contains("ADC") || inst_name.contains("OR ") || inst_name.contains("AND") {
+        if inst_name.contains("ADD") || inst_name.contains("INC") || inst_name.contains("ADC") || inst_name.contains("AND") {
             self.clear_n_flag();
         }
         else if inst_name.contains("SUB") || inst_name.contains("DEC") || inst_name.contains("SBC") || inst_name.contains("CP") {
@@ -85,6 +85,12 @@ impl Registers {
         else if inst_name.contains("BIT") {
             self.clear_n_flag();
             self.set_h_flag();
+            // handle Z in inst code
+        }
+        else if inst_name.contains("OR") {
+            self.clear_n_flag();
+            self.clear_h_flag();
+            self.clear_c_flag();
             // handle Z in inst code
         }
     }
@@ -205,6 +211,13 @@ impl Registers {
     }
 
     pub fn dec_a(&mut self) {
+        let original = self.a;
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
        // wrap on underflow
         self.a = self.a.wrapping_sub(1);
         if self.a == 0 {
@@ -233,12 +246,30 @@ impl Registers {
 
     pub fn dec_b(&mut self) {
         // wrap on underflow
+        let original = self.b;
         self.b = self.b.wrapping_sub(1);
         if self.b == 0 {
             self.set_z_flag()
         }
         else {
             self.clear_z_flag();
+        }
+
+        // e.g
+        // 0x10 = 0001_0000
+        // dec that it's
+        // 0000_1111
+        // half carry
+        //
+        // 0x11 = 0001_0001
+        // dec that it's
+        // 0001_0000
+        // no half carry
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
         }
     }
 
@@ -259,6 +290,13 @@ impl Registers {
     }
 
     pub fn dec_c(&mut self) {
+        let original = self.c;
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
         // wrap on underflow
         self.c = self.c.wrapping_sub(1);
         if self.c == 0 {
@@ -267,6 +305,7 @@ impl Registers {
         else {
             self.clear_z_flag();
         }
+
     }
 
     pub fn get_d(&self) -> u8 {
@@ -288,6 +327,7 @@ impl Registers {
 
     pub fn dec_d(&mut self) {
         // wrap on underflow
+        let original = self.d;
         self.d = self.d.wrapping_sub(1);
         //print!("reg d is {}\n", self.d);
         if self.d == 0 {
@@ -297,6 +337,12 @@ impl Registers {
         else {
             //print!("clearing z flag\n");
             self.clear_z_flag();
+        }
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
         }
     }
 
@@ -317,6 +363,13 @@ impl Registers {
     }
     pub fn dec_e(&mut self) {
         // wrap on underflow
+        let original = self.e;
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
         self.e = self.e.wrapping_sub(1);
         if self.e == 0 {
             self.set_z_flag()
@@ -351,6 +404,7 @@ impl Registers {
     }
  
     pub fn dec_h(&mut self) {
+        let original = self.h;
         // wrap on overflow 
         self.h = self.h.wrapping_sub(1);
         if self.h == 0 {
@@ -358,6 +412,12 @@ impl Registers {
         }
         else {
             self.clear_z_flag();
+        }
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
         }
     }
 
@@ -378,6 +438,13 @@ impl Registers {
     }
 
     pub fn dec_l(&mut self) {
+        let original = self.l;
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
        // wrap on underflow
         self.l = self.l.wrapping_sub(1);
         if self.l == 0 {
@@ -441,7 +508,6 @@ impl Registers {
         //inc should not handle overflows
         current = current.wrapping_add(1);
         self.set_bc(current);
-
     }
 
     pub fn inc_de(&mut self) {
@@ -465,6 +531,13 @@ impl Registers {
         self.set_de(current);
     }
 
+    pub fn dec_de_no_flags(&mut self) {
+        let mut current = (self.d as u16) << 8 | (self.e as u16);
+        //dec should not handle underflows
+        current = current.wrapping_sub(1);
+        self.set_de(current);
+    }
+
     pub fn dec_bc(&mut self) {
         let mut current = (self.b as u16) << 8 | (self.c as u16);
         //dec should not handle underflows
@@ -477,6 +550,14 @@ impl Registers {
         }
         self.set_bc(current);
     }
+
+    pub fn dec_bc_no_flags(&mut self) {
+        let mut current = (self.b as u16) << 8 | (self.c as u16);
+        //dec should not handle underflows
+        current = current.wrapping_sub(1);
+        self.set_bc(current);
+    }
+
 
     pub fn set_bc(&mut self, val: u16) {
         self.b = ((val & 0xFF00) >> 8) as u8;
@@ -537,6 +618,13 @@ impl Registers {
         }
         self.set_hl(current);
     }
+    pub fn dec_hl_no_flags(&mut self) {
+        let mut current = (self.h as u16) << 8 | (self.l as u16);
+        //dec should not handle underflows
+        current = current.wrapping_sub(1);
+        self.set_hl(current);
+    }
+
 
     pub fn get_and_inc_pc(&mut self) -> u16 {
         let ret_pc = self.pc;
@@ -605,6 +693,30 @@ impl Registers {
         }
         else {
             self.clear_z_flag();
+        }
+
+        // check for half-carry
+        let half_a = a & 0b0000_1111_1111_1111;
+        let half_b = b & 0b0000_1111_1111_1111;
+        if half_a + half_b > 0b0000_1111_1111_1111 {
+            self.set_h_flag();
+        }
+        else {
+            self.clear_h_flag();
+        }
+
+        // always return the overflow val
+        result
+    }
+
+    pub fn add_16bit_no_z_flag(&mut self, a: u16, b: u16) -> u16 {
+        // check for 16 bit overflow and set c flag
+        let (result, overflowed) = a.overflowing_add(b);
+        if overflowed {
+            self.set_c_flag();
+        }
+        else {
+            self.clear_c_flag();
         }
 
         // check for half-carry
