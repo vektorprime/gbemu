@@ -207,6 +207,8 @@ impl Registers {
         self.a = self.a.wrapping_add(1);
         if self.a == 0 {
             self.set_z_flag()
+        } else {
+            self.clear_z_flag();
         }
     }
 
@@ -241,6 +243,8 @@ impl Registers {
         self.b = self.b.wrapping_add(1);
         if self.b == 0 {
             self.set_z_flag()
+        } else {
+            self.clear_z_flag();
         }
     }
 
@@ -286,6 +290,8 @@ impl Registers {
         self.c = self.c.wrapping_add(1);
         if self.c == 0 {
             self.set_z_flag()
+        } else {
+            self.clear_z_flag();
         }
     }
 
@@ -322,6 +328,8 @@ impl Registers {
         self.d = self.d.wrapping_add(1);
         if self.d == 0 {
             self.set_z_flag()
+        } else {
+            self.clear_z_flag();
         }
     }
 
@@ -333,15 +341,13 @@ impl Registers {
         if self.d == 0 {
             //print!("setting z flag");
             self.set_z_flag()
-        }
-        else {
+        }  else {
             //print!("clearing z flag\n");
             self.clear_z_flag();
         }
         if original & 0x0F == 0x00 {
             self.set_h_flag();
-        }
-        else {
+        }  else {
             self.clear_h_flag();
         }
     }
@@ -359,6 +365,8 @@ impl Registers {
         self.e = self.e.wrapping_add(1);
         if self.e == 0 {
             self.set_z_flag()
+        } else {
+            self.clear_z_flag();
         }
     }
     pub fn dec_e(&mut self) {
@@ -400,6 +408,8 @@ impl Registers {
         self.h = self.h.wrapping_add(1);
         if self.h == 0 {
             self.set_z_flag()
+        } else {
+            self.clear_z_flag();
         }
     }
  
@@ -409,14 +419,12 @@ impl Registers {
         self.h = self.h.wrapping_sub(1);
         if self.h == 0 {
             self.set_z_flag()
-        }
-        else {
+        }  else {
             self.clear_z_flag();
         }
         if original & 0x0F == 0x00 {
             self.set_h_flag();
-        }
-        else {
+        }  else {
             self.clear_h_flag();
         }
     }
@@ -434,6 +442,8 @@ impl Registers {
         self.l = self.l.wrapping_add(1);
         if self.l == 0 {
             self.set_z_flag()
+        }  else {
+            self.clear_z_flag();
         }
     }
 

@@ -2,6 +2,7 @@
 #![forbid(unsafe_code)]
 
 
+use std::env;
 use pixels::{Error, Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
 use winit::event::*;
@@ -31,7 +32,7 @@ use crate::gb::constants::*;
 
 
 fn main() {
-
+    //env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
     //event_loop.set_control_flow(ControlFlow::WaitUntil(Instant::now() + Duration::from_millis(16)));
@@ -59,9 +60,9 @@ fn main() {
     if !skip_windows {
        //   let mut bg_map_win = GBWindow::new(WindowType::Game, &event_loop, 1024, 1024);
 
-        let mut tile_win = GBWindow::new(WindowType::Tile, &event_loop, 160, 144);
-        let mut bg_map_win = GBWindow::new(WindowType::BGMap, &event_loop, 256, 256);
-        let mut game_win = GBWindow::new(WindowType::Game, &event_loop, 160, 144);
+        let mut tile_win = GBWindow::new(WindowType::Tile, &event_loop, 128, 128);
+        let mut bg_map_win = GBWindow::new(WindowType::BGMap, &event_loop, 256, 280);
+        let mut game_win = GBWindow::new(WindowType::Game, &event_loop, 160, 160);
 
         let tile_win_id = tile_win.window.id();
         print!("tile_win_id is {:?}\n", tile_win_id);
@@ -70,10 +71,13 @@ fn main() {
         let game_win_id = game_win.window.id();
         print!("game_win_id is {:?}\n", game_win_id);
 
-        let tile_win_buffer = Arc::new(Mutex::new(vec![0u8; 92_160]));
+        let tile_win_buffer = Arc::new(Mutex::new(vec![0u8; 65_536]));
         //  let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 4_194_304]));
-        let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 262_144]));
-        let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 92_160]));
+        //let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 262_144]));
+        let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 286_720]));
+        //let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 92_160]));
+        let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 102_400]));
+
 
         let mut render_state = Arc::new(Mutex::new(PPUEvent::RenderEvent(RenderState::Render)));
         let mut render_state_arc = Arc::clone(&render_state);
@@ -94,9 +98,9 @@ fn main() {
         let mut bgmw_frames_this_sec: u64 = 0;
         let mut gw_frames_this_sec: u64 = 0;
 
-        let tw_max_fps = 5;
+        let tw_max_fps = 60;
         let bgmw_max_fps = 5;
-        let gw_max_fps = 60;
+        let gw_max_fps = 5;
 
         event_loop.run(|event, elwt| {
             let mut render_state_cloned = PPUEvent::RenderEvent(RenderState::Render);

@@ -258,7 +258,11 @@ impl Mbc {
 
             // Joypad and serial
             0xFF00 => self.hw_reg.joyp = byte,
-            0xFF01 => self.hw_reg.sb = byte,
+            // 0xFF01 => self.hw_reg.sb = byte,
+            0xFF42 => {
+                print!("{}", byte as char);
+                self.hw_reg.sb = byte;
+            },
             0xFF02 => self.hw_reg.sc = byte,
 
             // Timer
@@ -556,6 +560,10 @@ impl Mbc {
                 self.xram.write(calculated_add, byte);
                 return;
             }
+        } else if (0xC000..=0xDFFF).contains(&address) {
+            // read WRAM
+            let ram_base_size: u16 = 0xC000;
+            return self.wram.write(address - ram_base_size, byte);
         } else if (0xFE00..=0xFE9F).contains(&address) {
             // read OAM
             let oam_offset: u16 = 0xFE00;
