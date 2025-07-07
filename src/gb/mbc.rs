@@ -288,7 +288,15 @@ impl Mbc {
             0xFF44 => self.hw_reg.ly = 0, // writing to LY resets it
             0xFF45 => self.hw_reg.lyc = byte,
             0xFF46 => {
-                print!("writing to 0xFF46, DMA hw register \n");
+                if byte != 0 {
+                    print!("writing to 0xFF46, DMA hw register \n");
+                    let base_add = 0xFE00;
+                    for i    in 0..160u16 {
+                        let add= (byte as u16) << 8;
+                        let val = self.read(add + i);
+                        self.write(base_add + i, val);
+                    }
+                }
                 self.hw_reg.dma = byte;
             },
             0xFF47 => self.hw_reg.bgp = byte,
@@ -421,19 +429,19 @@ impl Mbc {
     pub fn mbc1_read(&self, address: u16) -> u8 {
         let current_bank_mode = self.rom_bank_mode;
         // read from rom bank 0
-        if  (0x0000..=0x1FFF).contains(&address) {
-            if current_bank_mode == RomBankMode::Simple {
+        if  (0x0000..=0x3FFF).contains(&address) {
+            //if current_bank_mode == RomBankMode::Simple {
                 return self.rom.as_ref().unwrap().read(address as u32);
-            } else {
-               if self.rom_bank > 0x10 {
-                   // eg add is 0x0010 and bank is 0x17
-                   // 0x17 * 0x4000 + 0x10 = 0x5C010
-                   let offset: u32 = (address as u32);
-                   let rom_bank_add: u32 = (self.rom_bank as u32) * 0x4000;
-                   let calculated_address:u32 = rom_bank_add + offset;
-                   return self.rom.as_ref().unwrap().read(calculated_address);
-               }
-            }
+            // } else {
+            //    if self.rom_bank > 0x10 {
+            //        // eg add is 0x0010 and bank is 0x17
+            //        // 0x17 * 0x4000 + 0x10 = 0x5C010
+            //        let offset: u32 = (address as u32);
+            //        let rom_bank_add: u32 = (self.rom_bank as u32) * 0x4000;
+            //        let calculated_address:u32 = rom_bank_add + offset;
+            //        return self.rom.as_ref().unwrap().read(calculated_address);
+            //    }
+            // }
         }  else if (0x4000..=0x7FFF).contains(&address) {
             // read from rom bank 1 to X
             if self.rom_bank == 1 {
@@ -481,6 +489,7 @@ impl Mbc {
             return self.hram.read(address - hram_offset);
         }
 
+        print!("Unhandled read in mbc1_read at add {}\n", address);
         self.ram.read(address)
     }
 
@@ -489,57 +498,51 @@ impl Mbc {
         let current_ram_size = self.rom.as_ref().unwrap().ram_size;
         // enable or diable ram write
         if (0x0000..=0x1FFF).contains(&address) {
-            if byte & 0xA0 == 0xA0 {
+            if (byte & 0x0F) == 0x0A {
                 self.wr_ram_bank = true;
-                return;
             }
             else {
                 self.wr_ram_bank = false;
-                return;
             }
+            return;
         }
         // switch rom banks
         else if (0x2000..=0x3FFF).contains(&address) {
             // sets the rom bank number for 0x4000-7FFF
-            if byte == 0 {
-                // 0 must always be rom bank 1
+            let bank = byte & 0b0001_1111;
+            if bank == 0 {
                 self.rom_bank = 1;
-                return;
+            } else {
+                self.rom_bank = bank;
+
             }
-            else {
-                // this is a 5 bit value so discard any higher bits
-                self.rom_bank = byte & 0b_0001_1111;
-                return;
-            }
+            return;
             // for 1MB roms - bit 5-6 of ROM bank num
             // for 32KB ram - RAM bank num
             // else ignore
         } else if  (0x4000..=0x5FFF).contains(&address) {
-            if current_ram_size == RamSize::KB_32 {
-                // write the 2 bits of the rank bank num for 32 KB RAM
-                self.ram_bank = byte | 0b_0000_0011;
-                return;
-            } else if self.rom_bank_mode == RomBankMode::Advanced {
-                // max size for MBC1 is 2 MB ROM
-                // write upper two bits (5-6) of the rom num for 1 MB ROM
-                let mut upper_bits = byte;
-                upper_bits <<= 5;
-                self.rom_bank + upper_bits;
-                return;
+            let value = byte & 0b_0000_0011; // Only the lower 2 bits matter
+
+            if self.rom_bank_mode == RomBankMode::Advanced {
+                // Use bits 5-6 for upper ROM bank bits
+                let upper_bits = value << 5;
+                self.rom_bank = (self.rom_bank & 0b0001_1111) | upper_bits;
+            } else {
+                // Use the value as RAM bank number (if applicable)
+                self.ram_bank = value;
             }
+            return;
         }  else if (0x6000..=0x7FFF).contains(&address) {
             // write the banking mode
             // simple 0000-3FFF and A000-BFFF are bank 0 of ROM and SRAM
             // advanced 0000-3FFF and A000-BFFF can be bank switched via 4000-5FFF hw reg
             if byte == 0 {
                 self.rom_bank_mode = RomBankMode::Simple;
-                return;
             }
             else {
                 self.rom_bank_mode = RomBankMode::Advanced;
-                return;
-
             }
+            return;
         } else if (0x8000..=0x9FFF).contains(&address) {
             // write to VRAM
             let vram_base_size: u16 = 0x8000;
@@ -563,19 +566,23 @@ impl Mbc {
         } else if (0xC000..=0xDFFF).contains(&address) {
             // read WRAM
             let ram_base_size: u16 = 0xC000;
-            return self.wram.write(address - ram_base_size, byte);
+            self.wram.write(address - ram_base_size, byte);
+            return;
         } else if (0xFE00..=0xFE9F).contains(&address) {
             // read OAM
             let oam_offset: u16 = 0xFE00;
-            return self.oam.write(address - oam_offset, byte);
+            self.oam.write(address - oam_offset, byte);
+            return;
         } else if (0xFF00..=0xFF7F).contains(&address) {
             // read IO
             let io_offset: u16 = 0xFF00;
-            return self.io.write(address - io_offset, byte);
+            self.io.write(address - io_offset, byte);
+            return;
         } else if (0xFF80..=0xFFFE).contains(&address) {
             // read HRAM
             let hram_offset: u16 = 0xFF80;
-            return self.hram.write(address - hram_offset, byte);
+            self.hram.write(address - hram_offset, byte);
+            return;
         }
 
         print!("attempted an unhandled write inside mbc1_write address {} byte {:X}\n", address, byte);

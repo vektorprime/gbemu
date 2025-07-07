@@ -90,13 +90,12 @@ impl Cpu {
         }
     }
 
-    // pub fn handle_oam_dma_transfer(&mut self, mem: &mut Mbc, dma_add: u16) -> u64 {
+    // pub fn handle_oam_dma_transfer_cycles(&mut self, mem: &mut Mbc, dma_add: u16) -> u64 {
     //
     //     // todo oam dma transfer code
-    //     // copy 0x0000 - 0xDF9F to FE00 - FE9F
     //     // tick cpu 160 mcycles
     //
-    //
+    //     if self.
     //     // clear DMA so this doesn't loop
     //     mem.write(dma_add, 0);
     //
@@ -105,15 +104,16 @@ impl Cpu {
     //     self.last_cycles
     //
     // }
+
     pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
         //debug
         // let pc_print = self.registers.get_pc();
         // print!("pc - 0x{:X} \n", pc_print);
-        // oam transfer is handled by game code, no need for this
-        // let dma_add: u16 = 0xFF46;
-        // if mem.read(dma_add) != 0 {
-        //      return self.handle_oam_dma_transfer(mem, dma_add);
-        // }
+        let dma_add: u16 = 0xFF46;
+        if mem.read(dma_add) != 0 {
+            mem.write(dma_add, 0);
+            return 160u64;
+        }
 
         if self.registers.get_pc() == 0x100 {
             print!("----------- \n");
@@ -121,9 +121,10 @@ impl Cpu {
             print!("----------- \n");
         }
 
-        //if mem.hw_reg.sc == 0x81 {
-            //print!("{}", mem.hw_reg.sb as char);
-        //}
+        //  if mem.hw_reg.sc == 0x81 {
+        //     print!("{}\n", mem.hw_reg.sb as char);
+        //      mem.hw_reg.sc == 0x0;
+        // }
 
         // if self.registers.get_pc() >= 0x100 {
         //     let pc_print = self.registers.get_pc();
@@ -673,7 +674,7 @@ impl Cpu {
                     let addr = self.registers.get_hl();
                     let value = mem.read(addr);
                     self.registers.set_a(value);
-                    self.registers.set_hl(addr.wrapping_add(1));
+                    self.registers.inc_hl();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1378,7 +1379,6 @@ impl Cpu {
                     // LD A B
                     let reg = self.registers.get_b();
                     self.registers.set_a(reg);
-
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2249,6 +2249,7 @@ impl Cpu {
                     let lo = mem.read(self.registers.get_pc());
                     let hi = mem.read(self.registers.get_pc() + 1);
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                    print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xC4 => {
@@ -2362,6 +2363,7 @@ impl Cpu {
                     if self.registers.is_z_flag_set() {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
+                        print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2473,6 +2475,7 @@ impl Cpu {
                     if !self.registers.is_c_flag_set() {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
+                        print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2595,6 +2598,7 @@ impl Cpu {
                     if self.registers.is_c_flag_set() {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
+                        print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2770,6 +2774,8 @@ impl Cpu {
                 0xE9 => {
                     //JP HL
                     let hl = self.registers.get_hl();
+                    print!("Jumping to add {}\n", hl);
+
                     self.registers.set_pc(hl);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
@@ -4446,6 +4452,8 @@ impl Cpu {
                     // JP A16
                     let lo = mem.read(self.registers.get_pc());
                     let hi = mem.read(self.registers.get_pc() + 1);
+                    print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
+
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },

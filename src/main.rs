@@ -49,9 +49,9 @@ fn main() {
     let mut emu = Emu::new(ColorMode::Gray, debug);
 
     // rom is loaded after bios runs
-    emu.load_rom_file(String::from("tetris.gb"));
+    //emu.load_rom_file(String::from("tetris.gb"));
     //emu.load_rom_file(String::from("dmg-acid2.gb"));
-    //emu.load_rom_file(String::from("cpu_instrs.gb"));
+    emu.load_rom_file(String::from("cpu_instrs.gb"));
     //emu.load_rom_file(String::from("addams.gb"));
     //emu.load_rom_file(String::from("boot_regs-A.gb"));
     emu.load_bios();
