@@ -16,7 +16,9 @@ pub struct Cpu {
     pub pending_enable_ime_counter: u8,
     //pub opcode: u8, // opcode of current inst.
     pub cycles: u64, // total m cycle count
-    pub last_cycles: u64, // mcycles pe tick to pass to ppu
+    pub last_mcycles: u64, // mcycles pe tick to pass to ppu
+    pub div_tcycles: u64,
+    pub tima_tcycles: u64,
     //pub sec_cycles: u64, // tracking max mcycles per sec
     //pub current_time: Instant,
     pub halted: bool,
@@ -36,7 +38,9 @@ impl Cpu {
             pending_enable_ime_counter: 0,
             //opcode: 0,
             cycles: 0, // total mcyces
-            last_cycles: 0, // mcycles pe tick to pass to ppu
+            last_mcycles: 0, // mcycles pe tick to pass to ppu
+            div_tcycles: 0,
+            tima_tcycles: 0,
             //sec_cycles: 0, // tracking max mcycles per sec
             //current_time: Instant::now(),
             halted: false, 
@@ -50,7 +54,7 @@ impl Cpu {
     pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
         
         self.cycles += size as u64;
-        self.last_cycles = size as u64;
+        self.last_mcycles = size as u64;
 
     }
 
@@ -105,6 +109,36 @@ impl Cpu {
     //
     // }
 
+    pub fn tick_div_reg(&mut self, mbc: &mut Mbc) {
+        if self.div_tcycles >= 256 {
+            mbc.hw_reg.div = mbc.hw_reg.div.wrapping_add(1);
+            self.div_tcycles = 0;
+        } else {
+            self.div_tcycles = self.last_mcycles * 4;
+        }
+    }
+
+    pub fn tick_tima_reg(&mut self, mbc: &mut Mbc) {
+        let inc_count = mbc.get_tima_reg_tcycle_inc_count();
+        if self.tima_tcycles >= inc_count {
+            let new_val = mbc.hw_reg.tima.wrapping_add(1);
+            if mbc.is_tac_bit2_enable_set() {
+                mbc.hw_reg.tima = new_val;
+                // overflow sets it to tma
+                if new_val == 0 {
+                    mbc.hw_reg.tima == mbc.hw_reg.tma;
+                }
+            }
+
+            self.tima_tcycles = 0;
+        } else {
+            self.tima_tcycles = self.last_mcycles * 4;
+        }
+
+    }
+
+
+
     pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
         //debug
         // let pc_print = self.registers.get_pc();
@@ -122,8 +156,8 @@ impl Cpu {
         }
 
         //  if mem.hw_reg.sc == 0x81 {
-        //     print!("{}\n", mem.hw_reg.sb as char);
-        //      mem.hw_reg.sc == 0x0;
+        //     print!("{}", mem.hw_reg.sb as char);
+        //      mem.hw_reg.sc = 0x0;
         // }
 
         // if self.registers.get_pc() >= 0x100 {
@@ -149,6 +183,8 @@ impl Cpu {
         // }
         // end debug
 
+        self.tick_div_reg(mem);
+        self.tick_tima_reg(mem);
         self.handle_interrupts(mem);
 
         // load rom here in case we want to test skipping bios
@@ -178,7 +214,7 @@ impl Cpu {
                 self.pending_enable_ime_counter = 0;
             }
         }
-        self.last_cycles
+        self.last_mcycles
     }
 
     pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {
@@ -2249,7 +2285,7 @@ impl Cpu {
                     let lo = mem.read(self.registers.get_pc());
                     let hi = mem.read(self.registers.get_pc() + 1);
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
-                    print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
+                    //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xC4 => {
@@ -2261,7 +2297,7 @@ impl Cpu {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
                         let called_addr = u16::from_le_bytes([lo, hi]);
-                        print!("calling add {:X}, pushing add {:X} \n", called_addr, ret_addr );
+                       // print!("calling add {:X}, pushing add {:X} \n", called_addr, ret_addr );
                         self.registers.set_pc(called_addr);
 
                         // push return address to stack
@@ -2351,7 +2387,7 @@ impl Cpu {
                     let hi_sp = mem.read(sp + 1);
                     let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
                     //set pc to 16 bit add
-                    print!("returning to add {:X} \n", ret_addr );
+                    //print!("returning to add {:X} \n", ret_addr );
                     self.registers.set_pc(ret_addr);
                     // shrink stack by 2
                     let new_sp = self.registers.get_sp() + 2;
@@ -2363,7 +2399,7 @@ impl Cpu {
                     if self.registers.is_z_flag_set() {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
-                        print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
+                        //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2389,7 +2425,7 @@ impl Cpu {
                         self.registers.set_sp(new_sp);
                         mem.write(new_sp, lo_pc);          // write low byte
                         mem.write(new_sp + 1, hi_pc);      // write high byte
-                        print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
+                       // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
                         self.registers.set_pc(target_addr); //
                     } else {
                         self.registers.inc_pc_by_inst_val(inst.size);
@@ -2413,21 +2449,18 @@ impl Cpu {
                     mem.write(new_sp, lo_pc);
                     mem.write(new_sp + 1, hi_pc);
 
-                    print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
+                   // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
 
                     self.registers.set_pc(target_addr);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xCE => {
                     // ADC A D8
-                    let a = self.registers.get_a();
                     let b_addr = self.registers.get_pc();
                     let b = mem.read(b_addr);
                     let c = if self.registers.is_c_flag_set() {1} else {0};
-                    let mut result = self.registers.add_8bit(a, b);
-                    result += c;
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2453,7 +2486,7 @@ impl Cpu {
                     // RET NC
                     if !self.registers.is_c_flag_set() {
                         let address = self.registers.get_sp();
-                        print!("returning to add {:X} \n", address );
+                        //print!("returning to add {:X} \n", address );
                         self.registers.set_pc(address);
                         self.registers.set_sp(address + 2);
                     }
@@ -2475,7 +2508,7 @@ impl Cpu {
                     if !self.registers.is_c_flag_set() {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
-                        print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
+                        //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2492,7 +2525,7 @@ impl Cpu {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
                         let called_addr = u16::from_le_bytes([lo, hi]);
-                        print!("calling add {:X}, pushing add {:X} \n", called_addr, ret_addr );
+                       // print!("calling add {:X}, pushing add {:X} \n", called_addr, ret_addr );
                         self.registers.set_pc(called_addr);
 
                         // push return address to stack
@@ -2598,7 +2631,7 @@ impl Cpu {
                     if self.registers.is_c_flag_set() {
                         let lo = mem.read(self.registers.get_pc());
                         let hi = mem.read(self.registers.get_pc() + 1);
-                        print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
+                        //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2623,7 +2656,7 @@ impl Cpu {
                         self.registers.set_sp(new_sp);
                         mem.write(new_sp, lo_pc);          // write low byte
                         mem.write(new_sp + 1, hi_pc);      // write high byte
-                        print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
+                       // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
 
                         self.registers.set_pc(target_addr); //
                     } else {
@@ -2774,7 +2807,7 @@ impl Cpu {
                 0xE9 => {
                     //JP HL
                     let hl = self.registers.get_hl();
-                    print!("Jumping to add {}\n", hl);
+                    //print!("Jumping to add {}\n", hl);
 
                     self.registers.set_pc(hl);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -4452,7 +4485,7 @@ impl Cpu {
                     // JP A16
                     let lo = mem.read(self.registers.get_pc());
                     let hi = mem.read(self.registers.get_pc() + 1);
-                    print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
+                    //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
 
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);

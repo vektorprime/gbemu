@@ -10,7 +10,7 @@ pub struct Ram {
 impl Ram {
     pub fn new() -> Self {
         Ram {
-            memory: vec![0; 65536],
+            memory: vec![0xFF; 65536],
         }
     }
 
@@ -38,7 +38,7 @@ pub struct RomRam {
 impl RomRam {
     pub fn new() -> Self {
         RomRam {
-            memory: [0; 131071],
+            memory: [0xFF; 131071],
         }
     }
 

@@ -689,6 +689,69 @@ impl Registers {
         result
     }
 
+    pub fn adc_8bit(&mut self, a: u8, b: u8, carry: u8) -> u8 {
+        let (result1, overflow1) = a.overflowing_add(b);
+        let (result, overflow2) = result1.overflowing_add(carry);
+
+        // Set C flag if there's an overflow in either addition
+        if overflow1 || overflow2 {
+            self.set_c_flag();
+        } else {
+            self.clear_c_flag();
+        }
+
+        // Set Z flag if result is zero
+        if result == 0 {
+            self.set_z_flag();
+        } else {
+            self.clear_z_flag();
+        }
+
+        // Check for half-carry
+        let half_a = a & 0x0F;
+        let half_b = b & 0x0F;
+        let half_carry = (half_a + half_b + carry) > 0x0F;
+        if half_carry {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
+
+        result
+    }
+
+    // pub fn add_8bit_check_h_c_flags(&mut self, a: u8, b: u8) -> (bool, bool) {
+    //     // check for 8 bit overflow and set c flag
+    //     let (result, overflowed) = a.overflowing_add(b);
+    //     let mut c_flag_set = false;
+    //     let mut h_flag_set = false;
+    //     if overflowed {
+    //         c_flag_set = true;
+    //     }
+    //     else {
+    //        c_flag_set = false;
+    //     }
+    //     if result == 0 {
+    //         self.set_z_flag();
+    //     }
+    //     else {
+    //         self.clear_z_flag();
+    //     }
+    //
+    //     // check for half-carry
+    //     let half_a = a & 0b0000_1111;
+    //     let half_b = b & 0b0000_1111;
+    //     if half_a + half_b > 0b0000_1111 {
+    //         self.set_h_flag();
+    //     }
+    //     else {
+    //         self.clear_h_flag();
+    //     }
+    //
+    //     // always set val whether overflow or not
+    //     result
+    // }
+
     pub fn add_16bit(&mut self, a: u16, b: u16) -> u16 {
         // check for 16 bit overflow and set c flag
         let (result, overflowed) = a.overflowing_add(b);

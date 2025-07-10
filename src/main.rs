@@ -49,9 +49,10 @@ fn main() {
     let mut emu = Emu::new(ColorMode::Gray, debug);
 
     // rom is loaded after bios runs
-    //emu.load_rom_file(String::from("tetris.gb"));
+    //emu.load_rom_file(String::from("01-special.gb"));
+    emu.load_rom_file(String::from("tetris.gb"));
     //emu.load_rom_file(String::from("dmg-acid2.gb"));
-    emu.load_rom_file(String::from("cpu_instrs.gb"));
+    //emu.load_rom_file(String::from("cpu_instrs.gb"));
     //emu.load_rom_file(String::from("addams.gb"));
     //emu.load_rom_file(String::from("boot_regs-A.gb"));
     emu.load_bios();
@@ -61,7 +62,7 @@ fn main() {
        //   let mut bg_map_win = GBWindow::new(WindowType::Game, &event_loop, 1024, 1024);
 
         let mut tile_win = GBWindow::new(WindowType::Tile, &event_loop, 128, 128);
-        let mut bg_map_win = GBWindow::new(WindowType::BGMap, &event_loop, 256, 280);
+        let mut bg_map_win = GBWindow::new(WindowType::BGMap, &event_loop, 256, 256);
         let mut game_win = GBWindow::new(WindowType::Game, &event_loop, 160, 160);
 
         let tile_win_id = tile_win.window.id();
@@ -72,9 +73,9 @@ fn main() {
         print!("game_win_id is {:?}\n", game_win_id);
 
         let tile_win_buffer = Arc::new(Mutex::new(vec![0u8; 65_536]));
-        //  let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 4_194_304]));
-        //let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 262_144]));
-        let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 286_720]));
+
+        let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 262_144]));
+        //let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 286_720]));
         //let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 92_160]));
         let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 102_400]));
 
@@ -98,9 +99,9 @@ fn main() {
         let mut bgmw_frames_this_sec: u64 = 0;
         let mut gw_frames_this_sec: u64 = 0;
 
-        let tw_max_fps = 60;
+        let tw_max_fps = 5;
         let bgmw_max_fps = 5;
-        let gw_max_fps = 5;
+        let gw_max_fps = 60;
 
         event_loop.run(|event, elwt| {
             let mut render_state_cloned = PPUEvent::RenderEvent(RenderState::Render);
@@ -132,8 +133,8 @@ fn main() {
                                             }
 
                                             tile_win.frame.render().unwrap();
+                                            tile_win.window.request_redraw();
                                             tw_frames_this_sec += 1;
-                                            //tile_win.window.request_redraw();
                                         }
 
                                     }
@@ -159,8 +160,9 @@ fn main() {
                                             }
 
                                             bg_map_win.frame.render().unwrap();
-                                            bgmw_frames_this_sec += 1;
                                             bg_map_win.window.request_redraw();
+                                            bgmw_frames_this_sec += 1;
+
                                         }
                                     }
                                     else {
@@ -185,8 +187,8 @@ fn main() {
                                             }
 
                                             game_win.frame.render().unwrap();
-                                            gw_frames_this_sec += 1;
                                             game_win.window.request_redraw();
+                                            gw_frames_this_sec += 1;
                                         }
                                     }
                                     else {
@@ -223,7 +225,6 @@ fn main() {
                         }
                     }
                     tile_win.window.request_redraw();
-
                 }
 
             }

@@ -78,6 +78,27 @@ impl Mbc {
         }
     }
 
+    pub fn get_tima_reg_tcycle_inc_count(&self) -> u64 {
+        let clock_select = self.hw_reg.tima & 0b0000_0011;
+        if clock_select == 0  {
+            return 1024
+        } else if clock_select == 1  {
+            return 16
+        } else if clock_select == 2  {
+            return 64
+        } else if clock_select == 3  {
+            return 256
+        }
+        panic!("Unable to get tcycle count in get_tima_reg_tcycle_inc_count");
+    }
+
+    pub fn is_tac_bit2_enable_set(&self) -> bool {
+        if self.hw_reg.tac & 0b0000_0100 == 0b0000_0100 {
+            return true
+        } else {
+            return false
+        }
+    }
 
     pub fn read_rom(&self, address: u16) -> u8 {
         let rom_type = self.rom.as_ref().unwrap().get_rom_type();
@@ -259,13 +280,30 @@ impl Mbc {
             // Joypad and serial
             0xFF00 => self.hw_reg.joyp = byte,
             // 0xFF01 => self.hw_reg.sb = byte,
-            0xFF42 => {
-                print!("{}", byte as char);
+            0xFF01 => {
+                //print!("{}", byte as char);
                 self.hw_reg.sb = byte;
             },
-            0xFF02 => self.hw_reg.sc = byte,
+            0xFF02 =>  {
+                if byte == 0x81 {
+                    // If it is, immediately "complete" the transfer
+                    print!("{}", self.hw_reg.sb as char); // Print the character
+                    self.hw_reg.sc = 0x00; // Clear SC. This simulates the hardware clearing it after transfer
+                } else {
+                    // For other SC values, just store it
+                    self.hw_reg.sc = byte;
+                }
+            }
+            //self.hw_reg.sc = byte,
 
             // Timer
+            //
+            // DIV
+            // appears as 8 bit to software that incrementd every tcycle
+            // internally in hw it's 16 bit that increments every 256 tcycle
+            // only upper 8 bits are mapped to mem
+            // writing to FF04 resets it to 0
+            // STOP inst also resets this and begins again after STOP ends
             0xFF04 => self.hw_reg.div = 0, // writing to DIV resets it
             0xFF05 => self.hw_reg.tima = byte,
             0xFF06 => self.hw_reg.tma = byte,
@@ -489,7 +527,7 @@ impl Mbc {
             return self.hram.read(address - hram_offset);
         }
 
-        print!("Unhandled read in mbc1_read at add {}\n", address);
+        //print!("Unhandled read in mbc1_read at add {}\n", address);
         self.ram.read(address)
     }
 
@@ -585,7 +623,7 @@ impl Mbc {
             return;
         }
 
-        print!("attempted an unhandled write inside mbc1_write address {} byte {:X}\n", address, byte);
+        //print!("attempted an unhandled write inside mbc1_write address {} byte {:X}\n", address, byte);
         self.ram.write(address, byte);
         //panic!("attempted an unhandled write inside mbc1_write address {} byte {:X}", address, byte);
     }
