@@ -50,8 +50,8 @@ fn main() {
 
     // rom is loaded after bios runs
     //emu.load_rom_file(String::from("01-special.gb"));
-    emu.load_rom_file(String::from("tetris.gb"));
-    //emu.load_rom_file(String::from("dmg-acid2.gb"));
+    //emu.load_rom_file(String::from("tetris.gb"));
+    emu.load_rom_file(String::from("dmg-acid2.gb"));
     //emu.load_rom_file(String::from("cpu_instrs.gb"));
     //emu.load_rom_file(String::from("addams.gb"));
     //emu.load_rom_file(String::from("boot_regs-A.gb"));
@@ -63,7 +63,7 @@ fn main() {
 
         let mut tile_win = GBWindow::new(WindowType::Tile, &event_loop, 128, 128);
         let mut bg_map_win = GBWindow::new(WindowType::BGMap, &event_loop, 256, 256);
-        let mut game_win = GBWindow::new(WindowType::Game, &event_loop, 160, 160);
+        let mut game_win = GBWindow::new(WindowType::Game, &event_loop, 160, 144);
 
         let tile_win_id = tile_win.window.id();
         print!("tile_win_id is {:?}\n", tile_win_id);
@@ -76,8 +76,8 @@ fn main() {
 
         let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 262_144]));
         //let bg_map_win_buffer = Arc::new(Mutex::new(vec![0u8; 286_720]));
-        //let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 92_160]));
-        let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 102_400]));
+        let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 92_160]));
+        //let game_win_buffer = Arc::new(Mutex::new(vec![0u8; 102_400]));
 
 
         let mut render_state = Arc::new(Mutex::new(PPUEvent::RenderEvent(RenderState::Render)));

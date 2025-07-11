@@ -74,6 +74,7 @@ pub struct Ppu {
     pub bg_tile_map: [u8; 1024],
     // pub active: bool,
     pub tcycle_in_mode_3_draw: u64,
+    pub pixel_in_frame: u64,
 }
 impl Ppu {
     pub fn new() -> Self {
@@ -109,6 +110,7 @@ impl Ppu {
             bg_tile_map: [0; 1024],
             // active: false,
             tcycle_in_mode_3_draw: 0,
+            pixel_in_frame: 0,
 
         }
     }
@@ -340,31 +342,73 @@ impl Ppu {
         }
     }
 
-    pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
+    // // // draws correctly but is NOT pixel per cycle
+    // pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, _cycles: &u64) {
+    //     if !self.ppu_init_complete {
+    //         return;
+    //     }
+    //
+    //     const ROWS_PER_GRID: usize = 18;
+    //     const TILES_PER_ROW: usize = 20;
+    //     const ROWS_PER_TILE: usize = 8;
+    //     const PIXELS_PER_ROW_IN_TILE: usize = 8;
+    //     const RGBA_SIZE: usize = 4;
+    //
+    //     let mut temp_buffer = vec![0u8; ROWS_PER_GRID * ROWS_PER_TILE * TILES_PER_ROW * PIXELS_PER_ROW_IN_TILE * RGBA_SIZE];
+    //     let mut rgba_index = 0;
+    //     let mut tile_map_index = 0;
+    //
+    //     for row_of_tiles_in_grid in 0..ROWS_PER_GRID {
+    //         for row_in_tile in 0..ROWS_PER_TILE {
+    //             for tile_x in 0..TILES_PER_ROW {
+    //                 let tile_index = self.bg_tile_map[tile_map_index + tile_x] as usize;
+    //                 let tile_row = &self.tiles[tile_index].data[row_in_tile];
+    //                 for &color in tile_row.iter() {
+    //                     let rgba = color.get_rgba_code();
+    //                     temp_buffer[rgba_index..rgba_index + 4].copy_from_slice(&rgba);
+    //                     rgba_index += 4;
+    //                 }
+    //             }
+    //         }
+    //         tile_map_index += (TILES_PER_ROW + 12);
+    //     }
+    //
+    //     let mut buffer = gw_buffer.lock().unwrap();
+    //     *buffer = temp_buffer;
+    // }
+
+
+    // // // version that draws a pixel per cycle
+    pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, tcycles: &u64) {
         // todo merge all the pixels from the pipe line here
         if !self.ppu_init_complete { return; }
         //let mut temp_buffer = vec![0u8; 92_160];
         let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
         // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
+        //let mut rgba_count: usize = self.tcycle_in_mode_3_draw as usize;
         let mut rgba_count: usize = self.tcycle_in_mode_3_draw as usize * 4;
-        let mut pixels_to_draw = cycles.clone();
+        let max_tcycle_in_mode_3_draw: u64 = 23_040;
+        //let max_tcycle_in_mode_3_draw: u64 = 41_618;
+        if rgba_count > max_tcycle_in_mode_3_draw as usize * 4 {
+            print!("rgba count >max_tcycle_in_mode_3_draw 92_160 in mode_3_draw \n");
+            return;
+        }
+        let mut pixels_to_draw = tcycles.clone();
         let mut pixels_drew: u64 = 0;
 
         //let mut rgba_count: usize = 0;
         let mut tile_in_grid_count: usize = 0;
-        let rows_per_grid: usize = 18;
-        let tiles_per_row: usize = 20;
-        let rows_per_tile = 8;
-         let pixels_per_row = 8;
+        const ROWS_PER_GRID: usize = 18;
+        const TILES_PER_ROW: usize = 20;
+        const TILES_PER_ROW_IN_BG_GRID: usize = 32;
+        const ROWS_PER_TILE: usize = 8;
+        const PIXELS_PER_ROW: usize = 8;
 
         let mut current_tcycles = self.tcycle_in_mode_3_draw;
-        // if current_tcycles >= 18_432 {
-        //     print!("\ncurrent_tcycles is {}\n", current_tcycles);
-        // }
         // print!("\ncurrent_tcycles is {}\n", current_tcycles);
         // print!("tcycles is {}\n", tcycles);
 
-        let pixels_per_full_row_of_tiles: u64 = (pixels_per_row * rows_per_tile * tiles_per_row) as u64;
+        let pixels_per_full_row_of_tiles: u64 = (PIXELS_PER_ROW * ROWS_PER_TILE * TILES_PER_ROW) as u64;
         //print!("pixels_per_full_row_of_tiles is {}\n", pixels_per_full_row_of_tiles);
         let starting_row_in_grid = current_tcycles / pixels_per_full_row_of_tiles;
         //print!("starting_row_in_grid is {}\n", starting_row_in_grid);
@@ -374,10 +418,10 @@ impl Ppu {
         }
         //print!("current_tcycles is {}\n", current_tcycles);
 
-        let mut starting_row_in_tile = current_tcycles / (rows_per_tile * tiles_per_row) as u64;
+        let mut starting_row_in_tile = current_tcycles / (ROWS_PER_TILE * TILES_PER_ROW) as u64;
         //print!("starting_row_in_tile is {}\n", starting_row_in_tile);
 
-        let completed_tiles_pixels = starting_row_in_tile * rows_per_tile as u64 * tiles_per_row as u64;
+        let completed_tiles_pixels = starting_row_in_tile * (ROWS_PER_TILE * TILES_PER_ROW) as u64;
         //print!("completed_tiles_pixels is {}\n", completed_tiles_pixels);
 
         current_tcycles -= completed_tiles_pixels as u64;
@@ -387,18 +431,18 @@ impl Ppu {
         // print!("remaining_pixels is {}\n", remaining_pixels);
         // print!("pixels_to_draw is {}\n", pixels_to_draw);
 
-        let mut tile_num = (starting_row_in_grid as usize * tiles_per_row) + ((remaining_pixels as usize + 1) / pixels_per_row as usize);
-        let mut pixels_to_skip: usize = (remaining_pixels as usize) % pixels_per_row as usize;
+        let mut tile_num = (starting_row_in_grid as usize * TILES_PER_ROW_IN_BG_GRID) + ((remaining_pixels as usize + 1) / PIXELS_PER_ROW as usize);
+        let mut pixels_to_skip: usize = (remaining_pixels as usize) % PIXELS_PER_ROW as usize;
+        // tile_num is assuming 32 tiles per row in grid, but our game only shows 20 tiles per row in grid, so we need to offset it
 
-
-        for row_of_tiles_in_grid in starting_row_in_grid as usize..rows_per_grid {
+        for row_of_tiles_in_grid in starting_row_in_grid as usize..ROWS_PER_GRID {
             // take the first row of each tile, then second, etc
-            for row_in_tile in starting_row_in_tile as usize..rows_per_tile {
+            for row_in_tile in starting_row_in_tile as usize..ROWS_PER_TILE {
                 // loop 32 times so we get the index for each tile in the row of the grid
-                for tpr in 0..tiles_per_row {
-                    let mut tile_index = self.bg_tile_map[tile_num + tpr] as usize; // todo get the count right
+                for tpr in 0..TILES_PER_ROW {
+                    let mut tile_index = self.bg_tile_map[tile_num + tpr] as usize;
                     // tile.data is an array of 8 arrays that each hold 8 PaletteColor
-                    for pixel in 0..pixels_per_row {
+                    for pixel in 0..PIXELS_PER_ROW {
                         if pixels_to_skip > 0 { pixels_to_skip -= 1; continue; }
                         //put each pixel into a vec so we can move it to the frame later
                         let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
@@ -406,6 +450,9 @@ impl Ppu {
                         //     print!("rgba is {:?} \n", rgba);
                         // }
                         //rgba = [255, 0, 0, 255]; // testing if this will render
+                        if rgba_count >= max_tcycle_in_mode_3_draw as usize * 4 {
+                            return;
+                        }
                         gw_buffer_unlocked[rgba_count..rgba_count+4].copy_from_slice(&rgba);
                         rgba_count += 4;
                         pixels_drew += 1;
@@ -418,45 +465,6 @@ impl Ppu {
         }
     }
 
-    // pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
-    //     // todo merge all the pixels from the pipe line here
-    //     if !self.ppu_init_complete { return; }
-    //     //let mut temp_buffer = vec![0u8; 92_160];
-    //     let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
-    //     // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
-    //     let mut rgba_count: usize = 0;
-    //     let mut tile_in_grid_count: usize = 0;
-    //     let rows_per_grid: usize = 18;
-    //     let tiles_per_row: usize = 20;
-    //     let rows_per_tile = 8;
-    //     let pixels_per_row_in_tile = 8;
-    //     for row_of_tiles_in_grid in 0..rows_per_grid {
-    //         // take the first row of each tile, then second, etc
-    //         for row_in_tile in 0..rows_per_tile {
-    //             // loop 32 times so we get the index for each tile in the row of the grid
-    //             for tpr in 0..tiles_per_row {
-    //                 let mut tile_index = self.bg_tile_map[tile_in_grid_count + tpr] as usize;
-    //                 // tile.data is an array of 8 arrays that each hold 8 PaletteColor
-    //                 for pixel in 0..pixels_per_row_in_tile {
-    //                     //put each pixel into a vec so we can move it to the frame later
-    //                     let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
-    //                     // if rgba != [255, 255, 255, 255] {
-    //                     //print!("rgba is {:?} \n", rgba);
-    //                     // }
-    //                     //rgba = [255, 0, 0, 255]; // testing if this will render
-    //                     gw_buffer_unlocked[rgba_count..rgba_count+4].copy_from_slice(&rgba);
-    //                     rgba_count += 4;
-    //                 }
-    //             }
-    //         }
-    //         // inc every row in grid so we don't get the same tiles
-    //         tile_in_grid_count += 20;
-    //     }
-    //     // {
-    //     //     let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
-    //     //     *gw_buffer_unlocked = temp_buffer;
-    //     // }
-    // }
 
 
 
@@ -676,6 +684,7 @@ impl Ppu {
         // // self.mode_3_draw(gw, &tcycle);
         // self.draw_bgmap(bgmw, &tcycle);
 
+
         // go through all PPU modes
         // mode 2 + 3 + 0 stop after scan line 143
         self.tcycle_in_scanline += tcycle;
@@ -685,6 +694,8 @@ impl Ppu {
         let mode_0_h_blank_first_tcycle = 369;
         let mode_3_drawing_first_tcycle = 80;
         let mode_2_oam_scan_last_tcycle = 80;
+
+
 
         //let mode_2_oam_scan_last_cycle: u64 = 80;
         //print!("current scan line is {}\n", current_scanline);
@@ -702,7 +713,7 @@ impl Ppu {
 
             // mode 2 is dot 0-80
             if self.tcycle_in_scanline <  mode_2_oam_scan_last_tcycle {
-                //self.draw_tiles(tw, &tcycle);
+                self.draw_tiles(tw, &tcycle);
                 self.mode_2_oam_scan(&tcycle);
             }
 
@@ -713,7 +724,7 @@ impl Ppu {
                 self.set_stat_ppu_mode(mbc, PPUMode::Draw);
                 self.started_mode_3_in_frame = true;
             }
-            if self.tcycle_in_scanline >  mode_3_drawing_first_tcycle && self.tcycle_in_scanline < mode_0_h_blank_first_tcycle {
+            if self.tcycle_in_scanline >=  mode_3_drawing_first_tcycle && self.tcycle_in_scanline < mode_0_h_blank_first_tcycle {
                 // don't pass a reference because we modify it and really only mode 3 should dec cycles
                 // self.load_all_tiles(&mbc);
                 // self.load_bg_tile_map(&mbc);
@@ -735,7 +746,7 @@ impl Ppu {
                 self.started_mode_0_in_frame = true;
             }
             if self.tcycle_in_scanline >=  mode_0_h_blank_first_tcycle {
-                //self.draw_bgmap(bgmw, &tcycle);
+                self.draw_bgmap(bgmw, &tcycle);
                 self.mode_0_h_blank(&tcycle);
             }
         } else {
@@ -782,6 +793,7 @@ impl Ppu {
 
         let max_tcycle_in_mode_3_draw: u64 = 23_040;
         //let max_tcycle_in_mode_3_draw: u64 = 24_768;
+        //let max_tcycle_in_mode_3_draw: u64 = 41_616;
 
         let max_tcycle_in_frame = 70_224;
         if self.tcycle_in_mode_3_draw >= max_tcycle_in_mode_3_draw {
@@ -792,6 +804,7 @@ impl Ppu {
             //print!("tcycle_in_frame is >= 70224, generating frame \n");
             self.tcycle_in_frame = 0;
             self.tcycle_in_scanline = 0;
+            //self.tcycle_in_mode_3_draw = 0;
             return PPUEvent::RenderEvent(RenderState::Render);
 
         } else {
