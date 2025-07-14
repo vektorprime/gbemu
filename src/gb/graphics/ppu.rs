@@ -409,7 +409,7 @@ impl Ppu {
 
 
     // // // version that draws a pixel per cycle
-    pub fn mode_3_draw(&self, gw_buffer: &Arc<Mutex<Vec<u8>>>, tcycles: &u64) {
+    pub fn mode_3_draw(&mut self, mbc: &mut Mbc, gw_buffer: &Arc<Mutex<Vec<u8>>>, tcycles: &u64) {
         // todo merge all the pixels from the pipe line here
         if !self.ppu_init_complete { return; }
         //let mut temp_buffer = vec![0u8; 92_160];
@@ -470,16 +470,15 @@ impl Ppu {
             for row_in_tile in starting_row_in_tile as usize..ROWS_PER_TILE {
                 // loop 32 times so we get the index for each tile in the row of the grid
                 for tpr in 0..TILES_PER_ROW {
-                    let mut tile_index = self.bg_tile_map[tile_num + tpr] as usize;
+                    //let mut tile_index = self.bg_tile_map[tile_num + tpr] as usize;
+                    let mut tile_index = self.get_index_from_bg_tile_map(mbc, tile_num + tpr);
                     // tile.data is an array of 8 arrays that each hold 8 PaletteColor
                     for pixel in 0..PIXELS_PER_ROW {
                         if pixels_to_skip > 0 { pixels_to_skip -= 1; continue; }
                         //put each pixel into a vec so we can move it to the frame later
-                        let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
-                        // if rgba != [255, 255, 255, 255] {
-                        //     print!("rgba is {:?} \n", rgba);
-                        // }
-                        //rgba = [255, 0, 0, 255]; // testing if this will render
+                        //let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
+                        let tile = self.get_tile(mbc, tile_index as u16);
+                        let rgba = tile.data[row_in_tile][pixel].get_rgba_code();
                         if rgba_count >= max_tcycle_in_mode_3_draw as usize * 4 {
                             return;
                         }
@@ -782,7 +781,7 @@ impl Ppu {
                 }
 
 
-                // self.mode_3_draw(gw, &tcycle);
+                self.mode_3_draw(mbc, gw, &tcycle);
 
                 self.tcycle_in_mode_3_draw += tcycle;
             }
