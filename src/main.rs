@@ -50,8 +50,8 @@ fn main() {
 
     // rom is loaded after bios runs
     //emu.load_rom_file(String::from("01-special.gb"));
-    //emu.load_rom_file(String::from("tetris.gb"));
-    emu.load_rom_file(String::from("dmg-acid2.gb"));
+    emu.load_rom_file(String::from("tetris.gb"));
+    //emu.load_rom_file(String::from("dmg-acid2.gb"));
     //emu.load_rom_file(String::from("cpu_instrs.gb"));
     //emu.load_rom_file(String::from("addams.gb"));
     //emu.load_rom_file(String::from("boot_regs-A.gb"));
@@ -99,8 +99,8 @@ fn main() {
         let mut bgmw_frames_this_sec: u64 = 0;
         let mut gw_frames_this_sec: u64 = 0;
 
-        let tw_max_fps = 5;
-        let bgmw_max_fps = 5;
+        let tw_max_fps = 10;
+        let bgmw_max_fps = 10;
         let gw_max_fps = 60;
 
         event_loop.run(|event, elwt| {

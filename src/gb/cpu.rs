@@ -76,8 +76,8 @@ impl Cpu {
                 self.registers.set_sp(new_sp);
                 // store lsb of bc in sp
                 // store msb of bc in sp + 1
-                mbc.write(new_sp, lo_pc);
-                mbc.write(new_sp + 1, hi_pc);
+                mbc.write(new_sp, lo_pc, OpSource::CPU);
+                mbc.write(new_sp + 1, hi_pc, OpSource::CPU);
                 // set pc
                 self.registers.set_pc(0x48);
                 self.inc_cycles_by_inst_val(4);
@@ -144,8 +144,9 @@ impl Cpu {
         // let pc_print = self.registers.get_pc();
         // print!("pc - 0x{:X} \n", pc_print);
         let dma_add: u16 = 0xFF46;
-        if mem.read(dma_add) != 0 {
-            mem.write(dma_add, 0);
+        if mem.read(dma_add, OpSource::CPU) != 0 {
+            print!("returning 160 cycles because there was a DMA transfer\n");
+            mem.write(dma_add, 0, OpSource::CPU);
             return 160u64;
         }
 
@@ -159,7 +160,7 @@ impl Cpu {
         //     print!("{}", mem.hw_reg.sb as char);
         //      mem.hw_reg.sc = 0x0;
         // }
-
+        //
         // if self.registers.get_pc() >= 0x100 {
         //     let pc_print = self.registers.get_pc();
         //     print!("pc - {:X} \n", pc_print);
@@ -219,12 +220,12 @@ impl Cpu {
 
     pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {
         let pc_reg = self.registers.get_and_inc_pc();
-        mem.read(pc_reg)
+        mem.read(pc_reg, OpSource::CPU)
     }
 
     pub fn fetch_next_cb_inst(&mut self, mem: &Mbc) -> u8 {
         let pc_reg = self.registers.get_pc();
-        mem.read(pc_reg)
+        mem.read(pc_reg, OpSource::CPU)
     }
 
     pub fn execute_inst(&mut self,  inst: Instruction, mem: &mut Mbc, is_cb_opcode: bool) {
@@ -236,8 +237,8 @@ impl Cpu {
                 },
                 0x01 => {
                     // LD BC D16
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     self.registers.set_bc(u16::from_le_bytes([lo, hi]));
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -247,7 +248,7 @@ impl Cpu {
                     // LD (BC) A
                     let a = self.registers.get_a();
                     let bc = self.registers.get_bc();
-                    mem.write(bc, a);
+                    mem.write(bc, a, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -276,7 +277,7 @@ impl Cpu {
                 },
                 0x06 => {
                     // LD B D8
-                    let operand = mem.read(self.registers.get_pc());
+                    let operand = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_b(operand);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -306,13 +307,13 @@ impl Cpu {
                     
                     let lower_8bits = 0b0000_0000_1111_1111;
                     let lower_sp = sp & lower_8bits;
-                    let dst_addr_p1 = mem.read(self.registers.get_pc());
-                    let dst_addr_p2 = mem.read(self.registers.get_pc() + 1);
+                    let dst_addr_p1 = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let dst_addr_p2 = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     let dst_addr = u16::from_le_bytes([dst_addr_p1, dst_addr_p2]);
-                    mem.write(dst_addr, lower_sp as u8);
+                    mem.write(dst_addr, lower_sp as u8, OpSource::CPU);
 
                     let upper_sp = (sp >> 8) as u8;
-                    mem.write(dst_addr + 1, upper_sp);
+                    mem.write(dst_addr + 1, upper_sp, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -329,7 +330,7 @@ impl Cpu {
                 },
                 0x0A => {
                     // LD A (BC)
-                    let bc_deref = mem.read(self.registers.get_bc());
+                    let bc_deref = mem.read(self.registers.get_bc(), OpSource::CPU);
                     self.registers.set_a(bc_deref);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -359,7 +360,7 @@ impl Cpu {
                 },
                 0x0E => {
                     // LD C D8
-                    let operand = mem.read(self.registers.get_pc());
+                    let operand = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_c(operand);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -394,8 +395,8 @@ impl Cpu {
                 },
                 0x11 => {
                     // LD DE D16
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     self.registers.set_de(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -404,7 +405,7 @@ impl Cpu {
                     // LD (DE) A
                     let a = self.registers.get_a();
                     let de = self.registers.get_de();
-                    mem.write(de, a);
+                    mem.write(de, a, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -432,7 +433,7 @@ impl Cpu {
                 },
                 0x16 => {
                     // LD D D8
-                    let operand = mem.read(self.registers.get_pc());
+                    let operand = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_d(operand);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -453,7 +454,7 @@ impl Cpu {
                 0x18 => {
                     // JR S8
                     let pc = self.registers.get_pc();
-                    let pc_offset_signed = mem.read(pc) as i8;
+                    let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                     if pc_offset_signed < 0 {
                         let neg_offset = pc_offset_signed.abs() as u8;
                         // need to +1 because we start counting on the next op
@@ -461,7 +462,7 @@ impl Cpu {
                         self.registers.set_pc(new_pc);
                     }
                     else {
-                        let offset = mem.read(pc) as u16;
+                        let offset = mem.read(pc, OpSource::CPU) as u16;
                         // need to +1 because we start counting on the next op
                         let new_pc = pc + offset + 1;
                         self.registers.set_pc(new_pc);
@@ -498,7 +499,7 @@ impl Cpu {
                 0x1A => {
                     // LD A, (DE)
                     let addr = self.registers.get_de();
-                    let value = mem.read(addr);
+                    let value = mem.read(addr, OpSource::CPU);
                     self.registers.set_a(value);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -527,7 +528,7 @@ impl Cpu {
                 },
                 0x1E => {
                     // LD E, d8
-                    let value = mem.read(self.registers.get_pc());
+                    let value = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_e(value);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -561,7 +562,7 @@ impl Cpu {
                     let z_flag = self.registers.is_z_flag_set();
                     if !z_flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset_signed = mem.read(pc) as i8;
+                        let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
                             let neg_offset = pc_offset_signed.abs() as u8;
                             // need to +1 because we start counting on the next op
@@ -569,7 +570,7 @@ impl Cpu {
                             self.registers.set_pc(new_pc);
                         }
                         else {
-                            let offset = mem.read(pc) as u16;
+                            let offset = mem.read(pc, OpSource::CPU) as u16;
                             // need to +1 because we start counting on the next op
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
@@ -582,8 +583,8 @@ impl Cpu {
                 },     
                 0x21 => {
                     // LD HL D16
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     self.registers.set_hl(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -592,7 +593,7 @@ impl Cpu {
                     // LD (HL+) A
                     let a = self.registers.get_a();
                     let hl = self.registers.get_hl();
-                    mem.write(hl, a);
+                    mem.write(hl, a, OpSource::CPU);
                     self.registers.inc_hl();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -621,7 +622,7 @@ impl Cpu {
                 },
                 0x26 => {
                     // LD H D8
-                    let val = mem.read(self.registers.get_pc());
+                    let val = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_h(val);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -661,7 +662,7 @@ impl Cpu {
                     let z_flag = self.registers.is_z_flag_set();
                     if z_flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset_signed = mem.read(pc) as i8;
+                        let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
                             let neg_offset = pc_offset_signed.abs() as u8;
                             // need to +1 because we start counting on the next op
@@ -669,7 +670,7 @@ impl Cpu {
                             self.registers.set_pc(new_pc);
                         }
                         else {
-                            let offset = mem.read(pc) as u16;
+                            let offset = mem.read(pc, OpSource::CPU) as u16;
                             // need to +1 because we start counting on the next op
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
@@ -708,7 +709,7 @@ impl Cpu {
                 0x2A => {
                     // LD A (HL+)
                     let addr = self.registers.get_hl();
-                    let value = mem.read(addr);
+                    let value = mem.read(addr, OpSource::CPU);
                     self.registers.set_a(value);
                     self.registers.inc_hl();
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -738,7 +739,7 @@ impl Cpu {
                 },
                 0x2E => {
                     // LD L, d8
-                    let value = mem.read(self.registers.get_pc());
+                    let value = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_l(value);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -759,7 +760,7 @@ impl Cpu {
                     let c_flag = self.registers.is_c_flag_set();
                     if !c_flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset_signed = mem.read(pc) as i8;
+                        let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
                             let neg_offset = pc_offset_signed.abs() as u8;
                             // need to +1 because we start counting on the next op
@@ -767,7 +768,7 @@ impl Cpu {
                             self.registers.set_pc(new_pc);
                         }
                         else {
-                            let offset = mem.read(pc) as u16;
+                            let offset = mem.read(pc, OpSource::CPU) as u16;
                             // need to +1 because we start counting on the next op
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
@@ -780,8 +781,8 @@ impl Cpu {
                 },   
                 0x31 => {
                     // LD SP D16
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     self.registers.set_sp(u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -790,7 +791,7 @@ impl Cpu {
                     // LD (HL-) A
                     let a = self.registers.get_a();
                     let add = self.registers.get_hl();
-                    mem.write(add, a);
+                    mem.write(add, a, OpSource::CPU);
                     self.registers.dec_hl_no_flags();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -806,7 +807,7 @@ impl Cpu {
                 0x34 => {
                     // INC (HL)
                     let addr = self.registers.get_hl();
-                    let value = mem.read(addr);
+                    let value = mem.read(addr, OpSource::CPU);
                     let result = value.wrapping_add(1);
                     if result == 0 {
                         self.registers.set_z_flag()
@@ -814,7 +815,7 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    mem.write(addr, result);
+                    mem.write(addr, result, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -822,7 +823,7 @@ impl Cpu {
                 0x35 => {
                     // DEC (HL)
                     let addr = self.registers.get_hl();
-                    let value = mem.read(addr);
+                    let value = mem.read(addr, OpSource::CPU);
                     if value & 0x0F == 0x00 {
                         self.registers.set_h_flag();
                     }
@@ -836,16 +837,16 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    mem.write(addr, result);
+                    mem.write(addr, result, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x36 => {
                     // LD (HL), d8
-                    let value = mem.read(self.registers.get_pc());
+                    let value = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let addr = self.registers.get_hl();
-                    mem.write(addr, value);
+                    mem.write(addr, value, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -860,7 +861,7 @@ impl Cpu {
                     let flag = self.registers.is_c_flag_set();
                     if flag {
                         let pc = self.registers.get_pc();
-                        let pc_offset_signed = mem.read(pc) as i8;
+                        let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
                             let neg_offset = pc_offset_signed.abs() as u8;
                             // need to +1 because we start counting on the next op
@@ -868,7 +869,7 @@ impl Cpu {
                             self.registers.set_pc(new_pc);
                         }
                         else {
-                            let offset = mem.read(pc) as u16;
+                            let offset = mem.read(pc, OpSource::CPU) as u16;
                             // need to +1 because we start counting on the next op
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
@@ -909,7 +910,7 @@ impl Cpu {
                 0x3A => {
                     // LD A (HL-) 
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
+                    let val = mem.read(addr, OpSource::CPU);
                     self.registers.set_a(val);
                     self.registers.dec_hl(); 
                     self.registers.handle_flags(inst.name);
@@ -940,7 +941,7 @@ impl Cpu {
                 },
                 0x3E => {
                     // LD A D8
-                    let value = mem.read(self.registers.get_pc());
+                    let value = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_a(value);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1010,7 +1011,7 @@ impl Cpu {
                 0x46 => {
                     // LD B (HL)
                     let reg = self.registers.get_hl();
-                    self.registers.set_b(mem.read(reg));
+                    self.registers.set_b(mem.read(reg, OpSource::CPU));
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1074,7 +1075,7 @@ impl Cpu {
                 0x4E => {
                     // LD C (HL)
                     let addr = self.registers.get_hl();
-                    let reg = mem.read(addr);
+                    let reg = mem.read(addr, OpSource::CPU);
                     self.registers.set_c(reg);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1139,7 +1140,7 @@ impl Cpu {
                 0x56 => {
                     // LD D (HL)
                     let addr = self.registers.get_hl();
-                    let reg = mem.read(addr);
+                    let reg = mem.read(addr, OpSource::CPU);
                     self.registers.set_d(reg);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1204,7 +1205,7 @@ impl Cpu {
                 0x5E => {
                     // LD E (HL)
                     let addr = self.registers.get_hl();
-                    let reg = mem.read(addr);
+                    let reg = mem.read(addr, OpSource::CPU);
                     self.registers.set_e(reg);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1269,7 +1270,7 @@ impl Cpu {
                 0x66 => {
                     // LD H (HL)
                     let addr = self.registers.get_hl();
-                    let reg = mem.read(addr);
+                    let reg = mem.read(addr, OpSource::CPU);
                     self.registers.set_h(reg);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1334,7 +1335,7 @@ impl Cpu {
                 0x6E => {
                     // LD L (HL)
                     let addr = self.registers.get_hl();
-                    let reg = mem.read(addr);
+                    let reg = mem.read(addr, OpSource::CPU);
                     self.registers.set_l(reg);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1351,7 +1352,7 @@ impl Cpu {
                 0x70 => {
                     // LD (HL) B
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_b());
+                    mem.write(addr, self.registers.get_b(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1359,7 +1360,7 @@ impl Cpu {
                 0x71 => {
                     // LD (HL) C
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_c());
+                    mem.write(addr, self.registers.get_c(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1367,7 +1368,7 @@ impl Cpu {
                 0x72 => {
                     // LD (HL) D
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_d());
+                    mem.write(addr, self.registers.get_d(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1375,7 +1376,7 @@ impl Cpu {
                 0x73 => {
                     // LD (HL) E
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_e());
+                    mem.write(addr, self.registers.get_e(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1383,7 +1384,7 @@ impl Cpu {
                 0x74 => {
                     // LD (HL) H
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_h());
+                    mem.write(addr, self.registers.get_h(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1391,7 +1392,7 @@ impl Cpu {
                 0x75 => {
                     // LD (HL) L
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_l());
+                    mem.write(addr, self.registers.get_l(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1406,7 +1407,7 @@ impl Cpu {
                 0x77 => {
                     // LD (HL) A
                     let addr = self.registers.get_hl();
-                    mem.write(addr, self.registers.get_a());
+                    mem.write(addr, self.registers.get_a(), OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1461,7 +1462,7 @@ impl Cpu {
                 0x7E => {
                     // LD A (HL)
                     let addr = self.registers.get_hl();
-                    let reg = mem.read(addr);
+                    let reg = mem.read(addr, OpSource::CPU);
                     self.registers.set_a(reg);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1539,7 +1540,7 @@ impl Cpu {
                     // ADD A (HL)
                     let a = self.registers.get_a(); 
                     let hl = self.registers.get_hl();
-                    let b = mem.read(hl);
+                    let b = mem.read(hl, OpSource::CPU);
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -1635,7 +1636,7 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     a += c;
                     let b_addr = self.registers.get_hl();
-                    let b = mem.read(b_addr);
+                    let b = mem.read(b_addr, OpSource::CPU);
                     let result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -1717,7 +1718,7 @@ impl Cpu {
                     // SUB A (HL)
                     let a = self.registers.get_a();
                     let addr = self.registers.get_hl();
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -1798,7 +1799,7 @@ impl Cpu {
                     // SUBC A (HL)
                     let a = self.registers.get_a();
                     let addr = self.registers.get_hl(); 
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -1879,7 +1880,7 @@ impl Cpu {
                     // AND (HL)
                     let a = self.registers.get_a();
                     let addr = self.registers.get_hl(); 
-                    let b = mem.read(addr); 
+                    let b = mem.read(addr, OpSource::CPU); 
                     let result = a & b;
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -1990,7 +1991,7 @@ impl Cpu {
                     // XOR (HL)
                     let a = self.registers.get_a();
                     let addr = self.registers.get_hl(); 
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = a ^ b;
                     if result == 0 {
                         self.registers.set_z_flag();
@@ -2111,7 +2112,7 @@ impl Cpu {
                     // OR (HL)
                     let a = self.registers.get_a();
                     let addr = self.registers.get_hl();
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = a | b;
                     if result == 0 {
                         self.registers.set_z_flag();
@@ -2225,7 +2226,7 @@ impl Cpu {
                     // CP (HL)
                     let a = self.registers.get_a();
                     let addr = self.registers.get_hl();
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = a.wrapping_sub(b);
                     if result == 0 {
                         self.registers.set_z_flag();
@@ -2261,8 +2262,8 @@ impl Cpu {
                 0xC1 => {
                     // POP BC
                     let address = self.registers.get_sp();
-                    let lo = mem.read(address);
-                    let hi = mem.read(address + 1);
+                    let lo = mem.read(address, OpSource::CPU);
+                    let hi = mem.read(address + 1, OpSource::CPU);
                     self.registers.set_bc_with_two_val(lo, hi);
                     self.registers.set_sp(address + 2);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2271,8 +2272,8 @@ impl Cpu {
                 0xC2 => {
                     // JP NZ A16
                     if !self.registers.is_z_flag_set() {
-                        let lo = mem.read(self.registers.get_pc());
-                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                        let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
                     else {
@@ -2282,8 +2283,8 @@ impl Cpu {
                 },
                 0xC3 => {
                     // JP A16
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2294,8 +2295,8 @@ impl Cpu {
                     let ret_addr = self.registers.get_pc() + 2;
                     if !self.registers.is_z_flag_set() {
                         // get the called address and set pc to it
-                        let lo = mem.read(self.registers.get_pc());
-                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                        let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         let called_addr = u16::from_le_bytes([lo, hi]);
                        // print!("calling add {:X}, pushing add {:X} \n", called_addr, ret_addr );
                         self.registers.set_pc(called_addr);
@@ -2306,9 +2307,9 @@ impl Cpu {
                         self.registers.set_sp(sp_addr);
                         // split ret_addr into two
                         let ret_part_1 = (ret_addr & 0x00FF) as u8;
-                        mem.write(sp_addr, ret_part_1);
+                        mem.write(sp_addr, ret_part_1, OpSource::CPU);
                         let ret_part_2 = (ret_addr >> 8) as u8;
-                        mem.write(sp_addr + 1, ret_part_2);
+                        mem.write(sp_addr + 1, ret_part_2, OpSource::CPU);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
@@ -2326,15 +2327,15 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_bc);
-                    mem.write(new_sp + 1, hi_bc);
+                    mem.write(new_sp, lo_bc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_bc, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xC6 => {
                     // ADD A D8
                     let a = self.registers.get_a();
-                    let imm = mem.read(self.registers.get_pc());
+                    let imm = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let result = a.wrapping_add(imm);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -2353,8 +2354,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc to 0x00
                     self.registers.set_pc(0x00);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2364,8 +2365,8 @@ impl Cpu {
                     if self.registers.is_z_flag_set() {
                         // get 16 bit add from SP
                         let sp = self.registers.get_sp();
-                        let lo_sp = mem.read(sp);
-                        let hi_sp = mem.read(sp + 1);
+                        let lo_sp = mem.read(sp, OpSource::CPU);
+                        let hi_sp = mem.read(sp + 1, OpSource::CPU);
                         let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
                         //set pc to 16 bit add
                         self.registers.set_pc(ret_addr);
@@ -2383,8 +2384,8 @@ impl Cpu {
                     // RET
                     // get 16 bit add from SP
                     let sp = self.registers.get_sp();
-                    let lo_sp = mem.read(sp);
-                    let hi_sp = mem.read(sp + 1);
+                    let lo_sp = mem.read(sp, OpSource::CPU);
+                    let hi_sp = mem.read(sp + 1, OpSource::CPU);
                     let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
                     //set pc to 16 bit add
                     //print!("returning to add {:X} \n", ret_addr );
@@ -2397,8 +2398,8 @@ impl Cpu {
                 0xCA => {
                     // JP Z A16
                     if self.registers.is_z_flag_set() {
-                        let lo = mem.read(self.registers.get_pc());
-                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                        let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
@@ -2412,8 +2413,8 @@ impl Cpu {
                     // CALL Z A16
                     if self.registers.is_z_flag_set() {
                         let pc = self.registers.get_pc();
-                        let lo_call = mem.read(pc);
-                        let hi_call = mem.read(pc + 1);
+                        let lo_call = mem.read(pc, OpSource::CPU);
+                        let hi_call = mem.read(pc + 1, OpSource::CPU);
                         let target_addr = u16::from_le_bytes([lo_call, hi_call]);
 
                         // Return address = PC after the operand (2 bytes)
@@ -2423,8 +2424,8 @@ impl Cpu {
 
                         let new_sp = self.registers.get_sp() - 2;
                         self.registers.set_sp(new_sp);
-                        mem.write(new_sp, lo_pc);          // write low byte
-                        mem.write(new_sp + 1, hi_pc);      // write high byte
+                        mem.write(new_sp, lo_pc, OpSource::CPU);          // write low byte
+                        mem.write(new_sp + 1, hi_pc, OpSource::CPU);      // write high byte
                        // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
                         self.registers.set_pc(target_addr); //
                     } else {
@@ -2435,8 +2436,8 @@ impl Cpu {
                 0xCD => {
                     // CALL A16
                     let pc = self.registers.get_pc();
-                    let lo_call = mem.read(pc);
-                    let hi_call = mem.read(pc + 1);
+                    let lo_call = mem.read(pc, OpSource::CPU);
+                    let hi_call = mem.read(pc + 1, OpSource::CPU);
                     let target_addr = u16::from_le_bytes([lo_call, hi_call]);
 
                     // Return address = PC after the operand (2 bytes)
@@ -2446,8 +2447,8 @@ impl Cpu {
 
                     let new_sp = self.registers.get_sp() - 2;
                     self.registers.set_sp(new_sp);
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
 
                    // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
 
@@ -2457,7 +2458,7 @@ impl Cpu {
                 0xCE => {
                     // ADC A D8
                     let b_addr = self.registers.get_pc();
-                    let b = mem.read(b_addr);
+                    let b = mem.read(b_addr, OpSource::CPU);
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
@@ -2476,8 +2477,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc
                     self.registers.set_pc(0x08);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2496,8 +2497,8 @@ impl Cpu {
                 0xD1 => {
                     // POP DE
                     let address = self.registers.get_sp();
-                    let lo = mem.read(address);
-                    let hi = mem.read(address + 1);
+                    let lo = mem.read(address, OpSource::CPU);
+                    let hi = mem.read(address + 1, OpSource::CPU);
                     self.registers.set_de_with_two_val(lo, hi);
                     self.registers.set_sp(address + 2);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2506,8 +2507,8 @@ impl Cpu {
                 0xD2 => {
                     // JP NC A16
                     if !self.registers.is_c_flag_set() {
-                        let lo = mem.read(self.registers.get_pc());
-                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                        let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
@@ -2522,8 +2523,8 @@ impl Cpu {
                     let ret_addr = self.registers.get_pc() + 2;
                     if !self.registers.is_c_flag_set() {
                         // get the called address and set pc to it
-                        let lo = mem.read(self.registers.get_pc());
-                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                        let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         let called_addr = u16::from_le_bytes([lo, hi]);
                        // print!("calling add {:X}, pushing add {:X} \n", called_addr, ret_addr );
                         self.registers.set_pc(called_addr);
@@ -2534,9 +2535,9 @@ impl Cpu {
                         self.registers.set_sp(sp_addr);
                         // split ret_addr into two
                         let ret_part_1 = (ret_addr & 0x00FF) as u8;
-                        mem.write(sp_addr, ret_part_1);
+                        mem.write(sp_addr, ret_part_1, OpSource::CPU);
                         let ret_part_2 = (ret_addr >> 8) as u8;
-                        mem.write(sp_addr + 1, ret_part_2);
+                        mem.write(sp_addr + 1, ret_part_2, OpSource::CPU);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
@@ -2554,8 +2555,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of de in sp
                     // store msb of de in sp + 1
-                    mem.write(new_sp, lo_de);
-                    mem.write(new_sp + 1, hi_de);
+                    mem.write(new_sp, lo_de, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_de, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2564,7 +2565,7 @@ impl Cpu {
                     // SUB A D8
                     let a = self.registers.get_a();
                     let addr = self.registers.get_pc();
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
@@ -2583,8 +2584,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc to 0x00
                     self.registers.set_pc(0x10);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2594,8 +2595,8 @@ impl Cpu {
                     if self.registers.is_c_flag_set() {
                         // get 16 bit add from SP
                         let sp = self.registers.get_sp();
-                        let lo_sp = mem.read(sp);
-                        let hi_sp = mem.read(sp + 1);
+                        let lo_sp = mem.read(sp, OpSource::CPU);
+                        let hi_sp = mem.read(sp + 1, OpSource::CPU);
                         let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
                         //set pc to 16 bit add
                         self.registers.set_pc(ret_addr);
@@ -2613,8 +2614,8 @@ impl Cpu {
                     // RETI
                     // get 16 bit add from SP
                     let sp = self.registers.get_sp();
-                    let lo_sp = mem.read(sp);
-                    let hi_sp = mem.read(sp + 1);
+                    let lo_sp = mem.read(sp, OpSource::CPU);
+                    let hi_sp = mem.read(sp + 1, OpSource::CPU);
                     let ret_addr = u16::from_le_bytes([lo_sp, hi_sp]);
                     //set pc to 16 bit add
                     self.registers.set_pc(ret_addr);
@@ -2629,8 +2630,8 @@ impl Cpu {
                 0xDA => {
                     // JP Z A16
                     if self.registers.is_c_flag_set() {
-                        let lo = mem.read(self.registers.get_pc());
-                        let hi = mem.read(self.registers.get_pc() + 1);
+                        let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                        let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                     }
@@ -2643,8 +2644,8 @@ impl Cpu {
                     // CALL C A16
                     if self.registers.is_c_flag_set() {
                         let pc = self.registers.get_pc();
-                        let lo_call = mem.read(pc);
-                        let hi_call = mem.read(pc + 1);
+                        let lo_call = mem.read(pc, OpSource::CPU);
+                        let hi_call = mem.read(pc + 1, OpSource::CPU);
                         let target_addr = u16::from_le_bytes([lo_call, hi_call]);
 
                         // Return address = PC after the operand (2 bytes)
@@ -2654,8 +2655,8 @@ impl Cpu {
 
                         let new_sp = self.registers.get_sp() - 2;
                         self.registers.set_sp(new_sp);
-                        mem.write(new_sp, lo_pc);          // write low byte
-                        mem.write(new_sp + 1, hi_pc);      // write high byte
+                        mem.write(new_sp, lo_pc, OpSource::CPU);          // write low byte
+                        mem.write(new_sp + 1, hi_pc, OpSource::CPU);      // write high byte
                        // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
 
                         self.registers.set_pc(target_addr); //
@@ -2668,7 +2669,7 @@ impl Cpu {
                     // SBC A D8
                     let a = self.registers.get_a();
                     let b_addr = self.registers.get_pc();
-                    let b = mem.read(b_addr);
+                    let b = mem.read(b_addr, OpSource::CPU);
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.sub_8bit(a, b);
                     let result2 = self.registers.sub_8bit(result, c);
@@ -2689,8 +2690,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc to 0x18
                     self.registers.set_pc(0x18);
                 },
@@ -2699,20 +2700,20 @@ impl Cpu {
                     // get the value in reg A
                     let a = self.registers.get_a();
                     // calculate the address with 0xFF00 + PC
-                    let offset = mem.read(self.registers.get_pc()) as u16;
+                    let offset = mem.read(self.registers.get_pc(), OpSource::CPU) as u16;
                     // Add the offset to 0xFF00
                     let base = 0xFF00;
                     let addr = base + offset;
                     // store the val from a in the addr
-                    mem.write(addr, a);
+                    mem.write(addr, a, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xE1 => {
                     // POP HL
                     let address = self.registers.get_sp();
-                    let lo = mem.read(address);
-                    let hi = mem.read(address + 1);
+                    let lo = mem.read(address, OpSource::CPU);
+                    let hi = mem.read(address + 1, OpSource::CPU);
                     self.registers.set_hl_with_two_val(lo, hi);
                     self.registers.set_sp(address + 2);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2728,7 +2729,7 @@ impl Cpu {
                     let base = 0xFF00;
                     let addr = base + offset;
                     // store the val from a in the addr
-                    mem.write(addr, a);
+                    mem.write(addr, a, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2743,8 +2744,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of hl in sp
                     // store msb of hl in sp + 1
-                    mem.write(new_sp, lo_hl);
-                    mem.write(new_sp + 1, hi_hl);
+                    mem.write(new_sp, lo_hl, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_hl, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2752,7 +2753,7 @@ impl Cpu {
                     //AND D8
                     let a = self.registers.get_a();
                     let pc = self.registers.get_pc();
-                    let b = mem.read(pc);
+                    let b = mem.read(pc, OpSource::CPU);
                     let result = a & b;
                     if result == 0 {
                         self.registers.set_z_flag();
@@ -2777,8 +2778,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc
                     self.registers.set_pc(0x20);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2786,7 +2787,7 @@ impl Cpu {
                 0xE8 => {
                     // ADD SP S8
                     let pc = self.registers.get_pc();
-                    let pc_offset_signed = mem.read(pc) as i8;
+                    let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                     if pc_offset_signed < 0 {
                         let neg_offset = pc_offset_signed.abs() as u8;
 
@@ -2794,7 +2795,7 @@ impl Cpu {
                         self.registers.set_pc(new_pc);
                     }
                     else {
-                        let offset = mem.read(pc) as u16;
+                        let offset = mem.read(pc, OpSource::CPU) as u16;
                         let new_pc = pc + offset;
                         self.registers.set_pc(new_pc);
                     }
@@ -2818,11 +2819,11 @@ impl Cpu {
                     // get the value in reg A
                     let a = self.registers.get_a();
                     // store it in the addr in next 2 bytes
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     let addr = u16::from_le_bytes([lo, hi]);
                     // store the val from a in the addr
-                    mem.write(addr, a);
+                    mem.write(addr, a, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2830,7 +2831,7 @@ impl Cpu {
                     // XOR D8
                     let a = self.registers.get_a();
                     let addr = self.registers.get_pc();
-                    let b = mem.read(addr);
+                    let b = mem.read(addr, OpSource::CPU);
                     let result = a ^ b;
                     if result == 0 {
                         self.registers.set_z_flag();
@@ -2854,8 +2855,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc to 0x28
                     self.registers.set_pc(0x28);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2863,12 +2864,12 @@ impl Cpu {
                 0xF0 => {
                     // LD A (A8)
                     // get the value at PC
-                    let offset = mem.read(self.registers.get_pc()) as u16;
+                    let offset = mem.read(self.registers.get_pc(), OpSource::CPU) as u16;
                     // Add the offset to 0xFF00
                     let base = 0xFF00;
                     let addr = base + offset;
                     // deref that mem address
-                    let val = mem.read(addr);
+                    let val = mem.read(addr, OpSource::CPU);
                     // store the value in A
                     self.registers.set_a(val);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2877,8 +2878,8 @@ impl Cpu {
                 0xF1 => {
                     // POP AF
                     let address = self.registers.get_sp();
-                    let lo = mem.read(address);
-                    let hi = mem.read(address + 1);
+                    let lo = mem.read(address, OpSource::CPU);
+                    let hi = mem.read(address + 1, OpSource::CPU);
                     self.registers.set_af_with_two_val(lo, hi);
                     self.registers.set_sp(address + 2);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2892,7 +2893,7 @@ impl Cpu {
                     let base = 0xFF00;
                     let addr = base + offset;
                     // deref that mem address
-                    let val = mem.read(addr);
+                    let val = mem.read(addr, OpSource::CPU);
                     // store the value in A
                     self.registers.set_a(val);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2917,8 +2918,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of af in sp
                     // store msb of af in sp + 1
-                    mem.write(new_sp, lo_af);
-                    mem.write(new_sp + 1, hi_af);
+                    mem.write(new_sp, lo_af, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_af, OpSource::CPU);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2935,8 +2936,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc
                     self.registers.set_pc(0x30);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2944,11 +2945,11 @@ impl Cpu {
                 0xFA => {
                     // LD A, (a16)
                     // get the 16-bit immediate address from PC and PC+1
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     let addr = u16::from_le_bytes([lo, hi]);
                     // deref that mem address
-                    let val = mem.read(addr);
+                    let val = mem.read(addr, OpSource::CPU);
                     // store the value in A
                     self.registers.set_a(val);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2965,7 +2966,7 @@ impl Cpu {
                 0xFE => {
                     // CP D8
                     let a = self.registers.get_a();
-                    let val = mem.read(self.registers.get_pc());
+                    let val = mem.read(self.registers.get_pc(), OpSource::CPU);
                     if a.wrapping_sub(val) == 0 {
                         self.registers.set_z_flag();
                     }
@@ -2988,8 +2989,8 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // store lsb of bc in sp
                     // store msb of bc in sp + 1
-                    mem.write(new_sp, lo_pc);
-                    mem.write(new_sp + 1, hi_pc);
+                    mem.write(new_sp, lo_pc, OpSource::CPU);
+                    mem.write(new_sp + 1, hi_pc, OpSource::CPU);
                     // set pc to 0x38
                     self.registers.set_pc(0x38);
                 },
@@ -3148,7 +3149,7 @@ impl Cpu {
                 0x06 => {
                     // RLC (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let bit7 = val & 0b1000_0000;
                     val <<= 1;
                     if bit7 != 0 {
@@ -3164,7 +3165,7 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3333,7 +3334,7 @@ impl Cpu {
                 0x0E => {
                     // RRC (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let bit0 = val & 0b0000_0001;
                     val >>= 1;
                     if bit0 != 0 {
@@ -3349,7 +3350,7 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3518,7 +3519,7 @@ impl Cpu {
                 0x16 => {
                     // RL (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
                     let bit7 = val & 0b1000_0000;
                     val = (val << 1) | carry;
@@ -3534,7 +3535,7 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3708,7 +3709,7 @@ impl Cpu {
                 0x1E => {
                     // RR (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let carry = if self.registers.is_c_flag_set() { 0b1000_0000 } else { 0 };
                     let bit0 = val & 0b0000_0001;
                     val >>= 1;
@@ -3725,7 +3726,7 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3889,10 +3890,10 @@ impl Cpu {
                 0x26 => {
                     // SLA (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let bit7 = val & 0b1000_0000;
                     val <<= 1;
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     if bit7 != 0 {
                         self.registers.set_c_flag();
                     }
@@ -4078,12 +4079,12 @@ impl Cpu {
                 0x2E => {
                     // SRA (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let bit0 = val & 0b0000_0001;
                     let msb = val & 0b1000_0000;
                     val >>= 1;
                     val |= msb;
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     }
@@ -4253,11 +4254,11 @@ impl Cpu {
                 0x36 => {
                     // SWAP (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let lower = val & 0b0000_1111;
                     let upper = val & 0b1111_0000;
                     let swapped = (lower << 4) | (upper >> 4);
-                    mem.write(addr, swapped);
+                    mem.write(addr, swapped, OpSource::CPU);
                     self.registers.clear_c_flag();
                     self.registers.clear_h_flag();
                     self.registers.clear_n_flag();
@@ -4424,10 +4425,10 @@ impl Cpu {
                 0x3E => {
                     // SRL (HL)
                     let addr = self.registers.get_hl();
-                    let mut val = mem.read(addr);
+                    let mut val = mem.read(addr, OpSource::CPU);
                     let bit0 = val & 0b0000_0001;
                     val >>= 1;
-                    mem.write(addr, val);
+                    mem.write(addr, val, OpSource::CPU);
                     self.registers.clear_h_flag();
                     self.registers.clear_n_flag();
                     if bit0 != 0 {
@@ -4483,8 +4484,8 @@ impl Cpu {
                 },
                 0xC3 => {
                     // JP A16
-                    let lo = mem.read(self.registers.get_pc());
-                    let hi = mem.read(self.registers.get_pc() + 1);
+                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
 
                     self.registers.set_pc(u16::from_le_bytes([lo, hi]));
@@ -4558,7 +4559,7 @@ impl Cpu {
                 0x46 => {
                     // BIT 0 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0000_0001;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0000_0001;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -4662,7 +4663,7 @@ impl Cpu {
                 0x4E => {
                     // BIT 1 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0000_0010;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0000_0010;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -4766,7 +4767,7 @@ impl Cpu {
                 0x56 => {
                     // BIT 2 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0000_0100;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0000_0100;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -4870,7 +4871,7 @@ impl Cpu {
                 0x5E => {
                     // BIT 3 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0000_1000;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0000_1000;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -4974,7 +4975,7 @@ impl Cpu {
                 0x66 => {
                     // BIT 4 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0001_0000;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0001_0000;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -5078,7 +5079,7 @@ impl Cpu {
                 0x6E => {
                     // BIT 5 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0010_0000;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0010_0000;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -5182,7 +5183,7 @@ impl Cpu {
                 0x76 => {
                     // BIT 6 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b0100_0000;
+                    let val = mem.read(addr, OpSource::CPU) & 0b0100_0000;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -5286,7 +5287,7 @@ impl Cpu {
                 0x7E => {
                     // BIT 7 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr) & 0b1000_0000;
+                    let val = mem.read(addr, OpSource::CPU) & 0b1000_0000;
                     if val == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -5372,8 +5373,8 @@ impl Cpu {
                 0x86 => {
                     // RES 0 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1111_1110);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1111_1110, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5451,8 +5452,8 @@ impl Cpu {
                 0x8E => {
                     // RES 1 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1111_1101);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1111_1101, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5530,8 +5531,8 @@ impl Cpu {
                 0x96 => {
                     // RES 2 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1111_1011);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1111_1011, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5609,8 +5610,8 @@ impl Cpu {
                 0x9E => {
                     // RES 3 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1111_0111);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1111_0111, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5688,8 +5689,8 @@ impl Cpu {
                 0xA6 => {
                     // RES 4 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1110_1111);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1110_1111, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5767,8 +5768,8 @@ impl Cpu {
                 0xAE => {
                     // RES 5 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1101_1111);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1101_1111, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5846,8 +5847,8 @@ impl Cpu {
                 0xB6 => {
                     // RES 6 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b1011_1111);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b1011_1111, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -5925,8 +5926,8 @@ impl Cpu {
                 0xBE => {
                     // RES 7 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val & 0b0111_1111);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val & 0b0111_1111, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6004,8 +6005,8 @@ impl Cpu {
                 0xC6 => {
                     // SET 0 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0000_0001);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0000_0001, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6083,8 +6084,8 @@ impl Cpu {
                 0xCE => {
                     // SET 1 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0000_0010);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0000_0010, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6162,8 +6163,8 @@ impl Cpu {
                 0xD6 => {
                     // SET 2 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0000_0100);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0000_0100, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6241,8 +6242,8 @@ impl Cpu {
                 0xDE => {
                     // SET 3 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0000_1000);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0000_1000, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6320,8 +6321,8 @@ impl Cpu {
                 0xE6 => {
                     // SET 4 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0001_0000);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0001_0000, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6399,8 +6400,8 @@ impl Cpu {
                 0xEE => {
                     // SET 5 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0010_0000);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0010_0000, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6478,8 +6479,8 @@ impl Cpu {
                 0xF6 => {
                     // SET 6 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b0100_0000);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b0100_0000, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -6557,8 +6558,8 @@ impl Cpu {
                 0xFE => {
                     // SET 7 (HL)
                     let addr = self.registers.get_hl();
-                    let val = mem.read(addr);
-                    mem.write(addr, val | 0b1000_0000);
+                    let val = mem.read(addr, OpSource::CPU);
+                    mem.write(addr, val | 0b1000_0000, OpSource::CPU);
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);

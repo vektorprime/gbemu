@@ -1,4 +1,4 @@
-
+use std::cmp::PartialEq;
 use crate::gb::ram::*;
 use crate::gb::rom::*;
 use crate::gb::bios::*;
@@ -6,6 +6,13 @@ use crate::gb::hwregisters::HardwareRegisters;
 
 use std::thread::sleep;
 use std::time::Duration;
+
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum OpSource {
+    CPU,
+    PPU
+}
 
 pub const ROM_BANK_SIZE: u16 = 0x4000;
 pub const RAM_BANK_SIZE: u16 = 0x4000;
@@ -28,7 +35,9 @@ pub struct Mbc {
     oam: Ram,
     io: Ram,
     hram: Ram,
+    pub restrict_vram_access: bool,
 }
+
 
 impl Mbc {
 
@@ -51,6 +60,7 @@ impl Mbc {
             oam: Ram::new(),
             io: Ram::new(),
             hram: Ram::new(),
+            restrict_vram_access: false,
         }
     }
 
@@ -100,7 +110,16 @@ impl Mbc {
         }
     }
 
-    pub fn read_rom(&self, address: u16) -> u8 {
+    pub fn read_rom(&self, address: u16, op_src: OpSource) -> u8 {
+        if op_src == OpSource::CPU {
+            if (0x8000..=0x97FF).contains(&address) {
+                if self.restrict_vram_access {
+                    print!("attempted to read from VRAM during restricted access\n");
+                    print!("address in read_rom is {:#x} \n", address);
+                }
+            }
+        }
+
         let rom_type = self.rom.as_ref().unwrap().get_rom_type();
         match rom_type {
             RomType::Rom_Only => {
@@ -124,7 +143,7 @@ impl Mbc {
         self.boot_rom.read(address)
     }
 
-    pub fn read(&self, address: u16) -> u8 {
+    pub fn read(&self, address: u16, op_src: OpSource) -> u8 {
         // handle special reads: BIOS, hw reg, then ROM
         match address {
             // BIOS
@@ -135,7 +154,7 @@ impl Mbc {
                 }
                 else {
                     //print!("r");
-                    self.read_rom(address)
+                    self.read_rom(address, op_src)
                 }
             },
             // Joypad and serial
@@ -202,19 +221,30 @@ impl Mbc {
             0xFF30..=0xFF3F => {
                 let index = (address - 0xFF30) as usize;
                 self.hw_reg.wave_pattern[index]
-            }
+            },
 
             // Interrupt enable
             0xFFFF => self.hw_reg.ie,
+            //
+            // 0x8000..=0x9FFF=> {
+            //     if self.restrict_vram_access {
+            //         print!("attempted to read to VRAM during restricted access");
+            //     }
+            //     self.read_rom(address)
+            //
+            // },
 
             // Fallback to ROM or other areas
-            _ => self.read_rom(address),
+            _ => self.read_rom(address, op_src),
         }
     }
 
     pub fn write_rom(&mut self, address: u16, byte: u8) {
         if (0x8000..=0x97FF).contains(&address) {
-            //print!("address in write_rom is {:#x} \n", address);
+            if self.restrict_vram_access {
+                print!("attempted to write to VRAM during restricted access\n");
+                print!("address in write_rom is {:#x} \n", address);
+            }
             self.need_tile_update = true;
         }
         if (0x9800..=0x9BFF).contains(&address) {
@@ -261,7 +291,7 @@ impl Mbc {
         self.boot_rom.write(address, byte);
     }
 
-    pub fn write(&mut self, address: u16, byte: u8) {
+    pub fn write(&mut self, address: u16, byte: u8, op_src: OpSource) {
         // handle special writes: BIOS, hw reg, then ROM
         match address {
             // BIOS
@@ -331,11 +361,12 @@ impl Mbc {
                     let base_add = 0xFE00;
                     for i    in 0..160u16 {
                         let add= (byte as u16) << 8;
-                        let val = self.read(add + i);
-                        self.write(base_add + i, val);
+                        let val = self.read(add + i, op_src);
+                        self.write(base_add + i, val, op_src);
                     }
+                    self.hw_reg.dma = byte;
                 }
-                self.hw_reg.dma = byte;
+
             },
             0xFF47 => self.hw_reg.bgp = byte,
             0xFF48 => self.hw_reg.obp0 = byte,
@@ -387,6 +418,14 @@ impl Mbc {
 
             // Interrupt enable
             0xFFFF => self.hw_reg.ie = byte,
+
+            // 0x8000..=0x9FFF=> {
+            //     if self.restrict_vram_access {
+            //         print!("attempted to write to VRAM during restricted access");
+            //     }
+            //     self.write_rom(address, byte);
+            //
+            // },
 
             // Fallback to ROM or bios
             _ => self.write_rom(address, byte),
