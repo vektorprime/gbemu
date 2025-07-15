@@ -193,7 +193,19 @@ impl HardwareRegisters {
     //lcd
     pub fn is_lcdc_bit7_enabled(&self) -> bool {
     if self.lcdc & 0b1000_0000 == 0b1000_0000 { true } else { false }
-}
+    }
+    pub fn is_lcdc_window_enable_bit5_enabled(&self) -> bool {
+        if self.lcdc & 0b0001_0000 == 0b0001_0000 { true } else { false }
+    }
+    pub fn is_lcdc_bg_win_tile_data_area_bit4_enabled(&self) -> bool {
+        if self.lcdc & 0b0000_1000 == 0b0000_1000 { true } else { false }
+    }
+    pub fn is_lcdc_window_tile_map_bit6_enabled(&self) -> bool {
+        if self.lcdc & 0b0010_0000 == 0b0010_0000 { true } else { false }
+    }
+    pub fn is_lcdc_bg_tile_map_bit3_enabled(&self) -> bool {
+        if self.lcdc & 0b0000_0100 == 0b0000_0100 { true } else { false }
+    }
     // check both ie and if
     pub fn is_vblank_bit0_interrupt_enabled(&self) -> bool {
         if self.is_ie_vblank_bit0_set() && self.is_if_vblank_bit0_set() {

@@ -3,7 +3,8 @@ use crate::gb::mbc::*;
 use crate::gb::graphics::palette::*;
 use crate::gb::graphics::tile::*;
 use crate::gb::hwregisters::*;
-
+use crate::gb::graphics::fetcher::*;
+use crate::gb::graphics::fifo::*;
 use crate::gb::gbwindow::*;
 
 use std::sync::{Arc, Mutex};
@@ -38,36 +39,14 @@ pub enum PPUMode {
 
 
 pub struct Ppu {
-    //ly_inc_cycle: u64,
-    //frame_cycle: u64,
+    fetcher: Fetcher,
+    fifo: Fifo,
     tcycle_in_frame: u64,
     tcycle_in_scanline: u64,
     started_mode_0_in_frame: bool,
     started_mode_1_in_frame: bool,
     started_mode_2_in_frame: bool,
     started_mode_3_in_frame: bool,
-    // LCD and scrolling
-    // pub lcdc: u8,  // FF40
-    // pub stat: u8,  // FF41
-    // pub scy: u8,   // FF42
-    // pub scx: u8,   // FF43
-    // pub ly: u8,    // FF44
-    // pub lyc: u8,   // FF45
-    // pub dma: u8,   // FF46
-    // pub bgp: u8,   // FF47
-    // pub obp0: u8,  // FF48
-    // pub obp1: u8,  // FF49
-    // pub wy: u8,    // FF4A
-    // pub wx: u8,    // FF4B
-    //
-    // pub bit0_bg_win_priority_enable: bool,
-    // pub bit1_obj_enable: bool, // 0 =  bg and win blank (white), and win display Bit is ignored in that case. Only objects may still be displayed (if enabled in Bit 1).
-    // pub bit2_obj_size: bool, // 0 = 8×8; 1 = 8×16 obj sprites
-    // pub bit3_bg_tile_map: bool, // 0 = 9800–9BFF; 1 = 9C00–9FFF
-    // pub bit4_bg_win_tiles: bool, // 0 = 8800–97FF; 1 = 8000–8FFF
-    // pub bit5_win_enable: bool,
-    // pub bit6_win_tile_map: bool, // 0 = 9800–9BFF; 1 = 9C00–9FFF
-    // pub bit7_lcd_ppu_enable: bool,
     pub tiles: Vec<Tile>, 
     //bg_tile_map: [u8; 1024],
     pub ppu_init_complete: bool,
@@ -80,32 +59,14 @@ pub struct Ppu {
 impl Ppu {
     pub fn new() -> Self {
         Ppu {
-            // bit0_bg_win_priority_enable: false,
-            // bit1_obj_enable: false,
-            // bit2_obj_size: false,
-            // bit3_bg_tile_map: false,
-            // bit4_bg_win_tiles: false,
-            // bit5_win_enable: false,
-            // bit6_win_tile_map: false,
-            // bit7_lcd_ppu_enable: false,
+            fetcher: Fetcher::new(),
+            fifo: Fifo::new(),
             tcycle_in_frame: 0,
             tcycle_in_scanline: 0,
             started_mode_0_in_frame: false,
             started_mode_1_in_frame: false,
             started_mode_2_in_frame: false,
             started_mode_3_in_frame: false,
-            // lcdc: 0,
-            // stat: 0,
-            // scy: 0,
-            // scx: 0,
-            // ly: 0,
-            // lyc: 0,
-            // dma: 0,
-            // bgp: 0,
-            // obp0: 0,
-            // obp1: 0,
-            // wy: 0,
-            // wx: 0,
             tiles: Vec::new(),
             ppu_init_complete: false,
             bg_tile_map: [0; 1024],
@@ -116,7 +77,9 @@ impl Ppu {
 
         }
     }
-    
+
+
+
     pub fn debug_show_tiles(&self) {
 
     }
@@ -300,30 +263,7 @@ impl Ppu {
     //     }
     // }
 
-    pub fn get_tile(&mut self, mbc: &Mbc, tile_idx: u16) -> Tile {
 
-        let address: u16 = 0x8000;
-
-        let mut new_tile = Tile::new();
-        // every 16 bytes is a tile
-        let mut temp_tile: [u8; 16] = [0; 16];
-        for y in 0..16 {
-            temp_tile[y] = mbc.read(address + (tile_idx * 16) + (y as u16), OpSource::PPU);
-        }
-
-        new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
-        new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
-        new_tile.decode_tile_row(temp_tile[4], temp_tile[5], 2);
-        new_tile.decode_tile_row(temp_tile[6], temp_tile[7], 3);
-        new_tile.decode_tile_row(temp_tile[8], temp_tile[9], 4);
-        new_tile.decode_tile_row(temp_tile[10], temp_tile[11], 5);
-        new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
-        new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
-
-
-        // store in self.tiles vec
-        new_tile
-    }
 
     pub fn draw_tiles(&mut self, mbc: &mut Mbc, tw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
         if !self.ppu_init_complete { return; }
@@ -355,7 +295,7 @@ impl Ppu {
                         // tile.data is an array of 8 arrays that each hold 8 PaletteColor
                         for pixel in 0..pixels_per_row {
                             //put each pixel into a vec so we can move it to the frame later
-                            let tile = self.get_tile(mbc, tile_idx as u16);
+                            let tile = get_tile(mbc, tile_idx as u8, TileType::BG_WIN);
                             let rgba = tile.data[row][pixel].get_rgba_code();
                             // let rgba = tile.data[row][pixel].get_rgba_code();
                             temp_buffer[pixel_count..pixel_count+4].copy_from_slice(&rgba);
@@ -477,7 +417,7 @@ impl Ppu {
                         if pixels_to_skip > 0 { pixels_to_skip -= 1; continue; }
                         //put each pixel into a vec so we can move it to the frame later
                         //let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
-                        let tile = self.get_tile(mbc, tile_index as u16);
+                        let tile = get_tile(mbc, tile_index as u8, TileType::BG_WIN);
                         let rgba = tile.data[row_in_tile][pixel].get_rgba_code();
                         if rgba_count >= max_tcycle_in_mode_3_draw as usize * 4 {
                             return;
@@ -611,7 +551,7 @@ impl Ppu {
                 for tile_x in 0..TILES_PER_ROW {
                     //let tile_index = self.bg_tile_map[tile_map_index + tile_x] as usize;
                     let tile_index = self.get_index_from_bg_tile_map(mbc,tile_map_index + tile_x);
-                    let tile = self.get_tile(mbc, tile_index as u16);
+                    let tile = get_tile(mbc, tile_index as u8, TileType::BG_WIN);
                     let tile_row = tile.data[row_in_tile];
                     for &color in tile_row.iter() {
                         let rgba = color.get_rgba_code();
@@ -743,10 +683,21 @@ impl Ppu {
         if current_scanline < mode_1_v_blank_first_scan_line {
             // set the PPU mode when entering a new mode
             if self.tcycle_in_scanline < mode_2_oam_scan_last_tcycle && !self.started_mode_2_in_frame {
-                //self.mode_2_oam_scan();
+
                 //print!("entering mode_2_oam_scan \n");
-                // not updating tycle manually because I want the cpu and ppu in sync
-                // // self.tcycle_in_scanline = 79;
+
+                // todo switch to using these in mode 2 as it's more accurate according to pandocs
+                // requires modifying the logic in step one of the tile num in fetcher
+                // ly == wy is only checked in start of mode 2 and is used later in the bg/win fifo process
+                // if mbc.hw_reg.ly == mbc.hw_reg.wy {
+                //     self.fetcher.window_layer_active_in_lcdc = true;
+                //     self.fetcher.switched_to_window_layer = false;
+                // }
+                // todo implement start of rendering scan line
+                // if start of rendering scan line
+                // delay rendering 6 tcycle so the PPU can fetch the first tile's data
+                // delay rendering 8 more tcycles because PPU does a fake render of this tile
+                self.fetcher.start_of_rendering = false; // outside of if
                 self.set_stat_ppu_mode(mbc, PPUMode::OAM_Scan);
                 self.started_mode_2_in_frame = true;
             }
@@ -766,13 +717,7 @@ impl Ppu {
                 self.started_mode_3_in_frame = true;
             }
             if self.tcycle_in_scanline >=  mode_3_drawing_first_tcycle && self.tcycle_in_scanline < mode_0_h_blank_first_tcycle {
-                // don't pass a reference because we modify it and really only mode 3 should dec cycles
-                // self.load_all_tiles(&mbc);
-                // self.load_bg_tile_map(&mbc);
 
-                // if  mbc.hw_reg.ly == 80 {
-                //     print!("current scan line is 80 \n");
-                // }
                 //only draw tiles and bg_map once per mode 3 to reduce utilization
                 if !self.drew_tiles_in_mode_3 {
                     self.draw_tiles(mbc, tw, &tcycle);
@@ -809,7 +754,9 @@ impl Ppu {
             if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame {
                 //mbc.hw_reg.set_ie_vblank_bit0();
                 //print!("entering mode_1_v_blank \n");
-
+                self.fetcher.win_y_pos = 0;
+                self.fetcher.tile_y_pos = 0;
+                // do not inc tile_x_pos here
                 self.set_stat_ppu_mode(mbc, PPUMode::V_Blank);
                 self.started_mode_1_in_frame = true;
             }

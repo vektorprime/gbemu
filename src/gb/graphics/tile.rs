@@ -1,9 +1,65 @@
 
 use crate::gb::graphics::palette::*;
-
+use crate::gb::mbc::{Mbc, OpSource};
 
 pub struct Tile {
     pub data: [[PaletteColor; 8]; 8],
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum TileType {
+    BG_WIN,
+    Object
+}
+pub fn get_tile(mbc: &Mbc, tile_idx: u8, tile_type: TileType) -> Tile {
+
+    let address: u16 =  if tile_type == TileType::Object {
+        // objects always uses 0x8000
+        0x8000
+    } else {
+        if mbc.hw_reg.is_lcdc_bg_win_tile_data_area_bit4_enabled() {
+            0x8000
+        } else {
+            0x9000
+        }
+    };
+
+    let mut new_tile = Tile::new();
+    // every 16 bytes is a tile
+    let mut temp_tile: [u8; 16] = [0; 16];
+    let idx = if address == 0x9000 { // handle special case of lcdc bit 4 being 0
+        if (tile_idx as i8) < 0 { // handle negative
+            let neg_offset = (tile_idx as i8).abs() as u16;
+            let add = address - neg_offset;
+            for y in 0..16 {
+                temp_tile[y] = mbc.read(add + (y as u16), OpSource::PPU);
+            }
+        } else { // handle signed positive, easy
+            let pos_offset = tile_idx as u16;
+            for y in 0..16 {
+                temp_tile[y] = mbc.read(address + (pos_offset * 16) + (y as u16), OpSource::PPU);
+            }
+        }
+
+    } else {
+        for y in 0..16 {
+            temp_tile[y] = mbc.read(address + (tile_idx as u16 * 16) + (y as u16), OpSource::PPU);
+        }
+    };
+
+
+    new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
+    new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
+    new_tile.decode_tile_row(temp_tile[4], temp_tile[5], 2);
+    new_tile.decode_tile_row(temp_tile[6], temp_tile[7], 3);
+    new_tile.decode_tile_row(temp_tile[8], temp_tile[9], 4);
+    new_tile.decode_tile_row(temp_tile[10], temp_tile[11], 5);
+    new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
+    new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
+
+
+    // store in self.tiles vec
+    new_tile
 }
 
 impl Tile {
