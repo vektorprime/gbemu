@@ -3,7 +3,7 @@
 
 // palette is set via hardware register (mem location) 0xFF47, BG palette data aka BGP
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum PaletteColor {
     White,
     LightGray,

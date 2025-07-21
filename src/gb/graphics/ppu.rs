@@ -7,10 +7,11 @@ use crate::gb::graphics::fetcher::*;
 use crate::gb::graphics::fifo::*;
 use crate::gb::gbwindow::*;
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::mpsc::Sender;
 use pixels::Pixels;
-
+use crate::gb::graphics::pixel::GBPixel;
+use crate::gb::graphics::sprite::Sprite;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Interrupt {
@@ -23,6 +24,7 @@ pub enum Interrupt {
 pub enum PPUEvent {
     RenderEvent(RenderState),
     InterruptEvent(Interrupt),
+    FinishedScanLine
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RenderState {
@@ -38,16 +40,22 @@ pub enum PPUMode {
 }
 
 
+
 pub struct Ppu {
     fetcher: Fetcher,
-    fifo: Fifo,
+    bg_win_fifo: Fifo,
+    sprite_fifo: Fifo,
     tcycle_in_frame: u64,
     tcycle_in_scanline: u64,
+    dot_in_scanline: u64,
     started_mode_0_in_frame: bool,
     started_mode_1_in_frame: bool,
     started_mode_2_in_frame: bool,
     started_mode_3_in_frame: bool,
-    pub tiles: Vec<Tile>, 
+    pub tiles: Vec<Tile>,
+    pub sprites: Vec<Sprite>,
+    //pub sprites_in_oam_idx: u16,
+    //pub sprites_interesting_x_pos: [u8; 10],
     //bg_tile_map: [u8; 1024],
     pub ppu_init_complete: bool,
     pub bg_tile_map: [u8; 1024],
@@ -60,14 +68,19 @@ impl Ppu {
     pub fn new() -> Self {
         Ppu {
             fetcher: Fetcher::new(),
-            fifo: Fifo::new(),
+            bg_win_fifo: Fifo::new(),
+            sprite_fifo: Fifo::new(),
             tcycle_in_frame: 0,
             tcycle_in_scanline: 0,
+            dot_in_scanline: 0,
             started_mode_0_in_frame: false,
             started_mode_1_in_frame: false,
             started_mode_2_in_frame: false,
             started_mode_3_in_frame: false,
             tiles: Vec::new(),
+            sprites: Vec::new(),
+            //sprites_in_oam_idx: 0,
+            //sprites_interesting_x_pos: [0; 10],
             ppu_init_complete: false,
             bg_tile_map: [0; 1024],
             // active: false,
@@ -79,12 +92,7 @@ impl Ppu {
     }
 
 
-
-    pub fn debug_show_tiles(&self) {
-
-    }
-
-
+    // deprecated
     pub fn load_all_tiles(&mut self, mbc: &Mbc) {
         self.tiles.clear();
         let address: u16 = 0x8000;
@@ -170,10 +178,62 @@ impl Ppu {
         }
     }
 
-    pub fn mode_2_oam_scan(&mut self, cycles: &u64) {
-    
-        // search for obj that are in this scan line pos and add to vec?
-        
+    pub fn mode_2_oam_scan(&mut self, mbc: &mut Mbc, cycles: &u64)   {
+        // todo each am entry should be 2 tcycles, introduce checking and delay for that
+        // may not be needed since there is already an 80 tcycle delay upstream
+
+        //clear it every scanline
+        self.sprites.clear();
+        self.sprites.reserve(10);
+
+        let oam_address: u16 = 0xFE00;
+
+        // the whole tile range
+        for x in (0..160).step_by(4) {
+            if self.sprites.len() == 10 {
+                //print!("sprites_in_oam_idx is 10, returning \n ");
+                return;
+            }
+            // every 4 bytes is a sprite
+            // build the sprite
+            let mut eligible_sprite: Sprite = Default::default();
+            let pradd = oam_address + x;
+            //print!("checking sprite oam at {} \n ", pradd);
+            eligible_sprite.byte0_y_pos             = mbc.read(oam_address + x + 0, OpSource::PPU);
+            eligible_sprite.byte1_x_pos             = mbc.read(oam_address + x + 1, OpSource::PPU);
+            eligible_sprite.byte2_tile_num          = mbc.read(oam_address + x + 2, OpSource::PPU);
+            eligible_sprite.byte3_sprite_flags      = mbc.read(oam_address + x + 3, OpSource::PPU);
+
+            // bytes 0 to 3 are y pos, x pos, tile_idx, flags
+            // check sprite parameters to determine if it needs to be drawn
+            // sprite x pos greater than 0
+            // sprite y pos <= ly + 16
+            // sprite y pos + sprite height 8 or 16 >= lu + 16
+            // if pass store in self.sprites (10 max)
+            // if self.sprites is full, exit
+            if eligible_sprite.byte1_x_pos > 0 && eligible_sprite.byte0_y_pos <= mbc.hw_reg.ly + 16 {
+                // check for stacked tile or regular tile and add to array with idx
+                if  (mbc.hw_reg.is_lcdc_obj_size_bit2_enabled() && eligible_sprite.byte0_y_pos + 16 >= mbc.hw_reg.ly + 16)
+                    || eligible_sprite.byte0_y_pos + 8 >= mbc.hw_reg.ly + 8 {
+                    //self.sprites_interesting_x_pos[self.sprites_in_oam_idx as usize] = eligible_sprite.byte1_x_pos;
+                    //self.sprites[self.sprites_in_oam_idx as usize] = eligible_sprite;
+                    self.sprites.push(eligible_sprite);
+                    if self.sprites.len() == 10 {
+                        // sort the sprites by X pos because we want the left-most sprites first when we use them in the fetcher steps
+                        // they're already filtered as being in the scanline, so we don't need to sort or filter by Y
+                        self.sprites.sort_by(|x1, x2| x1.byte1_x_pos.cmp(&x2.byte1_x_pos));
+                        return;
+                    }
+                    // self.sprites_in_oam_idx += 1;
+                    // if self.sprites_in_oam_idx == 10 {
+                    //
+                    //     //print!("sprites_in_oam_idx is 10, returning \n ");
+                    // }
+                }
+            }
+        }
+        // catch all sort
+        self.sprites.sort_by(|x1, x2| x1.byte1_x_pos.cmp(&x2.byte1_x_pos));
     }
 
     //
@@ -265,7 +325,7 @@ impl Ppu {
 
 
 
-    pub fn draw_tiles(&mut self, mbc: &mut Mbc, tw_buffer: &Arc<Mutex<Vec<u8>>>, cycles: &u64) {
+    pub fn draw_tiles(&mut self, mbc: &mut Mbc, tw_buffer: &Arc<Mutex<Vec<u8>>>) {
         if !self.ppu_init_complete { return; }
         let mut pixel_count: usize = 0;
         let mut tile_in_grid_count: usize = 0;
@@ -347,92 +407,190 @@ impl Ppu {
     //     *buffer = temp_buffer;
     // }
 
-
+    pub fn push_pixel_and_advance_counter(&mut self, gw_buffer_unlocked: &mut MutexGuard<Vec<u8>>, px: GBPixel ) -> Result<(), PPUEvent> {
+        // pushing px and fetching occur simultaneously
+        //if self.fetcher.tcycle_budget == 0 { return Ok(()); }
+        let rgba = px.color.get_rgba_code();
+        gw_buffer_unlocked[(self.pixel_in_frame as usize) * 4..(self.pixel_in_frame as usize) * 4 + 4 ] .copy_from_slice(&rgba);
+        self.pixel_in_frame += 1;
+        self.dot_in_scanline += 1;
+        if self.dot_in_scanline == 160 {
+            self.dot_in_scanline = 0;
+            return Err(PPUEvent::FinishedScanLine)
+        }
+        Ok(())
+    }
     // // // version that draws a pixel per cycle
-    pub fn mode_3_draw(&mut self, mbc: &mut Mbc, gw_buffer: &Arc<Mutex<Vec<u8>>>, tcycles: &u64) {
-        // todo merge all the pixels from the pipe line here
+    pub fn mode_3_mix_pixels_and_draw(&mut self, mbc: &mut Mbc, gw_buffer: &Arc<Mutex<Vec<u8>>>, tcycles: &u64) {
+
         if !self.ppu_init_complete { return; }
-        //let mut temp_buffer = vec![0u8; 92_160];
-        let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
-        // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
-        //let mut rgba_count: usize = self.tcycle_in_mode_3_draw as usize;
-        let mut rgba_count: usize = self.tcycle_in_mode_3_draw as usize * 4;
-        let max_tcycle_in_mode_3_draw: u64 = 23_040;
-        //let max_tcycle_in_mode_3_draw: u64 = 41_618;
-        if rgba_count > max_tcycle_in_mode_3_draw as usize * 4 {
-            print!("rgba count >max_tcycle_in_mode_3_draw 92_160 in mode_3_draw \n");
+        let buffer_len: u64 = 92160;
+        if self.pixel_in_frame * 4 >= buffer_len {
             return;
         }
-        let mut pixels_to_draw = tcycles.clone();
-        let mut pixels_drew: u64 = 0;
-
-        //let mut rgba_count: usize = 0;
-        let mut tile_in_grid_count: usize = 0;
-        const ROWS_PER_GRID: usize = 18;
-        const TILES_PER_ROW: usize = 20;
-        const TILES_PER_ROW_IN_BG_GRID: usize = 32;
-        const ROWS_PER_TILE: usize = 8;
-        const PIXELS_PER_ROW: usize = 8;
-
-        let mut current_tcycles = self.tcycle_in_mode_3_draw;
-        // print!("\ncurrent_tcycles is {}\n", current_tcycles);
-        // print!("tcycles is {}\n", tcycles);
-
-        let pixels_per_full_row_of_tiles: u64 = (PIXELS_PER_ROW * ROWS_PER_TILE * TILES_PER_ROW) as u64;
-        //print!("pixels_per_full_row_of_tiles is {}\n", pixels_per_full_row_of_tiles);
-        let starting_row_in_grid = current_tcycles / pixels_per_full_row_of_tiles;
-        //print!("starting_row_in_grid is {}\n", starting_row_in_grid);
-
-        if current_tcycles >= pixels_per_full_row_of_tiles {
-            current_tcycles -= starting_row_in_grid * pixels_per_full_row_of_tiles;
-        }
-        //print!("current_tcycles is {}\n", current_tcycles);
-
-        let mut starting_row_in_tile = current_tcycles / (ROWS_PER_TILE * TILES_PER_ROW) as u64;
-        //print!("starting_row_in_tile is {}\n", starting_row_in_tile);
-
-        let completed_tiles_pixels = starting_row_in_tile * (ROWS_PER_TILE * TILES_PER_ROW) as u64;
-        //print!("completed_tiles_pixels is {}\n", completed_tiles_pixels);
-
-        current_tcycles -= completed_tiles_pixels as u64;
-
-        let remaining_pixels = current_tcycles;
-
-        // print!("remaining_pixels is {}\n", remaining_pixels);
-        // print!("pixels_to_draw is {}\n", pixels_to_draw);
-
-        let mut tile_num = (starting_row_in_grid as usize * TILES_PER_ROW_IN_BG_GRID) + ((remaining_pixels as usize + 1) / PIXELS_PER_ROW as usize);
-        let mut pixels_to_skip: usize = (remaining_pixels as usize) % PIXELS_PER_ROW as usize;
-        // tile_num is assuming 32 tiles per row in grid, but our game only shows 20 tiles per row in grid, so we need to offset it
-
-        for row_of_tiles_in_grid in starting_row_in_grid as usize..ROWS_PER_GRID {
-            // take the first row of each tile, then second, etc
-            for row_in_tile in starting_row_in_tile as usize..ROWS_PER_TILE {
-                // loop 32 times so we get the index for each tile in the row of the grid
-                for tpr in 0..TILES_PER_ROW {
-                    //let mut tile_index = self.bg_tile_map[tile_num + tpr] as usize;
-                    let mut tile_index = self.get_index_from_bg_tile_map(mbc, tile_num + tpr);
-                    // tile.data is an array of 8 arrays that each hold 8 PaletteColor
-                    for pixel in 0..PIXELS_PER_ROW {
-                        if pixels_to_skip > 0 { pixels_to_skip -= 1; continue; }
-                        //put each pixel into a vec so we can move it to the frame later
-                        //let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
-                        let tile = get_tile(mbc, tile_index as u8, TileType::BG_WIN);
-                        let rgba = tile.data[row_in_tile][pixel].get_rgba_code();
-                        if rgba_count >= max_tcycle_in_mode_3_draw as usize * 4 {
-                            return;
-                        }
-                        gw_buffer_unlocked[rgba_count..rgba_count+4].copy_from_slice(&rgba);
-                        rgba_count += 4;
-                        pixels_drew += 1;
-                        if pixels_drew == pixels_to_draw {
-                            return;
-                        }
+        let tcycle_budget = tcycles.clone();
+        let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
+        let mode_0_h_blank_first_tcycle = 252;
+        for _ in 0..tcycle_budget {
+            match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
+                (Ok(bg_px), Err(_)) => {
+                    // push bg_px
+                    match self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px) {
+                        Ok(_) => {},
+                        Err(PPUEvent::FinishedScanLine) => {
+                            self.tcycle_in_scanline = mode_0_h_blank_first_tcycle;
+                            break;
+                        },
+                        _ => { }
                     }
+                },
+                (Err(_), Ok(sp_px)) => {
+                    // push sp_px
+                    match self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, sp_px) {
+                        Ok(_) => {},
+                        Err(PPUEvent::FinishedScanLine) => {
+                            self.tcycle_in_scanline = mode_0_h_blank_first_tcycle;
+                            break;
+                        },
+                        _ => { }
+                    }
+                },
+                (Ok(bg_px), Ok(sp_px)) => {
+                    if bg_px.bg_priority && bg_px.color != PaletteColor::White {
+                        // push_bg_px
+                        match self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px) {
+                            Ok(_) => {},
+                            Err(PPUEvent::FinishedScanLine) => {
+                                self.tcycle_in_scanline = mode_0_h_blank_first_tcycle;
+                                break;
+                            },
+                            _ => { }
+                        }
+
+                    } else {
+                        // push sp_px
+                        match self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, sp_px) {
+                            Ok(_) => {},
+                            Err(PPUEvent::FinishedScanLine) => {
+                                self.tcycle_in_scanline = mode_0_h_blank_first_tcycle;
+                                break;
+                            },
+                            _ => { }
+                        }
+
+                    }
+                },
+                (Err(_), Err(_)) => {
+                    // push none
+                    break;
                 }
             }
+            // let bg_px = self.bg_win_fifo.pop();
+            // let sp_px = self.sprite_fifo.pop();
+            // if bg_px.is_ok() && sp_px.is_err() {
+            //     // push bg_px
+            // } else if bg_px.is_err() && sp_px.is_ok() {
+            //     // push sp_px
+            // } else if bg_px.is_ok() && sp_px.is_ok() {
+            //     if bg_px.unwrap().bg_priority && bg_px.unwrap().color != PaletteColor::White {
+            //         // push bg pixel
+            //     }
+            // }
+
+            // if pixels_drew == pixels_to_draw {
+            //     return;
+            // }
         }
+
+
+
     }
+
+    // // // // version that draws a pixel per cycle NOT integrated with fetcher
+    // pub fn mode_3_draw(&mut self, mbc: &mut Mbc, gw_buffer: &Arc<Mutex<Vec<u8>>>, tcycles: &u64) {
+    //     // todo merge all the pixels from the pipe line here
+    //     if !self.ppu_init_complete { return; }
+    //     //let mut temp_buffer = vec![0u8; 92_160];
+    //     let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
+    //     // need to iterate over a tile multiple times because now I am drawing the second row on the first row per tile
+    //     //let mut rgba_count: usize = self.tcycle_in_mode_3_draw as usize;
+    //     let mut rgba_count: usize = self.tcycle_in_mode_3_draw as usize * 4;
+    //     let max_tcycle_in_mode_3_draw: u64 = 23_040;
+    //     //let max_tcycle_in_mode_3_draw: u64 = 41_618;
+    //     if rgba_count > max_tcycle_in_mode_3_draw as usize * 4 {
+    //         print!("rgba count >max_tcycle_in_mode_3_draw 92_160 in mode_3_draw \n");
+    //         return;
+    //     }
+    //     let mut pixels_to_draw = tcycles.clone();
+    //     let mut pixels_drew: u64 = 0;
+    //
+    //     //let mut rgba_count: usize = 0;
+    //     let mut tile_in_grid_count: usize = 0;
+    //     const ROWS_PER_GRID: usize = 18;
+    //     const TILES_PER_ROW: usize = 20;
+    //     const TILES_PER_ROW_IN_BG_GRID: usize = 32;
+    //     const ROWS_PER_TILE: usize = 8;
+    //     const PIXELS_PER_ROW: usize = 8;
+    //
+    //     let mut current_tcycles = self.tcycle_in_mode_3_draw;
+    //     // print!("\ncurrent_tcycles is {}\n", current_tcycles);
+    //     // print!("tcycles is {}\n", tcycles);
+    //
+    //     let pixels_per_full_row_of_tiles: u64 = (PIXELS_PER_ROW * ROWS_PER_TILE * TILES_PER_ROW) as u64;
+    //     //print!("pixels_per_full_row_of_tiles is {}\n", pixels_per_full_row_of_tiles);
+    //     let starting_row_in_grid = current_tcycles / pixels_per_full_row_of_tiles;
+    //     //print!("starting_row_in_grid is {}\n", starting_row_in_grid);
+    //
+    //     if current_tcycles >= pixels_per_full_row_of_tiles {
+    //         current_tcycles -= starting_row_in_grid * pixels_per_full_row_of_tiles;
+    //     }
+    //     //print!("current_tcycles is {}\n", current_tcycles);
+    //
+    //     let mut starting_row_in_tile = current_tcycles / (ROWS_PER_TILE * TILES_PER_ROW) as u64;
+    //     //print!("starting_row_in_tile is {}\n", starting_row_in_tile);
+    //
+    //     let completed_tiles_pixels = starting_row_in_tile * (ROWS_PER_TILE * TILES_PER_ROW) as u64;
+    //     //print!("completed_tiles_pixels is {}\n", completed_tiles_pixels);
+    //
+    //     current_tcycles -= completed_tiles_pixels as u64;
+    //
+    //     let remaining_pixels = current_tcycles;
+    //
+    //     // print!("remaining_pixels is {}\n", remaining_pixels);
+    //     // print!("pixels_to_draw is {}\n", pixels_to_draw);
+    //
+    //     let mut tile_num = (starting_row_in_grid as usize * TILES_PER_ROW_IN_BG_GRID) + ((remaining_pixels as usize + 1) / PIXELS_PER_ROW as usize);
+    //     let mut pixels_to_skip: usize = (remaining_pixels as usize) % PIXELS_PER_ROW as usize;
+    //     // tile_num is assuming 32 tiles per row in grid, but our game only shows 20 tiles per row in grid, so we need to offset it
+    //
+    //     for row_of_tiles_in_grid in starting_row_in_grid as usize..ROWS_PER_GRID {
+    //         // take the first row of each tile, then second, etc
+    //         for row_in_tile in starting_row_in_tile as usize..ROWS_PER_TILE {
+    //             // loop 32 times so we get the index for each tile in the row of the grid
+    //             for tpr in 0..TILES_PER_ROW {
+    //                 //let mut tile_index = self.bg_tile_map[tile_num + tpr] as usize;
+    //                 let mut tile_index = self.get_index_from_bg_tile_map(mbc, tile_num + tpr);
+    //                 // tile.data is an array of 8 arrays that each hold 8 PaletteColor
+    //                 for pixel in 0..PIXELS_PER_ROW {
+    //                     if pixels_to_skip > 0 { pixels_to_skip -= 1; continue; }
+    //                     //put each pixel into a vec so we can move it to the frame later
+    //                     //let mut rgba = self.tiles[tile_index].data[row_in_tile][pixel].get_rgba_code();
+    //                     let tile = get_tile(mbc, tile_index as u8, TileType::BG_WIN);
+    //                     let rgba = tile.data[row_in_tile][pixel].get_rgba_code();
+    //                     if rgba_count >= max_tcycle_in_mode_3_draw as usize * 4 {
+    //                         return;
+    //                     }
+    //                     gw_buffer_unlocked[rgba_count..rgba_count+4].copy_from_slice(&rgba);
+    //                     rgba_count += 4;
+    //                     pixels_drew += 1;
+    //                     if pixels_drew == pixels_to_draw {
+    //                         return;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
 
 
@@ -531,7 +689,7 @@ impl Ppu {
         mbc.read(address + bg_idx as u16, OpSource::PPU) as usize
     }
 
-    pub fn draw_bg_map(&mut self, mbc: &mut Mbc, bgmw_buffer: &Arc<Mutex<Vec<u8>>>, _cycles: &u64) {
+    pub fn draw_bg_map(&mut self, mbc: &mut Mbc, bgmw_buffer: &Arc<Mutex<Vec<u8>>>) {
         if !self.ppu_init_complete {
             return;
         }
@@ -624,7 +782,7 @@ impl Ppu {
         // don't tick ppu unless the lcdc says ppu is on
         // i went back and forth here but I left it on because it seems like it may work
         // the pc counter was inc slow but that was due to other reasons
-        if !mbc.hw_reg.is_lcdc_bit7_enabled() {
+        if !mbc.hw_reg.is_lcdc_lcd_and_ppu_enable_bit7_enabled() {
            //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
             mbc.hw_reg.ly = 0;
             mbc.hw_reg.stat = 0;
@@ -650,19 +808,17 @@ impl Ppu {
             print!("ppu init complete \n");
         }
 
-        // todo modify code so that it doesn't read the tiles at once but rather reads them on-demand from VRAM
-        if mbc.need_tile_update {
-            //self.load_all_tiles(&mbc);
-            //print!("need tile_update \n");
-            mbc.need_tile_update = false;
-        }
+        // if mbc.need_tile_update {
+        //     //self.load_all_tiles(&mbc);
+        //     //print!("need tile_update \n");
+        //     mbc.need_tile_update = false;
+        // }
         
-        // todo modify code so that it doesn't read the tile map at once but rather reads it on-demand from VRAM
-        if mbc.need_bg_map_update {
-            //self.load_bg_tile_map(&mbc);
-            //print!("need bg_tile_map update \n");
-            mbc.need_bg_map_update = false;
-        }
+        // if mbc.need_bg_map_update {
+        //     //self.load_bg_tile_map(&mbc);
+        //     //print!("need bg_tile_map update \n");
+        //     mbc.need_bg_map_update = false;
+        // }
 
 
         // go through all PPU modes
@@ -685,7 +841,8 @@ impl Ppu {
             if self.tcycle_in_scanline < mode_2_oam_scan_last_tcycle && !self.started_mode_2_in_frame {
 
                 //print!("entering mode_2_oam_scan \n");
-
+                //reset oam idx so we check it every scan line
+                //self.sprites_in_oam_idx = 0;
                 // todo switch to using these in mode 2 as it's more accurate according to pandocs
                 // requires modifying the logic in step one of the tile num in fetcher
                 // ly == wy is only checked in start of mode 2 and is used later in the bg/win fifo process
@@ -697,15 +854,19 @@ impl Ppu {
                 // if start of rendering scan line
                 // delay rendering 6 tcycle so the PPU can fetch the first tile's data
                 // delay rendering 8 more tcycles because PPU does a fake render of this tile
-                self.fetcher.start_of_rendering = false; // outside of if
+                self.fetcher.start_of_rendering = true; // outside of if
                 self.set_stat_ppu_mode(mbc, PPUMode::OAM_Scan);
+                // clear out oam data
+                //self.sprites_in_oam_idx = 0;
+
+                self.mode_2_oam_scan(mbc, &tcycle);
                 self.started_mode_2_in_frame = true;
             }
 
             // mode 2 is dot 0-80
             if self.tcycle_in_scanline <  mode_2_oam_scan_last_tcycle {
-
-                self.mode_2_oam_scan(&tcycle);
+                // pause for 80 tcycles
+                // no need to constantly scan oam again, it's only needed once per scan line
             }
 
 
@@ -713,20 +874,47 @@ impl Ppu {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
                 //print!("entering mode_3_drawing \n");
                 mbc.restrict_vram_access = true;
+                //reset fifos
+                self.sprite_fifo.data.clear();
+                self.bg_win_fifo.data.clear();
+                self.fetcher.tcycle_budget = 0;
+                //self.fetcher.tile_x_coord = 0;
+                // always reset the layer before we start
+                self.fetcher.active_layer = Layer::BG;
                 self.set_stat_ppu_mode(mbc, PPUMode::Draw);
                 self.started_mode_3_in_frame = true;
             }
+
+
             if self.tcycle_in_scanline >=  mode_3_drawing_first_tcycle && self.tcycle_in_scanline < mode_0_h_blank_first_tcycle {
 
                 //only draw tiles and bg_map once per mode 3 to reduce utilization
                 if !self.drew_tiles_in_mode_3 {
-                    self.draw_tiles(mbc, tw, &tcycle);
-                    self.draw_bg_map(mbc, bgmw, &tcycle);
+                    self.draw_tiles(mbc, tw);
+                    self.draw_bg_map(mbc, bgmw);
                     self.drew_tiles_in_mode_3 = true;
                 }
+                // todo fix why this is reaching > 255
+                let tcycles_res = self.fetcher.tcycle_budget.overflowing_add(tcycle as u8);
+                self.fetcher.tcycle_budget = if tcycles_res.1 {
+                    255
+                } else {
+                    tcycles_res.0
+                };
+                match self.fetcher.active_layer {
+                    Layer::BG | Layer::WIN => {
+                        //print!("matched BG layer in ppu.tick \n");
 
+                        self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprite_fifo, &self.sprites, tcycle);
+                    },
+                    Layer::SPRITE => {
+                        //print!("matched sprite layer in ppu.tick \n");
+                        self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &self.sprites, tcycle);
+                    },
+                }
+                //todo exit mode 3 early if we reach end of scanline
 
-                self.mode_3_draw(mbc, gw, &tcycle);
+                self.mode_3_mix_pixels_and_draw(mbc, gw, &tcycle);
 
                 self.tcycle_in_mode_3_draw += tcycle;
             }
@@ -802,12 +990,10 @@ impl Ppu {
             self.tcycle_in_frame = 0;
             self.tcycle_in_scanline = 0;
             //self.tcycle_in_mode_3_draw = 0;
-            return PPUEvent::RenderEvent(RenderState::Render);
+            PPUEvent::RenderEvent(RenderState::Render)
 
         } else {
-            return PPUEvent::RenderEvent(RenderState::NoRender);
-
+            return PPUEvent::RenderEvent(RenderState::NoRender)
         }
     }
 }
-

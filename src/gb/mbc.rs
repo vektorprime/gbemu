@@ -26,8 +26,8 @@ pub struct Mbc {
     ram_bank: u8,
     wr_ram_bank: bool,
     pub rom_ram: RomRam,
-    pub need_tile_update: bool,
-    pub need_bg_map_update: bool,
+    //pub need_tile_update: bool,
+    //pub need_bg_map_update: bool,
     pub rom_bank_mode: RomBankMode,
     xram: Ram,
     vram: Ram,
@@ -51,8 +51,8 @@ impl Mbc {
             ram_bank: 0,
             wr_ram_bank: false,
             rom_ram: RomRam::new(),
-            need_tile_update: false,
-            need_bg_map_update: false,
+            // need_tile_update: false,
+            // need_bg_map_update: false,
             rom_bank_mode: RomBankMode::Simple,
             xram: Ram::new(),
             vram: Ram::new(),
@@ -104,9 +104,9 @@ impl Mbc {
 
     pub fn is_tac_bit2_enable_set(&self) -> bool {
         if self.hw_reg.tac & 0b0000_0100 == 0b0000_0100 {
-            return true
+            true
         } else {
-            return false
+            false
         }
     }
 
@@ -114,8 +114,13 @@ impl Mbc {
         if op_src == OpSource::CPU {
             if (0x8000..=0x97FF).contains(&address) {
                 if self.restrict_vram_access {
-                    print!("attempted to read from VRAM during restricted access\n");
-                    print!("address in read_rom is {:#x} \n", address);
+                    print!("attempted to read from VRAM during restricted access, address in read_rom is {:#x} \n", address);
+                    return 0xFF;
+                }
+            } else if (0xFE00..=0xFE9F).contains(&address) {
+                if self.restrict_vram_access {
+                    print!("attempted to read from OAM during restricted access, address in read_rom is {:#x} \n", address);
+                    return 0xFF;
                 }
             }
         }
@@ -242,13 +247,13 @@ impl Mbc {
     pub fn write_rom(&mut self, address: u16, byte: u8) {
         if (0x8000..=0x97FF).contains(&address) {
             if self.restrict_vram_access {
-                print!("attempted to write to VRAM during restricted access\n");
-                print!("address in write_rom is {:#x} \n", address);
+                print!("attempted to write to VRAM during restricted access in write_rom, address is {:#x} \n", address);
+                return;
             }
-            self.need_tile_update = true;
+            //self.need_tile_update = true;
         }
         if (0x9800..=0x9BFF).contains(&address) {
-            self.need_bg_map_update = true;
+            // // self.need_bg_map_update = true;
             // if byte != 0x0 && byte != 0x2F {
             //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
             // }
@@ -266,6 +271,14 @@ impl Mbc {
             //     print!("address in write_rom is {:#x} \n", address);
             //     self.need_tile_update = true;
             // }
+        }
+
+        if (0xFE00..=0xFE9F).contains(&address) {
+            if self.restrict_vram_access {
+                print!("attempted to write to OAM during restricted access in write_rom, address is {:#x} \n", address);
+                return;
+            }
+            //self.need_tile_update = true;
         }
 
         let rom_type = self.rom.as_ref().unwrap().get_rom_type();
@@ -522,7 +535,7 @@ impl Mbc {
         }  else if (0x4000..=0x7FFF).contains(&address) {
             // read from rom bank 1 to X
             if self.rom_bank == 1 {
-                return self.rom.as_ref().unwrap().read((address as u32));
+                return self.rom.as_ref().unwrap().read((address as u32))
             } else {
                 // eg add is 0x0010 and bank is 0x17
                 // 0x17 * 0x4000 + 0x10 = 0x5C010

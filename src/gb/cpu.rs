@@ -145,7 +145,7 @@ impl Cpu {
         // print!("pc - 0x{:X} \n", pc_print);
         let dma_add: u16 = 0xFF46;
         if mem.read(dma_add, OpSource::CPU) != 0 {
-            print!("returning 160 cycles because there was a DMA transfer\n");
+            //print!("returning 160 cycles because there was a DMA transfer\n");
             mem.write(dma_add, 0, OpSource::CPU);
             return 160u64;
         }

@@ -29,7 +29,7 @@ pub fn get_tile(mbc: &Mbc, tile_idx: u8, tile_type: TileType) -> Tile {
     let mut temp_tile: [u8; 16] = [0; 16];
     let idx = if address == 0x9000 { // handle special case of lcdc bit 4 being 0
         if (tile_idx as i8) < 0 { // handle negative
-            let neg_offset = (tile_idx as i8).abs() as u16;
+            let neg_offset = ((tile_idx as i8).abs() as u16) * 16;
             let add = address - neg_offset;
             for y in 0..16 {
                 temp_tile[y] = mbc.read(add + (y as u16), OpSource::PPU);
@@ -57,8 +57,6 @@ pub fn get_tile(mbc: &Mbc, tile_idx: u8, tile_type: TileType) -> Tile {
     new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
     new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
 
-
-    // store in self.tiles vec
     new_tile
 }
 
@@ -158,7 +156,7 @@ impl Tile {
         self.data[row][5] = pixel5;
         self.data[row][6] = pixel6;
         self.data[row][7] = pixel7;
-
+        
     }
 
 }
