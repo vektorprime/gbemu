@@ -863,7 +863,7 @@ impl Ppu {
             // set the PPU mode when entering a new mode
             //if self.tcycle_in_scanline < self.mode_2_oam_scan_last_tcycle && !self.started_mode_2_in_frame {
             if current_dot == mode_2_first_dot && !self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
-                //print!("entering mode_2_oam_scan \n");
+                // print!("entering mode_2_oam_scan \n");
                 //reset oam idx so we check it every scan line
                 //self.sprites_in_oam_idx = 0;
                 // todo switch to using these in mode 2 as it's more accurate according to pandocs
@@ -900,7 +900,7 @@ impl Ppu {
 
             if self.tcycle_in_scanline >= self.mode_3_drawing_first_tcycle  && self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
-                //print!("entering mode_3_drawing \n");
+                // print!("entering mode_3_drawing \n");
                 mbc.restrict_vram_access = true;
                 //reset fifos
                 self.sprite_fifo.data.clear();
@@ -957,7 +957,7 @@ impl Ppu {
 
 
             if self.tcycle_in_scanline >= self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
-                //print!("entering mode_0_h_blank \n");
+                // print!("entering mode_0_h_blank \n");
                 mbc.restrict_vram_access = false;
 
                 // Mode 0 is the remainder of the dots left in the scan line (final dot is 456)
@@ -972,15 +972,18 @@ impl Ppu {
         else { // scanline must be 144 or greater
             // last 10 scan lines are mode 1
             // 4560 dots or 10 scan lines (each scan line is 456 dots)
+            //print!("tcycle in frame is {} and mode 1, 2, 3, and 0 bool are {}, {}, {}, {}\n", self.tcycle_in_frame, self.started_mode_1_in_frame, self.started_mode_2_in_scanline, self.started_mode_3_in_scanline, self.started_mode_0_in_scanline );
             let mode_1_v_blank_first_tcycle = 65_664;
-            if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline {
+            //if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline {
+            if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame  {
                 //mbc.hw_reg.set_ie_vblank_bit0();
-                //print!("entering mode_1_v_blank \n");
+                // print!("entering mode_1_v_blank \n");
                 self.fetcher.win_y_pos = 0;
                 self.fetcher.tile_y_pos = 0;
                 // do not inc tile_x_pos here
 
                 //only draw these tiles once per frame in mode 3
+
                 self.drew_tiles_in_mode_3 = false;
 
                 self.set_stat_ppu_mode(mbc, PPUMode::V_Blank);

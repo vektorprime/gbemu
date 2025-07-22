@@ -398,8 +398,11 @@ impl Fetcher {
                     match self.bg_win_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, bg_win_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_bg_layer step 4 \n");
+                            // print!("not enough tcycles in handle_bg_layer step 4 \n");
                             return;
+                        },
+                        Err(FetcherError::FifoNotEmpty) => {
+                            // print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
                         },
                         _ => {
                             panic!("unknown error in handle_bg_win_layer's step 4");
@@ -410,12 +413,12 @@ impl Fetcher {
                     match self.bg_win_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, bg_win_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_bg_layer step 4 \n");
+                            // print!("not enough tcycles in handle_bg_layer step 4 \n");
                             return;
                         },
                         Err(FetcherError::FifoNotEmpty) => {
-                            print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
-                        }
+                            // print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
+                        },
                         _ => {
                             panic!("unknown error in handle_bg_win_layer's step 4");
                         }
@@ -465,12 +468,15 @@ impl Fetcher {
                     match self.bg_win_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, bg_win_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_bg_layer step 4 \n");
+                            // print!("not enough tcycles in handle_bg_layer step 4 \n");
                             return;
                         },
                         Err(FetcherError::FifoNotEmpty) => {
-                            print!("FIFO not empty in handle_bg_layer step 4 \n");
+                            // print!("FIFO not empty in handle_bg_layer step 4 \n");
                             return;
+                        },
+                        Err(FetcherError::FifoNotEmpty) => {
+                            // print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
                         },
                         _ => {
                             panic!("unknown error in handle_bg_win_layer's step 4");
@@ -527,7 +533,7 @@ impl Fetcher {
                     match self.sprite_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, self.current_priority, sprite_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_sprite_layer step 4 \n");
+                            // print!("not enough tcycles in handle_sprite_layer step 4 \n");
                             return;
                         },
                         _ => {
@@ -551,7 +557,7 @@ impl Fetcher {
                     match self.sprite_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, self.current_priority, sprite_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_sprite_layer step 4 \n");
+                            // print!("not enough tcycles in handle_sprite_layer step 4 \n");
                             return;
                         },
                         _ => {
@@ -563,7 +569,7 @@ impl Fetcher {
                     match self.sprite_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, self.current_priority, sprite_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_sprite_layer step 4 \n");
+                            // print!("not enough tcycles in handle_sprite_layer step 4 \n");
                             return;
                         },
                         _ => {
@@ -589,7 +595,7 @@ impl Fetcher {
                             low_byte
                         },
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_sprite_layer step 1 \n");
+                            // print!("not enough tcycles in handle_sprite_layer step 1 \n");
                             return;
                         },
                         _ => {
@@ -612,7 +618,7 @@ impl Fetcher {
                     match self.sprite_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, self.current_priority, sprite_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
-                            print!("not enough tcycles in handle_sprite_layer step 4 \n");
+                            // print!("not enough tcycles in handle_sprite_layer step 4 \n");
                             return;
                         },
                         _ => {
