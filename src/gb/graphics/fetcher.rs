@@ -107,6 +107,7 @@ impl Fetcher {
         }
         self.tcycle_budget -= 2;
 
+        //todo this must be wrong, I need to fix the logic
         let dot = self.dot_in_scanline as u8;
         let dot_tuple = (self.dot_in_scanline as u8).overflowing_add(8);
         let dot_range: u8 = if dot_tuple.1 {
@@ -115,6 +116,7 @@ impl Fetcher {
             dot_tuple.0
         };
 
+        // todo, re-enable sprites after tshoot
         // check if we need to stop fetching bg_win and switch to the sprite fetcher
         if sprites.iter().any(|&x| x.byte1_x_pos <= dot_range) {
              //print!("switching to sprite layer \n");
@@ -133,7 +135,7 @@ impl Fetcher {
                 //todo add 6 tcycle of delay because fetcher needs to fetch 8 pixels from first win tile
                 self.win_x_pos = 0;
                 self.win_y_pos = 0;
-                self.dot_in_scanline = 0;
+                //self.dot_in_scanline = 0;
             }
         }
         // check if we need to disable switched_to_window_layer every scan line
@@ -148,11 +150,14 @@ impl Fetcher {
             // todo limit tile_index to 384 and return no more drawing needed result
             //print!("getting win tile index in bg_win_step_1_get_tile_num \n");
             //let tile_index = mbc.read(tile_base_add + self.win_x_pos as u16 + (self.win_y_pos  * TILES_IN_WIN_ROW) as u16, OpSource::PPU) as usize;
-            let tile_index = mbc.read(tile_base_add  + (32 * (self.win_y_pos / 8)) as u16, OpSource::PPU) as usize;
-            //todo get rid of row in tile or use it
-            self.row_in_tile += 1;
-            //reset to row 0 when we go to a new tile
-            if self.row_in_tile == ROWS_OF_PIXELS_IN_TILE { self.row_in_tile = 0; }
+            //let tile_index = mbc.read(tile_base_add  + (32 * (self.win_y_pos / 8)) as u16, OpSource::PPU) as usize;
+            let win_x = (self.win_x_pos / 8) & 0x1F;
+            let win_y = (self.win_y_pos / 8) * 32;
+            let tile_index = mbc.read(tile_base_add + win_x as u16 + win_y as u16, OpSource::PPU) as usize;
+            // not needed as I have win x and y
+            // self.row_in_tile += 1;
+            // //reset to row 0 when we go to a new tile
+            // if self.row_in_tile == ROWS_OF_PIXELS_IN_TILE { self.row_in_tile = 0; }
 
             Ok(tile_index)
         } else {
@@ -307,17 +312,21 @@ impl Fetcher {
         if self.active_layer == Layer::WIN {
             self.win_x_pos += 1;
             self.dot_in_scanline += 8;
-            if self.dot_in_scanline >= 160 { self.dot_in_scanline = 0; }
+            //if self.dot_in_scanline >= 160 { self.dot_in_scanline = 0; }
             //advance the y and reset 0 in the grid so we always know our position
             if self.win_x_pos == TILES_IN_WIN_ROW {
-                self.dot_in_scanline = 0;
+                //self.dot_in_scanline = 0;
                 self.win_y_pos += 1;
                 self.win_x_pos = 0;
             }
-        } else {
+        } else { // BG layer
             self.tile_x_pos += 1;
             if self.tile_x_pos >= 32 {
                 self.tile_x_pos = 0;
+                self.tile_y_pos += 1;
+                if self.tile_y_pos >= 32 {
+                    self.tile_y_pos = 0;
+                }
             }
             self.dot_in_scanline += 8;
             if self.dot_in_scanline >= 160 {
@@ -404,6 +413,9 @@ impl Fetcher {
                             print!("not enough tcycles in handle_bg_layer step 4 \n");
                             return;
                         },
+                        Err(FetcherError::FifoNotEmpty) => {
+                            print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
+                        }
                         _ => {
                             panic!("unknown error in handle_bg_win_layer's step 4");
                         }

@@ -27,6 +27,7 @@ pub enum PPUEvent {
     InterruptEvent(Interrupt),
     FinishedScanLine,
     InitNotComplete,
+    BufferOverflow,
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum RenderState {
@@ -50,10 +51,10 @@ pub struct Ppu {
     tcycle_in_frame: u64,
     tcycle_in_scanline: u64,
     pixel_in_scanline: u64,
-    started_mode_0_in_frame: bool,
+    started_mode_0_in_scanline: bool,
     started_mode_1_in_frame: bool,
-    started_mode_2_in_frame: bool,
-    started_mode_3_in_frame: bool,
+    started_mode_2_in_scanline: bool,
+    started_mode_3_in_scanline: bool,
     pub tiles: Vec<Tile>,
     pub sprites: Vec<Sprite>,
     //pub sprites_in_oam_idx: u16,
@@ -69,6 +70,7 @@ pub struct Ppu {
     pub  mode_0_h_blank_first_tcycle: u64,
     pub  mode_3_drawing_first_tcycle: u64,
     pub  mode_2_oam_scan_last_tcycle: u64,
+    pub  mode_2_oam_scan_current_tcycle: u16,
 }
 impl Ppu {
     pub fn new() -> Self {
@@ -79,10 +81,10 @@ impl Ppu {
             tcycle_in_frame: 0,
             tcycle_in_scanline: 0,
             pixel_in_scanline: 0,
-            started_mode_0_in_frame: false,
+            started_mode_0_in_scanline: false,
             started_mode_1_in_frame: false,
-            started_mode_2_in_frame: false,
-            started_mode_3_in_frame: false,
+            started_mode_2_in_scanline: false,
+            started_mode_3_in_scanline: false,
             tiles: Vec::new(),
             sprites: Vec::new(),
             //sprites_in_oam_idx: 0,
@@ -97,6 +99,7 @@ impl Ppu {
             mode_0_h_blank_first_tcycle: 369,
             mode_3_drawing_first_tcycle: 80,
             mode_2_oam_scan_last_tcycle: 80,
+            mode_2_oam_scan_current_tcycle: 0,
         }
     }
 
@@ -187,20 +190,33 @@ impl Ppu {
         }
     }
 
-    pub fn mode_2_oam_scan(&mut self, mbc: &mut Mbc, cycles: &u64)   {
+    pub fn mode_2_oam_scan(&mut self, mbc: &mut Mbc, tcycles: u64)   {
         // todo each am entry should be 2 tcycles, introduce checking and delay for that
         // may not be needed since there is already an 80 tcycle delay upstream
 
-        //clear it every scanline
-        self.sprites.clear();
-        self.sprites.reserve(10);
+        let mode_2_max_tcycles: u16 = 80;
+        let tcycle_per_oam: u16 = 2;
+        if tcycles < tcycle_per_oam as u64 {
+            // todo account for tcycle like 1 being saved in a budget once we validate that behavior should occur
+            //self.mode_2_oam_scan_tcycle_budget += tcycles;
+            return
+        }
+
+        let current_loop_pos =  self.mode_2_oam_scan_current_tcycle / tcycle_per_oam;
+        let final_loop_pos = (self.mode_2_oam_scan_current_tcycle + tcycles as u16) / tcycle_per_oam;
+
+        self.mode_2_oam_scan_current_tcycle + tcycles as u16;
 
         let oam_address: u16 = 0xFE00;
 
+
         // the whole tile range
-        for x in (0..160).step_by(4) {
+        for x in (current_loop_pos * 4..160).step_by(4) {
             if self.sprites.len() == 10 {
                 //print!("sprites_in_oam_idx is 10, returning \n ");
+                return;
+            }
+            if x >= final_loop_pos * 4 {
                 return;
             }
             // every 4 bytes is a sprite
@@ -227,7 +243,7 @@ impl Ppu {
                     //self.sprites_interesting_x_pos[self.sprites_in_oam_idx as usize] = eligible_sprite.byte1_x_pos;
                     //self.sprites[self.sprites_in_oam_idx as usize] = eligible_sprite;
                     self.sprites.push(eligible_sprite);
-                    if self.sprites.len() == 10 {
+                    if self.sprites.len() == 10 || self.mode_2_oam_scan_current_tcycle >= 80 {
                         // sort the sprites by X pos because we want the left-most sprites first when we use them in the fetcher steps
                         // they're already filtered as being in the scanline, so we don't need to sort or filter by Y
                         self.sprites.sort_by(|x1, x2| x1.byte1_x_pos.cmp(&x2.byte1_x_pos));
@@ -241,8 +257,11 @@ impl Ppu {
                 }
             }
         }
-        // catch all sort
-        self.sprites.sort_by(|x1, x2| x1.byte1_x_pos.cmp(&x2.byte1_x_pos));
+        // todo sort after 80 tcycle or 10 sprites are added
+       // if  self.mode_2_oam_scan_current_tcycle >= 80 {
+            // catch all sort
+            self.sprites.sort_by(|x1, x2| x1.byte1_x_pos.cmp(&x2.byte1_x_pos));
+        //}
     }
 
     //
@@ -350,6 +369,7 @@ impl Ppu {
             for row in 0..rows_per_tile {
                 tile_in_grid_count = 0;
                 for tile_idx in 0..TILE_COUNT {
+                    let tile = get_tile(mbc, tile_idx as u8, TileType::BG_WIN);
                     if row_of_tiles_in_grid > 0 {
                         if tile_in_grid_count < row_of_tiles_in_grid * TILES_PER_ROW {
                             tile_in_grid_count += 1;
@@ -364,7 +384,7 @@ impl Ppu {
                         // tile.data is an array of 8 arrays that each hold 8 PaletteColor
                         for pixel in 0..pixels_per_row {
                             //put each pixel into a vec so we can move it to the frame later
-                            let tile = get_tile(mbc, tile_idx as u8, TileType::BG_WIN);
+
                             let rgba = tile.data[row][pixel].get_rgba_code();
                             // let rgba = tile.data[row][pixel].get_rgba_code();
                             temp_buffer[pixel_count..pixel_count+4].copy_from_slice(&rgba);
@@ -434,14 +454,21 @@ impl Ppu {
 
         if !self.ppu_init_complete { return Err(PPUEvent::InitNotComplete); }
         let buffer_len: u64 = 92160;
-        if self.pixel_in_frame * 4 >= buffer_len {
-            panic!("PPU pixel buffer is too small in mode_3_mix_pixels_and_draw");
+        if (self.pixel_in_frame * 4) + 4 >= buffer_len {
+            //print!("PPU pixel buffer is too small in mode_3_mix_pixels_and_draw");
+            return Err(PPUEvent::BufferOverflow)
         }
         let tcycle_budget = tcycles.clone();
         let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
 
-        for _ in 0..tcycle_budget {
-            match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
+        for x in 0..tcycle_budget {
+            if x == 8 {
+                // fifo is 16 pixels but we only want to pull in chunks of 8
+                //print!("breaking out of mode_3_mix_pixels_and_draw for loop early because we popped u8 pixels\n");
+                break;
+
+            }
+                match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
                 (Ok(bg_px), Err(_)) => {
                     // push bg_px
                    self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px)?
@@ -766,19 +793,32 @@ impl Ppu {
         if !mbc.hw_reg.is_lcdc_lcd_and_ppu_enable_bit7_enabled() {
            //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
             mbc.hw_reg.ly = 0;
-            mbc.hw_reg.stat = 0;
+            //mbc.hw_reg.stat = 0;
+            // Clear mode bits (0–1) and coincidence flag (bit 2) but preserve interrupt enable bits (3,4,5,6):
+            mbc.hw_reg.stat = mbc.hw_reg.stat & 0b1111_1000;
             return PPUEvent::RenderEvent(RenderState::NoRender);
         }
 
+        // if mbc.hw_reg.lyc == mbc.hw_reg.ly {
+        //     // set bit 2 when ly == lyc constantly
+        //     mbc.hw_reg.set_stat_lyc_eq_ly_bit2();
+        //     if mbc.hw_reg.is_stat_lyc_int_sel_bit6_set() {
+        //         mbc.hw_reg.set_if_lcd_stat_bit1();
+        //     }
+        // }
+        // else {
+        //     // clear all except bit 2
+        //     mbc.hw_reg.clear_stat_lyc_eq_ly_bit2();
+        // }
+        // Handle LYC=LY coincidence
+        let prev_coincidence = mbc.hw_reg.is_stat_lyc_eq_ly_bit2_set();
+
         if mbc.hw_reg.lyc == mbc.hw_reg.ly {
-            // set bit 2 when ly == lyc constantly
             mbc.hw_reg.set_stat_lyc_eq_ly_bit2();
-            if mbc.hw_reg.is_stat_lyc_int_sel_bit6_set() {
-                mbc.hw_reg.set_if_lcd_stat_bit1();
+            if !prev_coincidence && mbc.hw_reg.is_stat_lyc_int_sel_bit6_set() {
+                mbc.hw_reg.set_if_lcd_stat_bit1(); // fire interrupt only on transition
             }
-        }
-        else {
-            // clear all except bit 2
+        } else {
             mbc.hw_reg.clear_stat_lyc_eq_ly_bit2();
         }
 
@@ -822,7 +862,7 @@ impl Ppu {
             let current_dot = self.tcycle_in_scanline - tcycle;
             // set the PPU mode when entering a new mode
             //if self.tcycle_in_scanline < self.mode_2_oam_scan_last_tcycle && !self.started_mode_2_in_frame {
-            if current_dot == mode_2_first_dot && !self.started_mode_2_in_frame {
+            if current_dot == mode_2_first_dot && !self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 //print!("entering mode_2_oam_scan \n");
                 //reset oam idx so we check it every scan line
                 //self.sprites_in_oam_idx = 0;
@@ -843,19 +883,22 @@ impl Ppu {
                 //self.sprites_in_oam_idx = 0;
                 // always reset pixels in frame because that's what the buffer writer uses as an index
                 self.pixel_in_scanline = 0;
-                self.pixel_in_frame = 0;
-                self.mode_2_oam_scan(mbc, &tcycle);
-                self.started_mode_2_in_frame = true;
+                //clear it every scanline
+                self.sprites.clear();
+                self.sprites.reserve(10);
+
+                self.started_mode_2_in_scanline = true;
             }
 
             // mode 2 is dot 0-80
-            if self.tcycle_in_scanline <  self.mode_2_oam_scan_last_tcycle {
+            if self.tcycle_in_scanline <  self.mode_2_oam_scan_last_tcycle && self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 // pause for 80 tcycles
-                // no need to constantly scan oam again, it's only needed once per scan line
+                self.mode_2_oam_scan(mbc, tcycle);
+
             }
 
 
-            if self.tcycle_in_scanline >= self.mode_3_drawing_first_tcycle  && !self.started_mode_3_in_frame {
+            if self.tcycle_in_scanline >= self.mode_3_drawing_first_tcycle  && self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
                 //print!("entering mode_3_drawing \n");
                 mbc.restrict_vram_access = true;
@@ -867,11 +910,11 @@ impl Ppu {
                 // always reset the layer before we start
                 self.fetcher.active_layer = Layer::BG;
                 self.set_stat_ppu_mode(mbc, PPUMode::Draw);
-                self.started_mode_3_in_frame = true;
+                self.started_mode_3_in_scanline = true;
             }
 
 
-            if self.tcycle_in_scanline >=  self.mode_3_drawing_first_tcycle && self.tcycle_in_scanline < self.mode_0_h_blank_first_tcycle {
+            if self.tcycle_in_scanline >=  self.mode_3_drawing_first_tcycle && self.tcycle_in_scanline < self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
 
                 //only draw tiles and bg_map once per mode 3 to reduce utilization
                 if !self.drew_tiles_in_mode_3 {
@@ -889,7 +932,6 @@ impl Ppu {
                 match self.fetcher.active_layer {
                     Layer::BG | Layer::WIN => {
                         //print!("matched BG layer in ppu.tick \n");
-
                         self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprite_fifo, &self.sprites, tcycle);
                     },
                     Layer::SPRITE => {
@@ -902,7 +944,11 @@ impl Ppu {
                     Ok(_) => {},
                     Err(PPUEvent::FinishedScanLine) => {
                         //print!("finished scan line early, switching to mode 0 H blank \n");
-                        self.mode_0_h_blank_first_tcycle = self.tcycle_in_scanline + 1;
+                        self.mode_0_h_blank_first_tcycle = self.tcycle_in_scanline;
+                    },
+                    Err(PPUEvent::BufferOverflow) => {
+                       // reset everything since we finished the pixels
+
                     },
                     _=> { }
                 }
@@ -910,15 +956,15 @@ impl Ppu {
             }
 
 
-            if self.tcycle_in_scanline >= self.mode_0_h_blank_first_tcycle && !self.started_mode_0_in_frame {
+            if self.tcycle_in_scanline >= self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 //print!("entering mode_0_h_blank \n");
                 mbc.restrict_vram_access = false;
-                self.drew_tiles_in_mode_3 = false;
+
                 // Mode 0 is the remainder of the dots left in the scan line (final dot is 456)
                 self.set_stat_ppu_mode(mbc, PPUMode::H_Blank);
-                self.started_mode_0_in_frame = true;
+                self.started_mode_0_in_scanline = true;
             }
-            if self.tcycle_in_scanline >=  self.mode_0_h_blank_first_tcycle {
+            if self.tcycle_in_scanline >=  self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
 
                 self.mode_0_h_blank(&tcycle);
             }
@@ -927,26 +973,33 @@ impl Ppu {
             // last 10 scan lines are mode 1
             // 4560 dots or 10 scan lines (each scan line is 456 dots)
             let mode_1_v_blank_first_tcycle = 65_664;
-            if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame {
+            if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline {
                 //mbc.hw_reg.set_ie_vblank_bit0();
                 //print!("entering mode_1_v_blank \n");
                 self.fetcher.win_y_pos = 0;
                 self.fetcher.tile_y_pos = 0;
                 // do not inc tile_x_pos here
+
+                //only draw these tiles once per frame in mode 3
+                self.drew_tiles_in_mode_3 = false;
+
                 self.set_stat_ppu_mode(mbc, PPUMode::V_Blank);
                 self.started_mode_1_in_frame = true;
             }
-            self.mode_1_v_blank(mbc, &tcycle);
+
+            if self.started_mode_1_in_frame {
+                self.mode_1_v_blank(mbc, &tcycle);
+            }
         }
 
-        // //if all modes  are done cycle back
-        if self.started_mode_2_in_frame && self.started_mode_3_in_frame &&
-                self.started_mode_0_in_frame && self.started_mode_1_in_frame {
-            self.started_mode_2_in_frame = false;
-            self.started_mode_3_in_frame = false;
-            self.started_mode_0_in_frame = false;
-            self.started_mode_1_in_frame = false;
-        }
+        // // //if all modes  are done cycle back
+        // if self.started_mode_2_in_frame && self.started_mode_3_in_frame &&
+        //         self.started_mode_0_in_frame && self.started_mode_1_in_frame {
+        //     self.started_mode_2_in_frame = false;
+        //     self.started_mode_3_in_frame = false;
+        //     self.started_mode_0_in_frame = false;
+        //     self.started_mode_1_in_frame = false;
+        // }
 
         // reset tcycle in scan line because max is 456
         // also inc LY
@@ -955,36 +1008,48 @@ impl Ppu {
             // this print is very freq
             //print!("tcycle_in_scanline >= 456, incrementing LY \n");
             self.tcycle_in_scanline = 0;
+            self.pixel_in_scanline = 0;
+            self.started_mode_2_in_scanline = false;
+            self.started_mode_3_in_scanline = false;
+            self.started_mode_0_in_scanline = false;
             mbc.hw_reg.ly += 1;
         }
-
         // max ly is 153 because there are 153 scanlines
         let max_ly_value = 153;
-        if mbc.hw_reg.ly >= max_ly_value {
+        if mbc.hw_reg.ly > max_ly_value {
             mbc.hw_reg.ly = 0;
+            self.tcycle_in_frame = 0;
+            self.started_mode_2_in_scanline = false;
+            self.started_mode_3_in_scanline = false;
+            self.started_mode_0_in_scanline = false;
+            self.started_mode_1_in_frame = false;
             // this print freq is the same as the 1 sec pausing, that means the ppu and cpu are in sync
             //print!("ly hw reg is max, resetting to 0 \n");
+        }
+
+        let max_draw_ly_value = 144;
+        if mbc.hw_reg.ly > max_draw_ly_value {
+            self.pixel_in_frame = 0;
         }
 
         //let max_tcycle_in_mode_3_draw: u64 = 23_040;
         //let max_tcycle_in_mode_3_draw: u64 = 24_768;
         //let max_tcycle_in_mode_3_draw: u64 = 41_616;
 
-        // let max_tcycle_in_frame = 70_224;
+        let max_tcycle_in_frame = 70_224;
         // if self.tcycle_in_mode_3_draw >= max_tcycle_in_mode_3_draw {
         //     self.tcycle_in_mode_3_draw = 0;
         // }
 
-        // if self.tcycle_in_frame >= max_tcycle_in_frame {
-        //     //print!("tcycle_in_frame is >= 70224, generating frame \n");
-        //     self.tcycle_in_frame = 0;
-        //     self.tcycle_in_scanline = 0;
-        //     //self.tcycle_in_mode_3_draw = 0;
-        //     PPUEvent::RenderEvent(RenderState::Render)
-        //
-        // } else {
-        //     return PPUEvent::RenderEvent(RenderState::NoRender)
-        // }
+        if self.tcycle_in_frame >= max_tcycle_in_frame {
+            //print!("tcycle_in_frame is >= 70224, generating frame \n");
+            self.tcycle_in_frame = 0;
+            //self.tcycle_in_scanline = 0;
+            //self.tcycle_in_mode_3_draw = 0;
+
+        } else {
+            return PPUEvent::RenderEvent(RenderState::NoRender)
+        }
         PPUEvent::RenderEvent(RenderState::Render)
     }
 }
