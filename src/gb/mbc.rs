@@ -112,7 +112,7 @@ impl Mbc {
 
     pub fn read_rom(&self, address: u16, op_src: OpSource) -> u8 {
         if op_src == OpSource::CPU {
-            if (0x8000..=0x97FF).contains(&address) {
+            if (0x8000..=0x9FFF).contains(&address) {
                 if self.restrict_vram_access {
                     print!("attempted to read from VRAM during restricted access, address in read_rom is {:#x} \n", address);
                     return 0xFF;
@@ -245,33 +245,33 @@ impl Mbc {
     }
 
     pub fn write_rom(&mut self, address: u16, byte: u8) {
-        if (0x8000..=0x97FF).contains(&address) {
+        if (0x8000..=0x9FFF).contains(&address) {
             if self.restrict_vram_access {
                 print!("attempted to write to VRAM during restricted access in write_rom, address is {:#x} \n", address);
                 return;
             }
             //self.need_tile_update = true;
         }
-        if (0x9800..=0x9BFF).contains(&address) {
-            // // self.need_bg_map_update = true;
-            // if byte != 0x0 && byte != 0x2F {
-            //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-            // }
-            // if address == 0x9820 {
-            //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-            //
-            // }
-            // if address == 0x9820 {
-            //     if byte == 0x9B {
-            //         std::thread::sleep(std::time::Duration::from_secs(10));
-            //         print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-            //     }
-            // }
-            // if (0x9000..=0x9010).contains(&address) {
-            //     print!("address in write_rom is {:#x} \n", address);
-            //     self.need_tile_update = true;
-            // }
-        }
+        // if (0x9800..=0x9BFF).contains(&address) {
+        //     // // self.need_bg_map_update = true;
+        //     // if byte != 0x0 && byte != 0x2F {
+        //     //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+        //     // }
+        //     // if address == 0x9820 {
+        //     //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+        //     //
+        //     // }
+        //     // if address == 0x9820 {
+        //     //     if byte == 0x9B {
+        //     //         std::thread::sleep(std::time::Duration::from_secs(10));
+        //     //         print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
+        //     //     }
+        //     // }
+        //     // if (0x9000..=0x9010).contains(&address) {
+        //     //     print!("address in write_rom is {:#x} \n", address);
+        //     //     self.need_tile_update = true;
+        //     // }
+        // }
 
         if (0xFE00..=0xFE9F).contains(&address) {
             if self.restrict_vram_access {
@@ -307,16 +307,16 @@ impl Mbc {
     pub fn write(&mut self, address: u16, byte: u8, op_src: OpSource) {
         // handle special writes: BIOS, hw reg, then ROM
         match address {
-            // BIOS
+            //BIOS
             0x00..=0xFF=> {
                 if self.hw_reg.boot_rom_control == 0 {
-                   // self.write_bios(address, byte);
-                    print!("writing while in bios to add {} byte {} \n", address, byte);
+                   self.write_bios(address, byte);
+                    print!("boot_rom_control at add {} is now byte {} \n", address, byte);
                 }
-                // else {
-                //     //panic!("writing between 0x00 to 0xFF in write");
-                //     self.write(address, byte);
-                // }
+                else {
+                    self.write_rom(address, byte);
+                }
+
             }
 
 
@@ -359,11 +359,11 @@ impl Mbc {
             0xFF40 => self.hw_reg.lcdc = byte,
             0xFF41 => self.hw_reg.stat = byte,
             0xFF42 => {
-                //print!("writing {} to SCY\n", self.hw_reg.scy);
+                //print!("writing {} to SCY\n", byte);
                 self.hw_reg.scy = byte;
             },
             0xFF43 => {
-                //print!("writing {} to SCX\n", self.hw_reg.scx);
+                //print!("writing {} to SCX\n", byte);
                 self.hw_reg.scx = byte;
             },
             0xFF44 => self.hw_reg.ly = 0, // writing to LY resets it
@@ -547,6 +547,9 @@ impl Mbc {
         } else if (0x8000..=0x9FFF).contains(&address) {
             // read VRAM
             let vram_base_size: u16 = 0x8000;
+            // if address == 0x9800 {
+            //     print!("reading address 0x9800\n ");
+            // }
             return self.vram.read(address - vram_base_size);
         } else if (0xA000..=0xBFFF).contains(&address) {
             //read XRAM
@@ -584,7 +587,6 @@ impl Mbc {
     }
 
     pub fn mbc1_write(&mut self, address: u16, byte: u8) {
-        let current_rom_size = self.rom.as_ref().unwrap().rom_size;
         let current_ram_size = self.rom.as_ref().unwrap().ram_size;
         // enable or diable ram write
         if (0x0000..=0x1FFF).contains(&address) {
@@ -636,6 +638,9 @@ impl Mbc {
         } else if (0x8000..=0x9FFF).contains(&address) {
             // write to VRAM
             let vram_base_size: u16 = 0x8000;
+            if address == 0x9800 {
+                print!("writing {:#X} to address 0x9800\n", byte);
+            }
             self.vram.write(address - vram_base_size, byte);
             return;
         } else if (0xA000..=0xBFFF).contains(&address) {

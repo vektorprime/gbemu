@@ -10,6 +10,7 @@ pub struct GBPixel {
     // skipping sprite priority for DMG
     // background priority is not skipped
     pub bg_priority: bool,
+    pub skip: bool,
 }
 
 impl GBPixel {
@@ -17,6 +18,7 @@ impl GBPixel {
         GBPixel {
             color: PaletteColor::White,
             bg_priority: false,
+            skip: false,
         }
     }
     pub fn decode_pixels_from_bytes(byte1: u8, byte2: u8) -> [PaletteColor; 8] {

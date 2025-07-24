@@ -59,7 +59,15 @@ impl Registers {
     }
 
     pub fn handle_flags(&mut self, inst_name: &str) {
-        if inst_name.contains("ADD") || inst_name.contains("INC") || inst_name.contains("ADC") || inst_name.contains("AND") {
+        if inst_name.contains("AND") {
+            self.clear_n_flag();
+            self.clear_c_flag();
+            self.set_h_flag()
+        }
+        if inst_name.contains("DAA") {
+            self.clear_h_flag()
+        }
+        if inst_name.contains("ADD") || inst_name.contains("INC") || inst_name.contains("ADC")  {
             self.clear_n_flag();
         }
         else if inst_name.contains("SUB") || inst_name.contains("DEC") || inst_name.contains("SBC") || inst_name.contains("CP") {
@@ -203,6 +211,12 @@ impl Registers {
     }
 
     pub fn inc_a(&mut self) {
+        let original = self.a;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
         // wrap on overflow 
         self.a = self.a.wrapping_add(1);
         if self.a == 0 {
@@ -239,8 +253,16 @@ impl Registers {
     }
 
     pub fn inc_b(&mut self) {
-        // wrap on overflow 
+        let original = self.b;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
+        // wrap on overflow
         self.b = self.b.wrapping_add(1);
+
+
         if self.b == 0 {
             self.set_z_flag()
         } else {
@@ -286,6 +308,12 @@ impl Registers {
     }
 
     pub fn inc_c(&mut self) {
+        let original = self.c;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
         // wrap on overflow 
         self.c = self.c.wrapping_add(1);
         if self.c == 0 {
@@ -324,6 +352,12 @@ impl Registers {
 
     
     pub fn inc_d(&mut self) {
+        let original = self.d;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
         // wrap on overflow 
         self.d = self.d.wrapping_add(1);
         if self.d == 0 {
@@ -361,6 +395,12 @@ impl Registers {
     }
 
     pub fn inc_e(&mut self) {
+        let original = self.e;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
         // wrap on overflow 
         self.e = self.e.wrapping_add(1);
         if self.e == 0 {
@@ -404,6 +444,12 @@ impl Registers {
     } 
 
     pub fn inc_h(&mut self) {
+        let original = self.h;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
         // wrap on overflow 
         self.h = self.h.wrapping_add(1);
         if self.h == 0 {
@@ -438,6 +484,12 @@ impl Registers {
     }
 
     pub fn inc_l(&mut self) {
+        let original = self.l;
+        if (original & 0x0F) == 0x0F {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
+        }
         // wrap on overflow 
         self.l = self.l.wrapping_add(1);
         if self.l == 0 {

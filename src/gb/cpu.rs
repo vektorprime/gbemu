@@ -285,15 +285,16 @@ impl Cpu {
                 },
                 0x07 => {
                     // RLCA
-                    let mut bit0 = 0b0000_0001;
+                    let mut bit7 = 0b1000_0000;
                     let mut a_reg = self.registers.get_a();
-                    bit0 &= a_reg;
+                    bit7 &= a_reg;
                     a_reg <<= 1;
-                    if bit0 == 1 {
-                        a_reg |= bit0;
+                    if bit7 == 0b1000_0000 {
+                        a_reg |= 0b0000_0001;
                         self.registers.set_c_flag();
                     }
                     else {
+                        a_reg &= 0b1111_1110;
                         self.registers.clear_c_flag();
                     }
                     self.registers.set_a(a_reg);
@@ -314,7 +315,6 @@ impl Cpu {
 
                     let upper_sp = (sp >> 8) as u8;
                     mem.write(dst_addr + 1, upper_sp, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -571,8 +571,9 @@ impl Cpu {
                         }
                         else {
                             let offset = mem.read(pc, OpSource::CPU) as u16;
+                            // handle overflow in rust dev mode requires overflowing_add, release does not
                             // need to +1 because we start counting on the next op
-                            let new_pc = pc + offset + 1;
+                            let new_pc = pc.overflowing_add(offset).0 + 1;
                             self.registers.set_pc(new_pc);
                         }
                     }
@@ -651,7 +652,11 @@ impl Cpu {
                             a_reg -= 0x6; 
                         }
                     }
-
+                    if a_reg == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(a_reg);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -701,8 +706,6 @@ impl Cpu {
                     }
                     // always set val whether overflow or not
                     self.registers.set_hl(new_val);
-
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1821,6 +1824,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_b(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -1831,6 +1839,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_c(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -1841,6 +1854,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_d(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -1851,6 +1869,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_e(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -1861,6 +1884,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_h(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -1871,6 +1899,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_l(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -1892,6 +1925,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b = self.registers.get_a(); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles); 
@@ -2785,26 +2823,33 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xE8 => {
-                    // ADD SP S8
+                    // ADD SP, s8
+                    let sp = self.registers.get_sp();
                     let pc = self.registers.get_pc();
-                    let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
-                    if pc_offset_signed < 0 {
-                        let neg_offset = pc_offset_signed.abs() as u8;
 
-                        let new_pc = pc - (neg_offset as u16);
-                        self.registers.set_pc(new_pc);
-                    }
-                    else {
-                        let offset = mem.read(pc, OpSource::CPU) as u16;
-                        let new_pc = pc + offset;
-                        self.registers.set_pc(new_pc);
-                    }
-                
-                    self.registers.handle_flags(inst.name);
-                    self.registers.clear_z_flag();
-                    self.inc_cycles_by_inst_val(inst.cycles);
+                    // fetch signed 8-bit immediate from instruction stream
+                    let imm = mem.read(pc + 1, OpSource::CPU) as i8;
+
+                    // compute new SP (wrapping add)
+                    let result = sp.wrapping_add(imm as i16 as u16);
+
+                    // set flags
+                    self.registers.clear_z_flag();  // Z = 0
+                    self.registers.clear_n_flag();  // N = 0
+
+                    // H and C are based on low byte addition
+                    let sp_low = sp & 0xFF;
+                    let imm_u8 = imm as u8;
+                    // self.registers.set_h_flag_if(((sp_low & 0x0F) + (imm_u8 & 0x0F)) > 0x0F);
+                    // self.registers.set_c_flag_if(((sp_low as u16) + (imm_u8 as u16)) > 0xFF);
+
+                    // store result
+                    self.registers.set_sp(result);
+
+                    // advance PC
                     self.registers.inc_pc_by_inst_val(inst.size);
-                }
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                },
                 0xE9 => {
                     //JP HL
                     let hl = self.registers.get_hl();
@@ -2901,8 +2946,8 @@ impl Cpu {
                 },
                 0xF3 => {
                     // DI
-                    // set IME to enable immediately
-                    self.ime = true;
+                    // set IME to false immediately
+                    self.ime = false;
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3182,12 +3227,7 @@ impl Cpu {
                     else {
                         self.registers.clear_c_flag();
                     }
-                    if a == 0 {
-                        self.registers.set_z_flag();
-                    }
-                    else {
-                        self.registers.clear_z_flag();
-                    }
+
                     self.registers.set_a(a);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -3541,25 +3581,24 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x17 => {
-                    // RL A
+                    // RLA
                     let mut a = self.registers.get_a();
-                    let carry = if self.registers.is_c_flag_set() { 1 } else { 0 };
-                    let bit7 = a & 0b1000_0000;
-                    a = (a << 1) | carry;
-                    if bit7 != 0 {
+                    let carry_val = if self.registers.is_c_flag_set() { 1 } else { 0 };
+
+                    // Set the new Carry flag from the old bit 7
+                    if (a & 0b1000_0000) != 0 {
                         self.registers.set_c_flag();
-                    }
-                    else {
+                    } else {
                         self.registers.clear_c_flag();
                     }
-                    if a == 0 {
-                        self.registers.set_z_flag();
-                    }
-                    else {
-                        self.registers.clear_z_flag();
-                    }
+
+                    // Shift A left and place the old carry value in the new bit 0
+                    a = (a << 1) | carry_val;
                     self.registers.set_a(a);
+
+                    // This function correctly clears the Z, N, and H flags for RLA
                     self.registers.handle_flags(inst.name);
+
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
