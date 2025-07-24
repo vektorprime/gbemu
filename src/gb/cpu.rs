@@ -168,10 +168,10 @@ impl Cpu {
         //      mem.hw_reg.sc = 0x0;
         // }
         //
-        if self.registers.get_pc() == 0x217 {
-            let pc_print = self.registers.get_pc();
-            print!("pc - {:X} \n", pc_print);
-        }
+        // if self.registers.get_pc() == 0x217 {
+        //     let pc_print = self.registers.get_pc();
+        //     print!("pc - {:X} \n", pc_print);
+        // }
 
         // if self.registers.get_pc() <= 0x100 {
         //     let pc_print = self.registers.get_pc();
@@ -643,35 +643,48 @@ impl Cpu {
                 },
                 0x27 => {
                     // DAA
-                    // note: assumes a is a uint8_t and wraps from 0xff to 0
-                    let n_flag = self.registers.is_n_flag_set();
-                    let h_flag = self.registers.is_h_flag_set();
-                    let c_flag = self.registers.is_c_flag_set();
-                    let mut a_reg = self.registers.get_a();
-                    if !n_flag {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
-                        if c_flag || a_reg > 0x99 { 
-                            a_reg += 0x60;  
-                            self.registers.set_c_flag();                        
+                    let mut a = self.registers.get_a();
+                    let n = self.registers.is_n_flag_set();
+                    let c = self.registers.is_c_flag_set();
+                    let h = self.registers.is_h_flag_set();
+                    let orig_a = a;
+
+                    if !n {
+                        if c || orig_a > 0x99 {
+                            a = a.wrapping_add(0x60);
+                            self.registers.set_c_flag();
+                        } else {
+                            // preserve old C
+                            if !c {
+                                self.registers.clear_c_flag();
+                            }
                         }
-                        if h_flag || (a_reg & 0x0f) > 0x09 { 
-                            a_reg += 0x6; 
+                        if h || (orig_a & 0x0F) > 0x09 {
+                            a = a.wrapping_add(0x06);
                         }
-                    } 
-                    else {  // after a subtraction, only adjust if (half-)carry occurred
-                        if c_flag { 
-                            a_reg -= 0x60; 
+                    } else {
+                        if c {
+                            a = a.wrapping_sub(0x60);
                         }
-                        if h_flag { 
-                            a_reg -= 0x6; 
+                        if h {
+                            a = a.wrapping_sub(0x06);
                         }
+                        // C is preserved on subtraction
                     }
-                    if a_reg == 0 {
+
+                    // Z flag
+                    if a == 0 {
                         self.registers.set_z_flag();
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.set_a(a_reg);
-                    self.registers.handle_flags(inst.name);
+
+                    // H always cleared
+                    self.registers.clear_h_flag();
+                    // N is unchanged
+
+                    self.registers.set_a(a);
+
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2984,6 +2997,22 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
+                0xF6 => {
+                    // OR D8
+                    // OR B
+                    let a = self.registers.get_a();
+                    let b = mem.read(self.registers.get_pc(), OpSource::CPU);
+                    let result = a | b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
+                    self.registers.set_a(result);
+                    self.registers.handle_flags(inst.name);
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
                 // todo rest of F
                 0xF7 => {
                     // RST 6
@@ -3002,6 +3031,48 @@ impl Cpu {
                     // set pc
                     self.registers.set_pc(0x30);
                     self.inc_cycles_by_inst_val(inst.cycles);
+                },
+                0xF8 => {
+                    // Read signed 8-bit immediate
+                    let imm = mem.read(self.registers.get_pc(), OpSource::CPU) as i8;
+                    let sp = self.registers.get_sp();
+
+                    // Perform signed addition
+                    let result = sp.wrapping_add(imm as i16 as u16);
+
+                    // Update HL
+                    self.registers.set_hl(result);
+
+                    // Flags: Z = 0, N = 0
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
+
+                    // Half-carry and Carry based on lower 8 bits addition
+                    let carry_in = imm as i16;
+                    let low_sp = sp & 0xFF;
+                    let low_res = (low_sp as i16).wrapping_add(carry_in);
+                    if ((low_sp ^ (carry_in as u16) ^ (result & 0xFFFF)) & 0x10) != 0 {
+                        self.registers.set_h_flag();
+                    } else {
+                        self.registers.clear_h_flag();
+                    }
+                    if ((low_sp as u16 + (imm as i16 as u16)) & 0x100) != 0 {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+
+                    // Advance
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
+                },
+                0xF9 => {
+                    let hl = self.registers.get_hl();
+                    self.registers.set_sp(hl);
+
+                    // No flags affected
+                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xFA => {
                     // LD A, (a16)

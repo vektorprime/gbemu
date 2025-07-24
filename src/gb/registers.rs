@@ -558,7 +558,7 @@ impl Registers {
 
     pub fn set_af_with_two_val(&mut self, val1: u8, val2: u8) {
         self.a = val2;
-        self.f = val1;
+        self.f = val1  & 0xF0;
     }
 
     pub fn get_bc(&self) -> u16 {
@@ -804,7 +804,7 @@ impl Registers {
     //     result
     // }
 
-    
+
     pub fn add_16bit(&mut self, a: u16, b: u16) -> u16 {
         // check for 16 bit overflow and set c flag
         let (result, overflowed) = a.overflowing_add(b);
