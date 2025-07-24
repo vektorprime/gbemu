@@ -44,8 +44,8 @@ impl Mbc {
     pub fn new() -> Self {
         Mbc {
             hw_reg: HardwareRegisters::new(),
-            ram: Ram::new(),
-            boot_rom: Ram::new(),
+            ram: Ram::new(0x00),
+            boot_rom: Ram::new(0x00),
             rom: None,
             rom_bank: 0,
             ram_bank: 0,
@@ -54,30 +54,17 @@ impl Mbc {
             // need_tile_update: false,
             // need_bg_map_update: false,
             rom_bank_mode: RomBankMode::Simple,
-            xram: Ram::new(),
-            vram: Ram::new(),
-            wram: Ram::new(),
-            oam: Ram::new(),
-            io: Ram::new(),
-            hram: Ram::new(),
+            xram: Ram::new(0xFF),
+            vram: Ram::new(0x00),
+            wram: Ram::new(0xFF),
+            oam: Ram::new(0xFF),
+            io: Ram::new(0xFF),
+            hram: Ram::new(0xFF),
             restrict_vram_access: false,
         }
     }
 
     pub fn load_rom_to_mem(&mut self) {
-        // let rom_size = self.rom.as_ref().unwrap().rom_size;
-        // let mut rom_banks = match rom_size {
-        //     RomSize::KB_32  => 0,     // no bank
-        //     RomSize::KB_64  => 4,     // 4 banks
-        //     RomSize::KB_128 => 8,     // 8 banks
-        //     RomSize::KB_256 => 16,    // 16 banks
-        //     RomSize::KB_512 => 32,    // 32 banks
-        //     RomSize::MB_1   => 64,    // 64 banks
-        //     RomSize::MB_2   => 128,   // 128 banks
-        //     RomSize::MB_4   => 256,   // 256 banks
-        //     RomSize::MB_8   => 512,   // 512 banks
-        //     _ => 0,
-        // };
 
         for (mut i, byte) in self.rom.as_ref().unwrap().data.iter().copied().enumerate() {
             if  i >= self.ram.memory.len() {
@@ -86,6 +73,7 @@ impl Mbc {
                 self.ram.memory[i] = byte;
             }
         }
+        print!("finished loading rom to mem");
     }
 
     pub fn get_tima_reg_tcycle_inc_count(&self) -> u64 {
@@ -146,6 +134,14 @@ impl Mbc {
     pub fn read_bios(&self, address: u16) -> u8 {
         //print!("address in read_bios is {:#x} \n", address);
         self.boot_rom.read(address)
+    }
+
+    pub fn copy_bios_to_rom(&mut self) {
+        for i in 0x00..0x100 {
+            if let Some(rom) = self.rom.as_mut() {
+                rom.data[i] = self.boot_rom.memory[i];
+            }
+        }
     }
 
     pub fn read(&self, address: u16, op_src: OpSource) -> u8 {
@@ -311,7 +307,7 @@ impl Mbc {
             0x00..=0xFF=> {
                 if self.hw_reg.boot_rom_control == 0 {
                    self.write_bios(address, byte);
-                    print!("boot_rom_control at add {} is now byte {} \n", address, byte);
+                    print!("writing in bios at add {} is now byte {} \n", address, byte);
                 }
                 else {
                     self.write_rom(address, byte);
@@ -396,8 +392,16 @@ impl Mbc {
 
             // Boot ROM control
             0xFF50 => {
-                print!("writing {} to 0xFF50, Boot ROM control hw register \n", byte);
-                self.hw_reg.boot_rom_control = byte
+                if byte == 1 {
+                    print!("writing {} to 0xFF50, Boot ROM control hw register \n", byte);
+                    self.hw_reg.boot_rom_control = byte;
+                } else {
+                    print!("ignoring write to 0xFF50 Boot ROM control since it wasn't 1 \n");
+
+                }
+
+                //this was a test don't use it
+                //self.copy_bios_to_rom();
             },
 
             // Audio (NR10–NR52)
@@ -447,8 +451,8 @@ impl Mbc {
     pub fn rom_only_read(&self, address: u16) -> u8 {
         // read from rom bank 0
         if  (0x0000..=0x7FFF).contains(&address) {
-            return self.rom.as_ref().unwrap().read(address as u32);
-            //self.ram.read(address);
+            //return self.rom.as_ref().unwrap().read(address as u32);
+            self.ram.read(address);
         } else if (0x8000..=0x9FFF).contains(&address) {
             // read V RAM
             let ram_offset: u16 = 0x8000;
@@ -476,13 +480,14 @@ impl Mbc {
         }
 
         self.ram.read(address)
+        //self.rom.as_ref().unwrap().read(address as u32)
     }
 
     pub fn rom_only_write(&mut self, address: u16, byte: u8) {
         // read from rom bank 0
         if  (0x0000..=0x7FFF).contains(&address) {
-            self.rom.as_mut().unwrap().write(address as u32, byte);
-            //self.ram.write(address, byte);
+            //self.rom.as_mut().unwrap().write(address as u32, byte);
+            self.ram.write(address, byte);
             //panic!("write to rom in rom_only_write address {}, byte {}", address, byte);
         } else if (0x8000..=0x9FFF).contains(&address) {
             // read VRAM
@@ -515,6 +520,7 @@ impl Mbc {
 
         // print!("writing to rom in rom_only_write address: {}, byte: {}\n", address, byte);
         self.ram.write(address, byte);
+        //self.rom.as_mut().unwrap().write(address as u32, byte);
     }
     pub fn mbc1_read(&self, address: u16) -> u8 {
         let current_bank_mode = self.rom_bank_mode;

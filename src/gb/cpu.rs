@@ -26,6 +26,7 @@ pub struct Cpu {
     pub cb_instructions: HashMap<u8, Instruction>,
     pub bios_executed: bool,
     pub rom_loaded: bool,
+    debug_print_pc: bool,
 }
 
 impl Cpu { 
@@ -48,6 +49,7 @@ impl Cpu {
             cb_instructions: Cpu::setup_cb_inst(),
             bios_executed: false,
             rom_loaded: false,
+            debug_print_pc: false,
         } 
     } 
 
@@ -154,17 +156,28 @@ impl Cpu {
             print!("----------- \n");
             print!("pc - 0x100 \n");
             print!("----------- \n");
+            self.debug_print_pc = true;
         }
 
+        // if self.debug_print_pc {
+        //         let pc_print = self.registers.get_pc();
+        //         print!("pc - {:X} \n", pc_print);
+        // }
         //  if mem.hw_reg.sc == 0x81 {
         //     print!("{}", mem.hw_reg.sb as char);
         //      mem.hw_reg.sc = 0x0;
         // }
         //
-        // if self.registers.get_pc() >= 0x100 {
+        if self.registers.get_pc() == 0x217 {
+            let pc_print = self.registers.get_pc();
+            print!("pc - {:X} \n", pc_print);
+        }
+
+        // if self.registers.get_pc() <= 0x100 {
         //     let pc_print = self.registers.get_pc();
-        //     print!("pc - {:X} \n", pc_print);
+        //     //print!("pc - {:X} \n", pc_print);
         // }
+
         // if self.registers.get_pc() == 0x300 {
         //     panic!("TESTING");
         // }
@@ -2293,6 +2306,9 @@ impl Cpu {
                     if !self.registers.is_z_flag_set() {
                         let address = self.registers.get_sp();
                         self.registers.set_pc(address);
+                        let lo = mem.read(address, OpSource::CPU);
+                        let hi = mem.read(address + 1, OpSource::CPU);
+                        self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                         self.registers.set_sp(address + 2);
                     }
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2525,8 +2541,10 @@ impl Cpu {
                     // RET NC
                     if !self.registers.is_c_flag_set() {
                         let address = self.registers.get_sp();
-                        //print!("returning to add {:X} \n", address );
                         self.registers.set_pc(address);
+                        let lo = mem.read(address, OpSource::CPU);
+                        let hi = mem.read(address + 1, OpSource::CPU);
+                        self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                         self.registers.set_sp(address + 2);
                     }
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -2639,10 +2657,8 @@ impl Cpu {
                         //set pc to 16 bit add
                         self.registers.set_pc(ret_addr);
                         // shrink stack by 2
-                        let new_sp = self.registers.get_sp() + 2;
-                        self.registers.set_sp(new_sp);
-                        // set pc to ret addr
-                        self.registers.set_pc(ret_addr);
+                        self.registers.set_sp(sp + 2);
+
                     } else {
                         self.registers.inc_pc_by_inst_val(inst.size);
                     }

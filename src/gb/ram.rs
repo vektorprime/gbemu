@@ -8,17 +8,15 @@ pub struct Ram {
 
 
 impl Ram {
-    pub fn new() -> Self {
+    pub fn new(init_val: u8) -> Self {
         Ram {
-            memory: vec![0x0; 65536],
+            memory: vec![init_val; 65536],
         }
     }
 
     pub fn load_bios_to_mem(&mut self, bios: &Bios) {
         for (i, byte) in bios.data.iter().copied().enumerate() {
             self.memory[i] = byte;
-            //print!("{}", byte as char);
-            if i > 0xFF { print!("load_bios_to_mem index greater than 0xFF \n");}
         }
     }
 
