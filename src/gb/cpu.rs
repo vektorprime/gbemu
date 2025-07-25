@@ -292,7 +292,6 @@ impl Cpu {
                     // LD B D8
                     let operand = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_b(operand);
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -375,7 +374,6 @@ impl Cpu {
                     // LD C D8
                     let operand = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_c(operand);
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -484,27 +482,10 @@ impl Cpu {
                 },
                 0x19 => {
                     // ADD HL DE
-                    let hl = self.registers.get_hl();
-                    let de = self.registers.get_de();
-                    let (result, carry) = hl.overflowing_add(de);
-
-                    // Half-carry: check if bit 11 overflowed
-                    if ((hl & 0x0FFF) + (de & 0x0FFF)) > 0x0FFF {
-                        self.registers.set_h_flag();
-                    } else {
-                        self.registers.clear_h_flag();
-                    }
-
-                    // Carry flag
-                    if carry {
-                        self.registers.set_c_flag();
-                    } else {
-                        self.registers.clear_c_flag();
-                    }
-
-                    // always set val whether overflow or not
+                    let a = self.registers.get_hl();
+                    let b = self.registers.get_de();
+                    let result = self.registers.add_16bit_no_z_flag(a, b);
                     self.registers.set_hl(result);
-
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -714,24 +695,11 @@ impl Cpu {
                 },   
                 0x29 => {
                     // ADD HL HL
-                    let first_operand = self.registers.get_hl();
-                    let second_operand = self.registers.get_hl();
-                    
-                    let (new_val, overflowed) = first_operand.overflowing_add(second_operand);
-                    // check for 12 bit overflow and set h flag
-                    if ((first_operand & 0x0FFF) + (second_operand & 0x0FFF)) > 0x0FFF {
-                        self.registers.set_h_flag();
-                    } else {
-                        self.registers.clear_h_flag();
-                    }
-                    // check for 16 bit overflow and set c flag
-                    if overflowed {
-                        self.registers.set_c_flag();
-                    } else {
-                        self.registers.clear_c_flag();
-                    }
-                    // always set val whether overflow or not
-                    self.registers.set_hl(new_val);
+                    let a = self.registers.get_hl();
+                    let b = self.registers.get_hl();
+                    let result = self.registers.add_16bit_no_z_flag(a, b);
+                    self.registers.set_hl(result);
+                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -829,7 +797,6 @@ impl Cpu {
                     // INC SP
                     self.registers.inc_sp();
                     // skip flags because the 16 bit ops don't touch them
-                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -872,7 +839,7 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x36 => {
-                    // LD (HL), d8
+                    // LD (HL) D8
                     let value = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let addr = self.registers.get_hl();
                     mem.write(addr, value, OpSource::CPU);
@@ -950,7 +917,6 @@ impl Cpu {
                     // DEC SP
                     self.registers.dec_sp();
                     // skip flags because the 16 bit ops don't touch them
-                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -972,7 +938,6 @@ impl Cpu {
                     // LD A D8
                     let value = mem.read(self.registers.get_pc(), OpSource::CPU);
                     self.registers.set_a(value);
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1588,12 +1553,10 @@ impl Cpu {
                 },
                 0x88 => {
                     // ADC A B
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_b();
-                    let result = self.registers.add_8bit(a, b);
-
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1601,11 +1564,10 @@ impl Cpu {
                 },
                 0x89 => {
                     // ADC A C
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_c();
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1613,11 +1575,10 @@ impl Cpu {
                 },
                 0x8A => {
                     // ADC A D
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_d();
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1625,11 +1586,10 @@ impl Cpu {
                 },
                 0x8B => {
                     // ADC A E
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_e();
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1637,11 +1597,10 @@ impl Cpu {
                 },
                 0x8C => {
                     // ADC A H
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_h();
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1649,11 +1608,10 @@ impl Cpu {
                 },
                 0x8D => {
                     // ADC A L
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_l();
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1661,12 +1619,11 @@ impl Cpu {
                 },
                 0x8E => {
                     // ADC A (HL)
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b_addr = self.registers.get_hl();
                     let b = mem.read(b_addr, OpSource::CPU);
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -1674,11 +1631,11 @@ impl Cpu {
                 },
                 0x8F => {
                     // ADC A A
-                    let mut a = self.registers.get_a();
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    a += c;
+                    let a = self.registers.get_a();
                     let b = self.registers.get_a();
-                    let result = self.registers.add_8bit(a, b);
+                    let c = if self.registers.is_c_flag_set() {1} else {0};
+                    let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
+                    self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2206,7 +2163,7 @@ impl Cpu {
                     // CP B
                     let a = self.registers.get_a();
                     let b = self.registers.get_b();
-                    let result = a - b;
+                    let result = a.wrapping_sub(b);
                      if result == 0 {
                          self.registers.set_z_flag();
                      } else {
@@ -2403,7 +2360,7 @@ impl Cpu {
                     // ADD A D8
                     let a = self.registers.get_a();
                     let imm = mem.read(self.registers.get_pc(), OpSource::CPU);
-                    let result = a.wrapping_add(imm);
+                    let result = self.registers.add_8bit(a, imm);
                     self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2737,10 +2694,11 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let b_addr = self.registers.get_pc();
                     let b = mem.read(b_addr, OpSource::CPU);
-                    let c = if self.registers.is_c_flag_set() {1} else {0};
-                    let result = self.registers.sub_8bit(a, b);
-                    let result2 = self.registers.sub_8bit(result, c);
-                    self.registers.set_a(result2);
+                    // let c = if self.registers.is_c_flag_set() {1} else {0};
+                    // let result = self.registers.sub_8bit(a, b);
+                    // let result2 = self.registers.sub_8bit(result, c);
+                    let result = self.registers.sub_8bit_carry(a, b);
+                    self.registers.set_a(result);
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2852,19 +2810,17 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xE8 => {
-                    // ADD SP, s8
+                    // ADD SP S8
                     let sp = self.registers.get_sp();
                     let pc = self.registers.get_pc();
 
-                    // fetch signed 8-bit immediate from instruction stream
-                    let imm = mem.read(pc + 1, OpSource::CPU) as i8;
 
-                    // compute new SP (wrapping add)
+                    let imm = mem.read(pc, OpSource::CPU) as i8;
+
                     let result = sp.wrapping_add(imm as i16 as u16);
 
-                    // set flags
-                    self.registers.clear_z_flag();  // Z = 0
-                    self.registers.clear_n_flag();  // N = 0
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
 
                     // H and C are based on low byte addition
                     let sp_low = sp & 0xFF;
@@ -2887,7 +2843,6 @@ impl Cpu {
                     self.registers.set_pc(hl);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
-                // todo 0xEE
                 0xEA => {
                     // LD (A16) A
                     // get the value in reg A
@@ -2999,7 +2954,6 @@ impl Cpu {
                 },
                 0xF6 => {
                     // OR D8
-                    // OR B
                     let a = self.registers.get_a();
                     let b = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let result = a | b;
@@ -3033,17 +2987,15 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xF8 => {
-                    // Read signed 8-bit immediate
+                    // LD HL SP+S8
                     let imm = mem.read(self.registers.get_pc(), OpSource::CPU) as i8;
                     let sp = self.registers.get_sp();
 
-                    // Perform signed addition
+                    // signed add
                     let result = sp.wrapping_add(imm as i16 as u16);
 
-                    // Update HL
                     self.registers.set_hl(result);
 
-                    // Flags: Z = 0, N = 0
                     self.registers.clear_z_flag();
                     self.registers.clear_n_flag();
 
@@ -3056,20 +3008,19 @@ impl Cpu {
                     } else {
                         self.registers.clear_h_flag();
                     }
-                    if ((low_sp as u16 + (imm as i16 as u16)) & 0x100) != 0 {
+                    if (((low_sp as u16).wrapping_add((imm as i16 as u16))) & 0x100) != 0 {
                         self.registers.set_c_flag();
                     } else {
                         self.registers.clear_c_flag();
                     }
 
-                    // Advance
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xF9 => {
+                    // LD SP HL
                     let hl = self.registers.get_hl();
                     self.registers.set_sp(hl);
-
                     // No flags affected
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3099,12 +3050,8 @@ impl Cpu {
                     // CP D8
                     let a = self.registers.get_a();
                     let val = mem.read(self.registers.get_pc(), OpSource::CPU);
-                    if a.wrapping_sub(val) == 0 {
-                        self.registers.set_z_flag();
-                    }
-                    else {
-                        self.registers.clear_z_flag();
-                    }
+                    let result = self.registers.sub_8bit(a, val);
+                    // don't store result anywhere for this op
                     self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);

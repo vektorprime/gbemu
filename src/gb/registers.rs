@@ -61,8 +61,9 @@ impl Registers {
     pub fn handle_flags(&mut self, inst_name: &str) {
         if inst_name.contains("AND") {
             self.clear_n_flag();
+            self.set_h_flag();
             self.clear_c_flag();
-            self.set_h_flag()
+
         }
         if inst_name.contains("DAA") {
             self.clear_h_flag()
@@ -532,12 +533,6 @@ impl Registers {
     pub fn dec_sp(&mut self) {
         // wrap on overflow 
         self.sp = self.sp.wrapping_sub(1);
-        if self.sp == 0 {
-            self.set_z_flag()
-        }
-        else {
-            self.clear_z_flag();
-        }
     }
     pub fn get_pc(&self) -> u16 {
         self.pc
@@ -741,6 +736,8 @@ impl Registers {
         result
     }
 
+
+
     pub fn adc_8bit(&mut self, a: u8, b: u8, carry: u8) -> u8 {
         let (result1, overflow1) = a.overflowing_add(b);
         let (result, overflow2) = result1.overflowing_add(carry);
@@ -891,36 +888,33 @@ impl Registers {
     }
 
     pub fn sub_8bit_carry(&mut self, a: u8, b: u8) -> u8 {
-        // check for 8 bit underflow and set c flag
-        let c_bool = self.is_c_flag_set();
-        let c = if c_bool { 1 } else { 0 };
-        let (mut result, underflowed) = a.overflowing_sub(b);
-        result = result.wrapping_sub(c);
-        if underflowed {
+        let c = if self.is_c_flag_set() { 1 } else { 0 };
+        let result = a.wrapping_sub(b).wrapping_sub(c);
+
+        // Carry: if (a < b + c)
+        if (a as u16) < (b as u16 + c as u16) {
             self.set_c_flag();
-        }
-        else {
+        } else {
             self.clear_c_flag();
         }
 
-        if result == 0 {
-            self.set_z_flag();
-        }
-        else {
-            self.clear_z_flag();
-        }
-
-        // // check for half-carry attempt
-        let half_a = a & 0b0000_1111;
-        let half_b = b & 0b0000_1111;
-        if half_a < half_b {
+        // Half-carry: if (low nibble of a < low nibble of b + c)
+        if (a & 0x0F) < ((b & 0x0F) + c) {
             self.set_h_flag();
-        }
-        else {
+        } else {
             self.clear_h_flag();
         }
 
-        // always set val whether overflow or not
+        // Zero flag
+        if result == 0 {
+            self.set_z_flag();
+        } else {
+            self.clear_z_flag();
+        }
+
+        // N flag is always set for subtraction
+        self.set_n_flag();
+
         result
     }
 

@@ -325,11 +325,9 @@ impl Mbc {
             },
             0xFF02 =>  {
                 if byte == 0x81 {
-                    // If it is, immediately "complete" the transfer
-                    print!("{}", self.hw_reg.sb as char); // Print the character
-                    self.hw_reg.sc = 0x00; // Clear SC. This simulates the hardware clearing it after transfer
+                    print!("{}", self.hw_reg.sb as char);
+                    self.hw_reg.sc = 0x00;
                 } else {
-                    // For other SC values, just store it
                     self.hw_reg.sc = byte;
                 }
             }
