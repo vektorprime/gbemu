@@ -19,7 +19,7 @@ pub struct Emu {
     pub ppu: Ppu,
     // pub lcd: Lcd,
     pub debug: bool,
-    pub sec_cycles: u64, // tracking max mcycles per sec
+    pub sec_mcycles: u64, // tracking max mcycles per sec
     pub current_time: Instant,
 }
 
@@ -32,7 +32,7 @@ impl Emu {
             ppu: Ppu::new(),
             // lcd: Lcd::new(),
             debug,
-            sec_cycles: 0, // tracking max mcycles per sec
+            sec_mcycles: 0, // tracking max mcycles per sec
             current_time: Instant::now(),
         }
     }
@@ -51,14 +51,14 @@ impl Emu {
 
     //pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
     pub fn tick(&mut self, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>) -> PPUEvent {
-        let mcycle_per_sec: u64 = 1_053_360;
+        let mcycles_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
         if elapsed_time < one_sec {
-            if self.sec_cycles < mcycle_per_sec {
-                let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-                self.sec_cycles += cycles;
-                self.ppu.tick(&mut self.mbc, tw, bgmw, gw, cycles)
+            if self.sec_mcycles < mcycles_per_sec {
+                let mcycles = self.cpu.tick(&mut self.mbc, &self.bios);
+                self.sec_mcycles += mcycles;
+                self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
             } else {
                 return PPUEvent::RenderEvent(RenderState::NoRender);
             }
@@ -66,13 +66,13 @@ impl Emu {
             if elapsed_time > one_sec && self.debug == false {
                 panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
             } else {
-                if self.sec_cycles < mcycle_per_sec {
-                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_cycles);
+                if self.sec_mcycles < mcycles_per_sec {
+                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
                 }
                 else {
                     print!("sec has elapsed and reached max mcycle\n");
                 }
-                self.sec_cycles = 0;
+                self.sec_mcycles = 0;
                 self.current_time = Instant::now();
                 return PPUEvent::RenderEvent(RenderState::NoRender);
             }
@@ -86,9 +86,9 @@ impl Emu {
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();
         if elapsed_time < one_sec {
-            if self.sec_cycles < mcycle_per_sec {
+            if self.sec_mcycles < mcycle_per_sec {
                 let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-                self.sec_cycles += cycles;
+                self.sec_mcycles += cycles;
                 PPUEvent::RenderEvent(RenderState::NoRender)
                 //self.ppu.tick_no_window(&mut self.mbc, cycles)
             } else {
@@ -98,13 +98,13 @@ impl Emu {
             if elapsed_time > one_sec {
                 panic!("ERROR: Elapsed time greater than one sick in EMU tick");
             } else {
-                if self.sec_cycles < mcycle_per_sec {
-                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_cycles);
+                if self.sec_mcycles < mcycle_per_sec {
+                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
                 }
                 else {
                     print!("sec has elapsed and reached max mcycle\n");
                 }
-                self.sec_cycles = 0;
+                self.sec_mcycles = 0;
                 self.current_time = Instant::now();
                 PPUEvent::RenderEvent(RenderState::NoRender)
             }

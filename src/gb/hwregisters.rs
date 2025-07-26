@@ -211,15 +211,108 @@ impl HardwareRegisters {
     pub fn is_lcdc_obj_size_bit2_enabled(&self) -> bool {
         if self.lcdc & 0b0000_0100 == 0b0000_0100 { true } else { false }
     }
+
+
     // check both ie and if
-    pub fn is_vblank_bit0_interrupt_enabled(&self) -> bool {
-        if self.is_ie_vblank_bit0_set() && self.is_if_vblank_bit0_set() {
-            true
+    pub fn is_vblank_bit0_interrupt_requested_and_enabled(&self) -> bool {
+        if self.is_if_vblank_bit0_set() {
+            print!("if vblank int requested\n");
+            if self.is_ie_vblank_bit0_set() {
+                print!("if vblank int requested and ie bit is enabled\n");
+                return true
+            }
         }
         else {
-            false
+            print!("if vblank int requested but ie bit not enabled\n");
+            return false
         }
+
+        false
     }
+
+    pub fn is_lcd_stat_bit1_interrupt_requested_and_enabled(&self) -> bool {
+        if self.is_if_lcd_stat_bit1_set() {
+            print!("if lcd_stat int requested\n");
+            if self.is_ie_lcd_stat_bit1_set() {
+                print!("if lcd_stat int requested and ie bit is enabled\n");
+                return true
+            }
+        }
+        else {
+            print!("if lcd_stat int requested but ie bit not enabled\n");
+            return false
+        }
+
+        false
+    }
+
+    pub fn is_timer_bit2_interrupt_requested_and_enabled(&self) -> bool {
+        if self.is_if_timer_bit2_set() {
+            //print!("if timer int requested\n");
+            if self.is_ie_timer_bit2_set() {
+                //print!("if timer int requested and ie bit is enabled\n");
+                return true
+            }
+        }
+        else {
+            print!("if timer int requested but ie bit not enabled\n");
+            return false
+        }
+
+        false
+    }
+
+    pub fn is_serial_bit3_interrupt_requested_and_enabled(&self) -> bool {
+        if self.is_if_serial_bit3_set() {
+            //print!("if serial int requested\n");
+            if self.is_ie_serial_bit3_set() {
+                //print!("if serial int requested and ie bit is enabled\n");
+                return true
+            }
+        }
+        else {
+            print!("if serial int requested but ie bit not enabled\n");
+            return false
+        }
+
+        false
+    }
+
+    pub fn is_joypad_bit4_interrupt_requested_and_enabled(&self) -> bool {
+        if self.is_if_joypad_bit4_set() {
+            //print!("if joypad int requested\n");
+            if self.is_ie_joypad_bit4_set() {
+                //print!("if joypad int requested and ie bit is enabled\n");
+                return true
+            }
+        }
+        else {
+            print!("if joypad int requested but ie bit not enabled\n");
+            return false
+        }
+
+        false
+    }
+
+    pub fn clear_if_vblank_bit0(&mut self) {
+        self.intflags &= 0b1111_1110;
+    }
+
+    pub fn clear_if_lcd_bit1(&mut self) {
+        self.intflags &= 0b1111_1101;
+    }
+
+    pub fn clear_if_timer_bit2(&mut self) {
+        self.intflags &= 0b1111_1011;
+    }
+    pub fn clear_if_serial_bit3(&mut self) {
+        self.intflags &= 0b1111_0111;
+    }
+
+    pub fn clear_if_joypad_bit4(&mut self) {
+        self.intflags &= 0b1110_1111;
+    }
+
     pub fn is_lcd_stat_bit1_interrupt_enabled(&self) -> bool {
         if self.is_ie_lcd_stat_bit1_set() && self.is_if_lcd_stat_bit1_set() {
             true

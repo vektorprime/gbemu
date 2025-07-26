@@ -36,6 +36,7 @@ pub struct Mbc {
     io: Ram,
     hram: Ram,
     pub restrict_vram_access: bool,
+    pub reset_cpu_counter: bool,
 }
 
 
@@ -61,6 +62,7 @@ impl Mbc {
             io: Ram::new(0xFF),
             hram: Ram::new(0xFF),
             restrict_vram_access: false,
+            reset_cpu_counter: false,
         }
     }
 
@@ -76,18 +78,26 @@ impl Mbc {
         print!("finished loading rom to mem");
     }
 
-    pub fn get_tima_reg_tcycle_inc_count(&self) -> u64 {
-        let clock_select = self.hw_reg.tima & 0b0000_0011;
+    pub fn get_tima_reg_interesting_bit(&self) -> u16 {
+        let clock_select = self.hw_reg.tac & 0b0000_0011;
         if clock_select == 0  {
-            return 1024
+            //return 9
+            // bit 9 (10th bit) is 512 in dec
+            return 512
         } else if clock_select == 1  {
-            return 16
+            //return 3
+            // bit 3 is 8 in dec
+            return 8
         } else if clock_select == 2  {
-            return 64
+            //return 5
+            // bit 5 is 32 in dec
+            return 32
         } else if clock_select == 3  {
-            return 256
+            //return 7
+            // bit 7 is 128 in dec
+            return 128
         }
-        panic!("Unable to get tcycle count in get_tima_reg_tcycle_inc_count");
+        panic!("Unable to get mcycle count in get_tima_reg_tcycle_inc_count");
     }
 
     pub fn is_tac_bit2_enable_set(&self) -> bool {
@@ -341,10 +351,34 @@ impl Mbc {
             // only upper 8 bits are mapped to mem
             // writing to FF04 resets it to 0
             // STOP inst also resets this and begins again after STOP ends
-            0xFF04 => self.hw_reg.div = 0, // writing to DIV resets it
+            0xFF04 =>  {
+                // writing to DIV resets it
+                self.reset_cpu_counter = true;
+                self.hw_reg.div = 0;
+            },
+
+            // increments at rate selected by TAC
+            // when it overflows, it resets to the value specified by TMA and an interrupt is requested (timer interrupt) by setting IF bit
             0xFF05 => self.hw_reg.tima = byte,
+
+            // tbd logic
             0xFF06 => self.hw_reg.tma = byte,
+
+
+            // TAC values
+            // bits 1 and 0 select the freq (clock select) at which TIMA is incremented
+            // 0 0 means inc every 256 m cycle (4096 hz)
+            // 0 1 means inc every 4 m cycle (262144 hz)
+            // 1 0 means inc every 16 m cycle (65536 hz)
+            // 1 1 means inc every 64 m cycle (16384 hz)
+            // bit 2 enables or disables TIMA incrementing
+            // bits 3-7 not used
+            // bit 9 means 4096 hz
+            // bit 7 means 16384 hz
+            // bit 5 means 65536 hz
+            // bit 3 means 262144 hz
             0xFF07 => self.hw_reg.tac = byte,
+
 
             // Interrupt flags
             0xFF0F => self.hw_reg.intflags = byte,

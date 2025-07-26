@@ -15,8 +15,8 @@ pub struct Cpu {
     pub pending_enable_ime: bool,
     pub pending_enable_ime_counter: u8,
     //pub opcode: u8, // opcode of current inst.
-    pub cycles: u64, // total m cycle count
-    pub last_mcycles: u64, // mcycles pe tick to pass to ppu
+    pub total_mcycles: u64, // total m cycle count
+    pub last_mcycles_inc_val: u64, // mcycles pe tick to pass to ppu
     pub div_tcycles: u64,
     pub tima_tcycles: u64,
     //pub sec_cycles: u64, // tracking max mcycles per sec
@@ -27,6 +27,8 @@ pub struct Cpu {
     pub bios_executed: bool,
     pub rom_loaded: bool,
     debug_print_pc: bool,
+    counter: u16,
+    last_counter: u16,
 }
 
 impl Cpu { 
@@ -38,8 +40,8 @@ impl Cpu {
             pending_enable_ime: false,
             pending_enable_ime_counter: 0,
             //opcode: 0,
-            cycles: 0, // total mcyces
-            last_mcycles: 0, // mcycles pe tick to pass to ppu
+            total_mcycles: 0, // total mcyces
+            last_mcycles_inc_val: 0, // mcycles per tick to pass to ppu
             div_tcycles: 0,
             tima_tcycles: 0,
             //sec_cycles: 0, // tracking max mcycles per sec
@@ -50,48 +52,151 @@ impl Cpu {
             bios_executed: false,
             rom_loaded: false,
             debug_print_pc: false,
+            counter: 0,
+            last_counter: 0,
         } 
     } 
 
     pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
-        
-        self.cycles += size as u64;
-        self.last_mcycles = size as u64;
+
+        self.last_counter = self.counter;
+        //self.counter += size as u16;
+        self.counter.wrapping_add(size as u16);
+
+        //self.total_mcycles += size as u64;
+        self.total_mcycles.wrapping_add(size as u64);
+        self.last_mcycles_inc_val = size as u64;
 
     }
+
+    pub fn execute_vblank_interrupt(&mut self, mem: &mut Mbc) {
+        // push pc to stack
+        let pc = self.registers.get_pc();
+        // split 16 bits to 2x 8 bit
+        let lo_pc = (pc & 0x00FF) as u8;
+        let hi_pc = (pc >> 8) as u8;
+        // grow stack down by 2
+        let new_sp = self.registers.get_sp() - 2;
+        self.registers.set_sp(new_sp);
+        // store lsb of bc in sp
+        // store msb of bc in sp + 1
+        mem.write(new_sp, lo_pc, OpSource::CPU);
+        mem.write(new_sp + 1, hi_pc, OpSource::CPU);
+        // set pc
+        self.registers.set_pc(0x40);
+        // all RST ops are 4 so I assume this is 4 too
+        self.inc_cycles_by_inst_val(4);
+    }
+
+
+    pub fn execute_stat_interrupt(&mut self, mem: &mut Mbc) {
+        // push pc to stack
+        let pc = self.registers.get_pc();
+        // split 16 bits to 2x 8 bit
+        let lo_pc = (pc & 0x00FF) as u8;
+        let hi_pc = (pc >> 8) as u8;
+        // grow stack down by 2
+        let new_sp = self.registers.get_sp() - 2;
+        self.registers.set_sp(new_sp);
+        // store lsb of bc in sp
+        // store msb of bc in sp + 1
+        mem.write(new_sp, lo_pc, OpSource::CPU);
+        mem.write(new_sp + 1, hi_pc, OpSource::CPU);
+        // set pc
+        self.registers.set_pc(0x48);
+        // all RST ops are 4 so I assume this is 4 too
+        self.inc_cycles_by_inst_val(4);
+    }
+
+    pub fn execute_timer_interrupt(&mut self, mem: &mut Mbc) {
+        // push pc to stack
+        let pc = self.registers.get_pc();
+        // split 16 bits to 2x 8 bit
+        let lo_pc = (pc & 0x00FF) as u8;
+        let hi_pc = (pc >> 8) as u8;
+        // grow stack down by 2
+        let new_sp = self.registers.get_sp() - 2;
+        self.registers.set_sp(new_sp);
+        // store lsb of bc in sp
+        // store msb of bc in sp + 1
+        mem.write(new_sp, lo_pc, OpSource::CPU);
+        mem.write(new_sp + 1, hi_pc, OpSource::CPU);
+        // set pc
+        self.registers.set_pc(0x50);
+        // all RST ops are 4 so I assume this is 4 too
+        self.inc_cycles_by_inst_val(4);
+    }
+
+    pub fn execute_serial_interrupt(&mut self, mem: &mut Mbc) {
+        // push pc to stack
+        let pc = self.registers.get_pc();
+        // split 16 bits to 2x 8 bit
+        let lo_pc = (pc & 0x00FF) as u8;
+        let hi_pc = (pc >> 8) as u8;
+        // grow stack down by 2
+        let new_sp = self.registers.get_sp() - 2;
+        self.registers.set_sp(new_sp);
+        // store lsb of bc in sp
+        // store msb of bc in sp + 1
+        mem.write(new_sp, lo_pc, OpSource::CPU);
+        mem.write(new_sp + 1, hi_pc, OpSource::CPU);
+        // set pc
+        self.registers.set_pc(0x58);
+        // all RST ops are 4 so I assume this is 4 too
+        self.inc_cycles_by_inst_val(4);
+    }
+
+    pub fn execute_joypad_interrupt(&mut self, mem: &mut Mbc) {
+        // push pc to stack
+        let pc = self.registers.get_pc();
+        // split 16 bits to 2x 8 bit
+        let lo_pc = (pc & 0x00FF) as u8;
+        let hi_pc = (pc >> 8) as u8;
+        // grow stack down by 2
+        let new_sp = self.registers.get_sp() - 2;
+        self.registers.set_sp(new_sp);
+        // store lsb of bc in sp
+        // store msb of bc in sp + 1
+        mem.write(new_sp, lo_pc, OpSource::CPU);
+        mem.write(new_sp + 1, hi_pc, OpSource::CPU);
+        // set pc
+        self.registers.set_pc(0x60);
+        // all RST ops are 4 so I assume this is 4 too
+        self.inc_cycles_by_inst_val(4);
+    }
+
+
 
     pub fn handle_interrupts(&mut self, mbc: &mut Mbc) {
         if self.ime {
             // check that each interrupt is enabled and requested, then handle
-            if mbc.hw_reg.is_vblank_bit0_interrupt_enabled() {
 
-            }
-            if mbc.hw_reg.is_lcd_stat_bit1_interrupt_enabled() {
-                print!("lcd stat bit 1 interrupt enabled");
-                // push pc to stack
-                let pc = self.registers.get_pc();
-                // split 16 bits to 2x 8 bit
-                let lo_pc = (pc & 0x00FF) as u8;
-                let hi_pc = (pc >> 8) as u8;
-                // grow stack down by 2
-                let new_sp = self.registers.get_sp() - 2;
-                self.registers.set_sp(new_sp);
-                // store lsb of bc in sp
-                // store msb of bc in sp + 1
-                mbc.write(new_sp, lo_pc, OpSource::CPU);
-                mbc.write(new_sp + 1, hi_pc, OpSource::CPU);
-                // set pc
-                self.registers.set_pc(0x48);
-                self.inc_cycles_by_inst_val(4);
-            }
-            if mbc.hw_reg.is_timer_bit2_interrupt_enabled() {
 
+            if mbc.hw_reg.is_vblank_bit0_interrupt_requested_and_enabled() {
+                print!("executing vblank_bit0_interrupt\n");
+                self.execute_vblank_interrupt(mbc);
+                mbc.hw_reg.clear_if_vblank_bit0();
             }
-            if mbc.hw_reg.is_serial_bit3_interrupt_enabled() {
 
+            if mbc.hw_reg.is_lcd_stat_bit1_interrupt_requested_and_enabled() {
+                print!("executing lcd_stat_bit1_interrupt\n");
+                self.execute_stat_interrupt(mbc);
+                mbc.hw_reg.clear_if_lcd_bit1();
             }
-            if mbc.hw_reg.is_joypad_bit4_interrupt_enabled() {
-
+            if mbc.hw_reg.is_timer_bit2_interrupt_requested_and_enabled() {
+                print!("executing timer_bit2_interrupt\n");
+                self.execute_timer_interrupt(mbc);
+                mbc.hw_reg.clear_if_timer_bit2();
+            }
+            if mbc.hw_reg.is_serial_bit3_interrupt_requested_and_enabled() {
+                print!("executing serial_bit3_interrupt\n");
+                self.execute_serial_interrupt(mbc);
+                mbc.hw_reg.clear_if_serial_bit3();
+            }
+            if mbc.hw_reg.is_joypad_bit4_interrupt_requested_and_enabled() {
+                print!("executing joypad_bit4_interrupt\n");
+                self.execute_joypad_interrupt(mbc);
+                mbc.hw_reg.clear_if_joypad_bit4();
             }
         }
     }
@@ -112,35 +217,50 @@ impl Cpu {
     // }
 
     pub fn tick_div_reg(&mut self, mbc: &mut Mbc) {
-        if self.div_tcycles >= 256 {
-            mbc.hw_reg.div = mbc.hw_reg.div.wrapping_add(1);
-            self.div_tcycles = 0;
-        } else {
-            self.div_tcycles = self.last_mcycles * 4;
+        if mbc.reset_cpu_counter {
+            self.counter = 0;
+            mbc.reset_cpu_counter = false;
         }
+
+        self.counter.wrapping_add(self.last_mcycles_inc_val as u16);
+        mbc.hw_reg.div = (self.counter >> 8) as u8;
+        // if self.div_tcycles >= 256 {
+        //     mbc.hw_reg.div = mbc.hw_reg.div.wrapping_add(1);
+        //     self.div_tcycles = 0;
+        // } else {
+        //     self.div_tcycles = self.last_mcycles * 4;
+        // }
     }
+
+    // pub fn get_bit_mask_from_interrupt(&self, bit: u8) -> u8 {
+    //
+    // }
 
     pub fn tick_tima_reg(&mut self, mbc: &mut Mbc) {
-        let inc_count = mbc.get_tima_reg_tcycle_inc_count();
-        if self.tima_tcycles >= inc_count {
-            let new_val = mbc.hw_reg.tima.wrapping_add(1);
-            if mbc.is_tac_bit2_enable_set() {
-                mbc.hw_reg.tima = new_val;
-                // overflow sets it to tma
-                if new_val == 0 {
-                    mbc.hw_reg.tima == mbc.hw_reg.tma;
+        if mbc.is_tac_bit2_enable_set() {
+            let interesting_bit = mbc.get_tima_reg_interesting_bit();
+            let last_bit = self.last_counter & interesting_bit;
+            if last_bit == 0 {
+                let current_bit = self.counter & interesting_bit;
+                if current_bit != 0 {
+                    // this is a rising edge, we should inc tima here
+                    let result =  mbc.hw_reg.tima.overflowing_add(1);
+                    if result.1 {
+                        mbc.hw_reg.tima = mbc.hw_reg.tma;
+                        mbc.hw_reg.set_if_timer_bit2();
+                    }
                 }
             }
-
-            self.tima_tcycles = 0;
-        } else {
-            self.tima_tcycles = self.last_mcycles * 4;
         }
-
     }
 
+    pub fn disable_ime(&mut self) {
+        self.ime = false;
+    }
 
-
+    pub fn enable_ime(&mut self) {
+        self.ime = true;
+    }
     pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
         //debug
         // let pc_print = self.registers.get_pc();
@@ -156,6 +276,8 @@ impl Cpu {
             print!("----------- \n");
             print!("pc - 0x100 \n");
             print!("----------- \n");
+            // per pandocs ime is disabled when rom starts
+            self.disable_ime();
             self.debug_print_pc = true;
         }
 
@@ -176,24 +298,6 @@ impl Cpu {
         // if self.registers.get_pc() <= 0x100 {
         //     let pc_print = self.registers.get_pc();
         //     //print!("pc - {:X} \n", pc_print);
-        // }
-
-        // if self.registers.get_pc() == 0x300 {
-        //     panic!("TESTING");
-        // }
-
-        // if self.registers.get_pc() == 0x21c {
-        //     print!("pc - {:X} \n", self.registers.get_pc());
-        // }
-
-        // if self.registers.get_pc() == 0x86 {
-        //     print!("pc is 0x86 \n");
-        // }
-        // if self.registers.get_pc() == 0x8c {
-        //     print!("pc is 0x8c \n");
-        // }
-        // if mem.hw_reg.ly == 0x90 {
-        //     print!("hw reg ly is 0x90 \n");
         // }
         // end debug
 
@@ -224,11 +328,12 @@ impl Cpu {
         if self.pending_enable_ime {
             self.pending_enable_ime_counter += 1;
             if self.pending_enable_ime_counter == 2 {
-                self.ime = true;
+                self.enable_ime();
                 self.pending_enable_ime_counter = 0;
+                self.pending_enable_ime = false;
             }
         }
-        self.last_mcycles
+        self.last_mcycles_inc_val
     }
 
     pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {
@@ -898,8 +1003,8 @@ impl Cpu {
                     }
                     // always set val whether overflow or not
                     self.registers.set_hl(new_val);
-
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2648,7 +2753,7 @@ impl Cpu {
                     self.registers.set_sp(new_sp);
                     // set pc to ret addr
                     self.registers.set_pc(ret_addr);
-                    self.ime = true;
+                    self.enable_ime();
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xDA => {
@@ -2810,28 +2915,40 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xE8 => {
-                    // ADD SP S8
+                    // ADD SP, s8
                     let sp = self.registers.get_sp();
                     let pc = self.registers.get_pc();
 
-
                     let imm = mem.read(pc, OpSource::CPU) as i8;
+                    let imm_i16 = imm as i16;
 
+                    let sp_low = sp & 0xFF;
+
+                    // H: check bit 3 -> 4
+                    let half_carry = (sp_low as i16 & 0x0F) + (imm_i16 & 0x0F) > 0x0F;
+                    if half_carry {
+                        self.registers.set_h_flag();
+                    } else {
+                        self.registers.clear_h_flag();
+                    }
+
+                    // C: check bit 7 -> 8
+                    let sum = sp_low as i16 + imm_i16;
+                    let carry = sum > 0xFF || sum < 0x00;
+                    if carry {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+
+                    // Perform the full signed addition for SP
                     let result = sp.wrapping_add(imm as i16 as u16);
+                    self.registers.set_sp(result);
 
+                    // Z and N are always cleared
                     self.registers.clear_z_flag();
                     self.registers.clear_n_flag();
 
-                    // H and C are based on low byte addition
-                    let sp_low = sp & 0xFF;
-                    let imm_u8 = imm as u8;
-                    // self.registers.set_h_flag_if(((sp_low & 0x0F) + (imm_u8 & 0x0F)) > 0x0F);
-                    // self.registers.set_c_flag_if(((sp_low as u16) + (imm_u8 as u16)) > 0xFF);
-
-                    // store result
-                    self.registers.set_sp(result);
-
-                    // advance PC
                     self.registers.inc_pc_by_inst_val(inst.size);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
@@ -2931,7 +3048,7 @@ impl Cpu {
                 0xF3 => {
                     // DI
                     // set IME to false immediately
-                    self.ime = false;
+                    self.disable_ime();
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2989,30 +3106,35 @@ impl Cpu {
                 0xF8 => {
                     // LD HL SP+S8
                     let imm = mem.read(self.registers.get_pc(), OpSource::CPU) as i8;
+                    let imm_i16 = imm as i16;
                     let sp = self.registers.get_sp();
 
-                    // signed add
+
+                    let sp_low = sp & 0xFF;
+
+                    // H: check bit 3 -> 4
+                    let half_carry = (sp_low as i16 & 0x0F) + (imm_i16 & 0x0F) > 0x0F;
+                    if half_carry {
+                        self.registers.set_h_flag();
+                    } else {
+                        self.registers.clear_h_flag();
+                    }
+
+                    // C: check bit 7 -> 8
+                    let sum = sp_low as i16 + imm_i16;
+                    let carry = sum > 0xFF || sum < 0x00;
+                    if carry {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+
                     let result = sp.wrapping_add(imm as i16 as u16);
 
                     self.registers.set_hl(result);
 
                     self.registers.clear_z_flag();
                     self.registers.clear_n_flag();
-
-                    // Half-carry and Carry based on lower 8 bits addition
-                    let carry_in = imm as i16;
-                    let low_sp = sp & 0xFF;
-                    let low_res = (low_sp as i16).wrapping_add(carry_in);
-                    if ((low_sp ^ (carry_in as u16) ^ (result & 0xFFFF)) & 0x10) != 0 {
-                        self.registers.set_h_flag();
-                    } else {
-                        self.registers.clear_h_flag();
-                    }
-                    if (((low_sp as u16).wrapping_add((imm as i16 as u16))) & 0x100) != 0 {
-                        self.registers.set_c_flag();
-                    } else {
-                        self.registers.clear_c_flag();
-                    }
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3039,7 +3161,7 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xFB => {
-                    // IE
+                    // EI
                     // set IME to enable AFTER the next inst. executes
                     self.pending_enable_ime = true;
 
