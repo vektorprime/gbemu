@@ -216,14 +216,14 @@ impl HardwareRegisters {
     // check both ie and if
     pub fn is_vblank_bit0_interrupt_requested_and_enabled(&self) -> bool {
         if self.is_if_vblank_bit0_set() {
-            print!("if vblank int requested\n");
+            //print!("if vblank int requested\n");
             if self.is_ie_vblank_bit0_set() {
-                print!("if vblank int requested and ie bit is enabled\n");
+                //print!("if vblank int requested and ie bit is enabled\n");
                 return true
             }
         }
         else {
-            print!("if vblank int requested but ie bit not enabled\n");
+            //print!("if vblank int requested but ie bit not enabled\n");
             return false
         }
 
@@ -232,14 +232,14 @@ impl HardwareRegisters {
 
     pub fn is_lcd_stat_bit1_interrupt_requested_and_enabled(&self) -> bool {
         if self.is_if_lcd_stat_bit1_set() {
-            print!("if lcd_stat int requested\n");
+            //print!("if lcd_stat int requested\n");
             if self.is_ie_lcd_stat_bit1_set() {
-                print!("if lcd_stat int requested and ie bit is enabled\n");
+                //print!("if lcd_stat int requested and ie bit is enabled\n");
                 return true
             }
         }
         else {
-            print!("if lcd_stat int requested but ie bit not enabled\n");
+            //print!("if lcd_stat int requested but ie bit not enabled\n");
             return false
         }
 
@@ -255,7 +255,7 @@ impl HardwareRegisters {
             }
         }
         else {
-            print!("if timer int requested but ie bit not enabled\n");
+            //print!("if timer int requested but ie bit not enabled\n");
             return false
         }
 
@@ -271,7 +271,7 @@ impl HardwareRegisters {
             }
         }
         else {
-            print!("if serial int requested but ie bit not enabled\n");
+            //print!("if serial int requested but ie bit not enabled\n");
             return false
         }
 
@@ -287,7 +287,7 @@ impl HardwareRegisters {
             }
         }
         else {
-            print!("if joypad int requested but ie bit not enabled\n");
+            //print!("if joypad int requested but ie bit not enabled\n");
             return false
         }
 

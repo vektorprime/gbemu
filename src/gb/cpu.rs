@@ -173,28 +173,28 @@ impl Cpu {
 
 
             if mbc.hw_reg.is_vblank_bit0_interrupt_requested_and_enabled() {
-                print!("executing vblank_bit0_interrupt\n");
+                //print!("executing vblank_bit0_interrupt\n");
                 self.execute_vblank_interrupt(mbc);
                 mbc.hw_reg.clear_if_vblank_bit0();
             }
 
             if mbc.hw_reg.is_lcd_stat_bit1_interrupt_requested_and_enabled() {
-                print!("executing lcd_stat_bit1_interrupt\n");
+                //print!("executing lcd_stat_bit1_interrupt\n");
                 self.execute_stat_interrupt(mbc);
                 mbc.hw_reg.clear_if_lcd_bit1();
             }
             if mbc.hw_reg.is_timer_bit2_interrupt_requested_and_enabled() {
-                print!("executing timer_bit2_interrupt\n");
+                //print!("executing timer_bit2_interrupt\n");
                 self.execute_timer_interrupt(mbc);
                 mbc.hw_reg.clear_if_timer_bit2();
             }
             if mbc.hw_reg.is_serial_bit3_interrupt_requested_and_enabled() {
-                print!("executing serial_bit3_interrupt\n");
+                //print!("executing serial_bit3_interrupt\n");
                 self.execute_serial_interrupt(mbc);
                 mbc.hw_reg.clear_if_serial_bit3();
             }
             if mbc.hw_reg.is_joypad_bit4_interrupt_requested_and_enabled() {
-                print!("executing joypad_bit4_interrupt\n");
+                //print!("executing joypad_bit4_interrupt\n");
                 self.execute_joypad_interrupt(mbc);
                 mbc.hw_reg.clear_if_joypad_bit4();
             }
@@ -358,7 +358,7 @@ impl Cpu {
                     let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                     self.registers.set_bc(u16::from_le_bytes([lo, hi]));
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -367,7 +367,7 @@ impl Cpu {
                     let a = self.registers.get_a();
                     let bc = self.registers.get_bc();
                     mem.write(bc, a, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -382,14 +382,16 @@ impl Cpu {
                 0x04 => {
                     // INC B
                     self.registers.inc_b();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x05 => {
                     // DEC B
                     self.registers.dec_b();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -415,7 +417,9 @@ impl Cpu {
                         self.registers.clear_c_flag();
                     }
                     self.registers.set_a(a_reg);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -441,7 +445,8 @@ impl Cpu {
                     let b = self.registers.get_bc();
                     let result = self.registers.add_16bit_no_z_flag(a, b);
                     self.registers.set_hl(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -449,7 +454,7 @@ impl Cpu {
                     // LD A (BC)
                     let bc_deref = mem.read(self.registers.get_bc(), OpSource::CPU);
                     self.registers.set_a(bc_deref);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -464,14 +469,16 @@ impl Cpu {
                 0x0C => {
                     // INC C
                     self.registers.inc_c();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x0D => {
                     // DEC C
                     self.registers.dec_c();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -497,7 +504,9 @@ impl Cpu {
                         self.registers.clear_c_flag();
                     }
                     self.registers.set_a(a_reg);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -536,14 +545,16 @@ impl Cpu {
                 0x14 => {
                     // INC D
                     self.registers.inc_d();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x15 => {
                     // DEC D
                     self.registers.dec_d();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -563,7 +574,9 @@ impl Cpu {
                         a_reg |= 0b0000_0001;
                     }
                     self.registers.set_a(a_reg);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -591,7 +604,8 @@ impl Cpu {
                     let b = self.registers.get_de();
                     let result = self.registers.add_16bit_no_z_flag(a, b);
                     self.registers.set_hl(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -614,14 +628,16 @@ impl Cpu {
                 0x1C => {
                     // INC E
                     self.registers.inc_e();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x1D => {
                     // DEC E
                     self.registers.dec_e();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -652,7 +668,9 @@ impl Cpu {
                     }
 
                     self.registers.set_a(a_reg);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },       
@@ -709,14 +727,16 @@ impl Cpu {
                 0x24 => {
                     // INC H
                     self.registers.inc_h();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x25 => {
                     // DEC H
                     self.registers.dec_h();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -804,7 +824,8 @@ impl Cpu {
                     let b = self.registers.get_hl();
                     let result = self.registers.add_16bit_no_z_flag(a, b);
                     self.registers.set_hl(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -828,14 +849,16 @@ impl Cpu {
                 0x2C => {
                     // INC L
                     self.registers.inc_l();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x2D => {
                     // DEC L
                     self.registers.dec_l();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -853,7 +876,6 @@ impl Cpu {
                     self.registers.set_a(val);
                     self.registers.set_h_flag();
                     self.registers.set_n_flag();
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -917,7 +939,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     mem.write(addr, result, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -939,7 +962,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     mem.write(addr, result, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -980,7 +1004,6 @@ impl Cpu {
                         self.registers.inc_pc_by_inst_val(inst.size);
                     }
 
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },   
                 0x39 => {
@@ -1014,7 +1037,6 @@ impl Cpu {
                     let val = mem.read(addr, OpSource::CPU);
                     self.registers.set_a(val);
                     self.registers.dec_hl(); 
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1028,14 +1050,16 @@ impl Cpu {
                 0x3C => {
                     // INC A
                     self.registers.inc_a();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x3D => {
                     // DEC A
                     self.registers.dec_a();
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1055,7 +1079,8 @@ impl Cpu {
                     else {
                         self.registers.set_c_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1581,7 +1606,8 @@ impl Cpu {
                     let b = self.registers.get_b();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1591,7 +1617,8 @@ impl Cpu {
                     let b = self.registers.get_c();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1601,7 +1628,8 @@ impl Cpu {
                     let b = self.registers.get_d();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1611,7 +1639,8 @@ impl Cpu {
                     let b = self.registers.get_e();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1621,7 +1650,8 @@ impl Cpu {
                     let b = self.registers.get_h();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1631,7 +1661,8 @@ impl Cpu {
                     let b = self.registers.get_l();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1642,7 +1673,8 @@ impl Cpu {
                     let b = mem.read(hl, OpSource::CPU);
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1652,7 +1684,8 @@ impl Cpu {
                     let b = self.registers.get_a();
                     let mut result = self.registers.add_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1663,7 +1696,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1674,7 +1708,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1685,7 +1720,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1696,7 +1732,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1707,7 +1744,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1718,7 +1756,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1730,7 +1769,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1741,7 +1781,8 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1751,7 +1792,8 @@ impl Cpu {
                     let b = self.registers.get_b();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                     //self.registers.handle_flags(inst.name);
+                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1761,7 +1803,8 @@ impl Cpu {
                     let b = self.registers.get_c();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1771,7 +1814,8 @@ impl Cpu {
                     let b = self.registers.get_d();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1781,7 +1825,8 @@ impl Cpu {
                     let b = self.registers.get_e();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1791,7 +1836,8 @@ impl Cpu {
                     let b = self.registers.get_h();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1801,7 +1847,8 @@ impl Cpu {
                     let b = self.registers.get_l();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1812,7 +1859,8 @@ impl Cpu {
                     let b = mem.read(addr, OpSource::CPU);
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1822,7 +1870,8 @@ impl Cpu {
                     let b = self.registers.get_a();
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1832,7 +1881,8 @@ impl Cpu {
                     let b = self.registers.get_b(); 
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                     //self.registers.handle_flags(inst.name);
+                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1842,7 +1892,8 @@ impl Cpu {
                     let b = self.registers.get_c(); 
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                     //self.registers.handle_flags(inst.name);
+                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1852,7 +1903,8 @@ impl Cpu {
                     let b = self.registers.get_d();
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1862,7 +1914,8 @@ impl Cpu {
                     let b = self.registers.get_e(); 
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();;
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },   
@@ -1872,7 +1925,8 @@ impl Cpu {
                     let b = self.registers.get_h(); 
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },  
@@ -1882,7 +1936,8 @@ impl Cpu {
                     let b = self.registers.get_l(); 
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 }, 
@@ -1893,7 +1948,8 @@ impl Cpu {
                     let b = mem.read(addr, OpSource::CPU);
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1903,7 +1959,8 @@ impl Cpu {
                     let b = self.registers.get_a(); 
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -1918,8 +1975,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA1 => {
@@ -1933,8 +1992,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA2 => {
@@ -1948,8 +2009,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA3 => {
@@ -1963,8 +2026,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA4 => {
@@ -1978,8 +2043,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA5 => {
@@ -1993,8 +2060,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA6 => {
@@ -2004,8 +2073,10 @@ impl Cpu {
                     let b = mem.read(addr, OpSource::CPU); 
                     let result = a & b;
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA7 => {
@@ -2019,8 +2090,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA8 => {
@@ -2034,8 +2107,11 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA9 => {
@@ -2049,8 +2125,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xAA => {
@@ -2064,8 +2142,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xAB => {
@@ -2079,8 +2159,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xAC => {
@@ -2094,8 +2176,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xAD => {
@@ -2109,8 +2193,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xAE => {
@@ -2125,8 +2211,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xAF => {
@@ -2140,8 +2228,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB0 => {
@@ -2155,8 +2245,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB1 => {
@@ -2170,8 +2262,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB2 => {
@@ -2185,8 +2279,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB3 => {
@@ -2200,8 +2296,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB4 => {
@@ -2215,8 +2313,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB5 => {
@@ -2229,9 +2329,10 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB6 => {
@@ -2246,8 +2347,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles); 
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB7 => {
@@ -2260,7 +2363,10 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
+
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2274,7 +2380,8 @@ impl Cpu {
                      } else {
                          self.registers.clear_z_flag();
                      }
-                    self.registers.handle_flags(inst.name);
+                     //self.registers.handle_flags(inst.name);
+                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2288,7 +2395,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2302,7 +2410,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2316,7 +2425,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2330,7 +2440,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2344,7 +2455,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2359,7 +2471,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2372,7 +2485,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles); 
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2467,7 +2581,8 @@ impl Cpu {
                     let imm = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let result = self.registers.add_8bit(a, imm);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
                     self.registers.inc_pc_by_inst_val(inst.size);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
@@ -2506,7 +2621,6 @@ impl Cpu {
                         self.registers.inc_pc_by_inst_val(inst.size);
                     }
 
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xC9 => {
@@ -2699,7 +2813,8 @@ impl Cpu {
                     let b = mem.read(addr, OpSource::CPU);
                     let result = self.registers.sub_8bit(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2795,7 +2910,7 @@ impl Cpu {
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xDE => {
-                    // SBC A D8
+                    // SUBC A D8
                     let a = self.registers.get_a();
                     let b_addr = self.registers.get_pc();
                     let b = mem.read(b_addr, OpSource::CPU);
@@ -2804,7 +2919,8 @@ impl Cpu {
                     // let result2 = self.registers.sub_8bit(result, c);
                     let result = self.registers.sub_8bit_carry(a, b);
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2892,7 +3008,9 @@ impl Cpu {
                     }
                     self.registers.set_h_flag();
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
+                    self.registers.clear_c_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -2985,7 +3103,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3080,7 +3200,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(result);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
+                    self.registers.clear_c_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3174,7 +3296,8 @@ impl Cpu {
                     let val = mem.read(self.registers.get_pc(), OpSource::CPU);
                     let result = self.registers.sub_8bit(a, val);
                     // don't store result anywhere for this op
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3228,7 +3351,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_b(b);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3251,7 +3376,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_c(c);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3274,7 +3401,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_d(d);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3297,7 +3426,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_e(e);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3320,7 +3451,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_h(h);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3343,7 +3476,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_l(l);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3367,7 +3502,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     mem.write(addr, val, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3385,7 +3522,9 @@ impl Cpu {
                     }
 
                     self.registers.set_a(a);
-                    self.registers.handle_flags(inst.name);
+                    //self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3408,7 +3547,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_b(b);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3431,7 +3571,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_c(c);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3454,7 +3595,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_d(d);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3477,7 +3619,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_e(e);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3500,7 +3643,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_h(h);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3523,7 +3667,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_l(l);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3547,7 +3692,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     mem.write(addr, val, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3570,7 +3716,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(a);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3593,7 +3740,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_b(b);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3616,7 +3764,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_c(c);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3639,7 +3788,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_d(d);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3662,7 +3812,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_e(e);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3685,7 +3836,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_h(h);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3708,7 +3860,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_l(l);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3732,7 +3885,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     mem.write(addr, val, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3752,8 +3906,9 @@ impl Cpu {
                     a = (a << 1) | carry_val;
                     self.registers.set_a(a);
 
-                    // This function correctly clears the Z, N, and H flags for RLA
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_z_flag();
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -3778,7 +3933,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_b(b);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3801,7 +3957,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_c(c);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3825,7 +3982,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_d(d);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3849,7 +4007,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_e(e);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3873,7 +4032,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_h(h);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3897,7 +4057,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_l(l);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3922,7 +4083,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     mem.write(addr, val, OpSource::CPU);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3946,7 +4108,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(a);
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3968,7 +4131,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -3990,7 +4154,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4012,7 +4177,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4034,7 +4200,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4056,7 +4223,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4078,7 +4246,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4101,7 +4270,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4123,7 +4293,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4147,7 +4318,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4171,7 +4343,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4195,7 +4368,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4219,7 +4393,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4243,7 +4418,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4267,7 +4443,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4292,7 +4469,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4316,7 +4494,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4347,7 +4526,9 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
 
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_c_flag();
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4366,7 +4547,7 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4385,7 +4566,7 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4404,7 +4585,6 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4423,7 +4603,6 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4442,7 +4621,6 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4462,7 +4640,6 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4481,7 +4658,6 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4503,8 +4679,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
-                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x39 => {
@@ -4525,7 +4701,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4547,7 +4724,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4569,7 +4747,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4591,7 +4770,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4613,7 +4793,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4636,7 +4817,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4658,7 +4840,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4673,7 +4856,8 @@ impl Cpu {
                     else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4695,7 +4879,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4708,7 +4893,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4721,7 +4907,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4734,7 +4921,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4747,7 +4935,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4760,7 +4949,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4773,7 +4963,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4786,7 +4977,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4799,7 +4991,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4812,7 +5005,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4825,7 +5019,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4838,7 +5033,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4851,7 +5047,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4864,7 +5061,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4877,7 +5075,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4890,7 +5089,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4903,7 +5103,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4916,7 +5117,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4929,7 +5131,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4942,7 +5145,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4955,7 +5159,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4968,7 +5173,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4981,7 +5187,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -4994,7 +5201,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5007,7 +5215,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5020,7 +5229,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5033,7 +5243,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5046,7 +5257,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5059,7 +5271,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5072,7 +5285,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5085,7 +5299,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5098,7 +5313,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5111,7 +5327,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5124,7 +5341,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5137,7 +5355,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5150,7 +5369,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5163,7 +5383,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5176,7 +5397,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5189,7 +5411,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -5202,7 +5425,8 @@ impl Cpu {
                     } else {
                         self.registers.clear_z_flag();
                     }
-                    self.registers.handle_flags(inst.name);
+                    self.registers.clear_n_flag();
+                    self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
