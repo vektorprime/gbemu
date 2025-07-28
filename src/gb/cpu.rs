@@ -61,10 +61,10 @@ impl Cpu {
 
         self.last_counter = self.counter;
         //self.counter += size as u16;
-        self.counter.wrapping_add(size as u16);
+       self.counter = self.counter.wrapping_add(size as u16);
 
         //self.total_mcycles += size as u64;
-        self.total_mcycles.wrapping_add(size as u64);
+        self.total_mcycles = self.total_mcycles.wrapping_add(size as u64);
         self.last_mcycles_inc_val = size as u64;
 
     }
@@ -222,7 +222,7 @@ impl Cpu {
             mbc.reset_cpu_counter = false;
         }
 
-        self.counter.wrapping_add(self.last_mcycles_inc_val as u16);
+        self.counter =  self.counter.wrapping_add(self.last_mcycles_inc_val as u16);
         mbc.hw_reg.div = (self.counter >> 8) as u8;
         // if self.div_tcycles >= 256 {
         //     mbc.hw_reg.div = mbc.hw_reg.div.wrapping_add(1);
@@ -1027,7 +1027,6 @@ impl Cpu {
                     // always set val whether overflow or not
                     self.registers.set_hl(new_val);
                     self.registers.clear_n_flag();
-                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
