@@ -79,23 +79,15 @@ impl Mbc {
     }
 
     pub fn get_tima_reg_interesting_bit(&self) -> u16 {
-        let clock_select = self.hw_reg.tac & 0b0000_0011;
-        if clock_select == 0  {
-            //return 9
-            // bit 9 (10th bit) is 512 in dec
-            return 512
-        } else if clock_select == 1  {
-            //return 3
-            // bit 3 is 8 in dec
-            return 8
-        } else if clock_select == 2  {
-            //return 5
-            // bit 5 is 32 in dec
-            return 32
-        } else if clock_select == 3  {
-            //return 7
-            // bit 7 is 128 in dec
-            return 128
+        let clock_select = self.hw_reg.tac & 0b11;
+        if clock_select == 0b00  {
+            return 1 << 9
+        } else if clock_select == 0b01  {
+            return 1 << 2
+        } else if clock_select == 0b10  {
+            return 1 << 5
+        } else if clock_select == 0b11  {
+            return 1 << 7
         }
         panic!("Unable to get mcycle count in get_tima_reg_tcycle_inc_count");
     }
@@ -256,35 +248,14 @@ impl Mbc {
                 print!("attempted to write to VRAM during restricted access in write_rom, address is {:#x} \n", address);
                 return;
             }
-            //self.need_tile_update = true;
         }
-        // if (0x9800..=0x9BFF).contains(&address) {
-        //     // // self.need_bg_map_update = true;
-        //     // if byte != 0x0 && byte != 0x2F {
-        //     //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-        //     // }
-        //     // if address == 0x9820 {
-        //     //     print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-        //     //
-        //     // }
-        //     // if address == 0x9820 {
-        //     //     if byte == 0x9B {
-        //     //         std::thread::sleep(std::time::Duration::from_secs(10));
-        //     //         print!("address in write_rom is {:#x} and new value is {:#x} \n", address, byte);
-        //     //     }
-        //     // }
-        //     // if (0x9000..=0x9010).contains(&address) {
-        //     //     print!("address in write_rom is {:#x} \n", address);
-        //     //     self.need_tile_update = true;
-        //     // }
-        // }
+
 
         if (0xFE00..=0xFE9F).contains(&address) {
             if self.restrict_vram_access {
                 print!("attempted to write to OAM during restricted access in write_rom, address is {:#x} \n", address);
                 return;
             }
-            //self.need_tile_update = true;
         }
 
         let rom_type = self.rom.as_ref().unwrap().get_rom_type();
@@ -397,7 +368,7 @@ impl Mbc {
             0xFF44 => self.hw_reg.ly = 0, // writing to LY resets it
             0xFF45 => self.hw_reg.lyc = byte,
             0xFF46 => {
-                if byte != 0 {
+
                     print!("writing to 0xFF46, DMA hw register \n");
                     let base_add = 0xFE00;
                     for i    in 0..160u16 {
@@ -406,7 +377,8 @@ impl Mbc {
                         self.write(base_add + i, val, op_src);
                     }
                     self.hw_reg.dma = byte;
-                }
+                    //self.hw_reg.dma = 0;
+
 
             },
             0xFF47 => self.hw_reg.bgp = byte,

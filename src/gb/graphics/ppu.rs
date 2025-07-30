@@ -16,6 +16,7 @@ use crate::gb::graphics::sprite::Sprite;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Interrupt {
+    Vblank_40,
     Stat_48,
     Timer_50,
     Serial_58,
@@ -836,6 +837,8 @@ impl Ppu {
         if !mbc.hw_reg.is_lcdc_lcd_and_ppu_enable_bit7_enabled() {
            //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
             mbc.hw_reg.ly = 0;
+            self.tcycle_in_scanline = 0;
+            self.tcycle_in_frame = 0;
             //mbc.hw_reg.stat = 0;
             // Clear mode bits (0–1) and coincidence flag (bit 2) but preserve interrupt enable bits (3,4,5,6):
             mbc.hw_reg.stat = mbc.hw_reg.stat & 0b1111_1000;
