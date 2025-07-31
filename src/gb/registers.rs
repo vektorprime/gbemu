@@ -889,20 +889,16 @@ impl Registers {
 
     pub fn sub_8bit_carry(&mut self, a: u8, b: u8) -> u8 {
         let c = if self.is_c_flag_set() { 1 } else { 0 };
-        let result = a.wrapping_sub(b).wrapping_sub(c);
 
-        // Carry: if (a < b + c)
-        if (a as u16) < (b as u16 + c as u16) {
+        // Two-stage subtraction with overflow detection
+        let (result1, underflow1) = a.overflowing_sub(b);
+        let (result, underflow2) = result1.overflowing_sub(c);
+
+        // Set C flag if there's an underflow in either subtraction
+        if underflow1 || underflow2 {
             self.set_c_flag();
         } else {
             self.clear_c_flag();
-        }
-
-        // Half-carry: if (low nibble of a < low nibble of b + c)
-        if (a & 0x0F) < ((b & 0x0F) + c) {
-            self.set_h_flag();
-        } else {
-            self.clear_h_flag();
         }
 
         // Zero flag
@@ -910,6 +906,15 @@ impl Registers {
             self.set_z_flag();
         } else {
             self.clear_z_flag();
+        }
+
+        // Half-carry: Check if borrow occurred from bit 4
+        let half_a = a & 0x0F;
+        let half_b = b & 0x0F;
+        if (half_a as i16 - half_b as i16 - c as i16) < 0 {
+            self.set_h_flag();
+        } else {
+            self.clear_h_flag();
         }
 
         // N flag is always set for subtraction
