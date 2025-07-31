@@ -2646,6 +2646,7 @@ impl Cpu {
                     let c = if self.registers.is_c_flag_set() {1} else {0};
                     let result = self.registers.adc_8bit(self.registers.get_a(), b, c as u8);
                     self.registers.set_a(result);
+                    self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
