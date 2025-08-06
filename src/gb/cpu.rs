@@ -57,6 +57,16 @@ impl Cpu {
         } 
     } 
 
+    pub fn tick_dma(&mut self, mbc: &mut Mbc) {
+        if mbc.dma_cycles_remaining != 0 {
+            mbc.dma_cycles_remaining -= 1;
+            if mbc.dma_cycles_remaining == 0 {
+                print!("No DMA cycles left, ending DMA tick\n");
+                mbc.dma_active = false;
+            }
+        }
+    }
+
     pub fn inc_cycles_by_inst_val(&mut self, size: u8) {
 
         //self.last_counter = self.counter;
@@ -218,10 +228,10 @@ impl Cpu {
         //     print!("pc - {:X} \n", pc_print);
         // }
 
-        if self.registers.get_pc() == 0xC01C {
-            let pc_print = self.registers.get_pc();
-            print!("pc - {:X} \n", pc_print);
-        }
+        // if self.registers.get_pc() == 0xC01C {
+        //     let pc_print = self.registers.get_pc();
+        //     print!("pc - {:X} \n", pc_print);
+        // }
 
 
         // if self.registers.get_pc() == 0x1DB {
@@ -237,6 +247,9 @@ impl Cpu {
         //     //print!("pc - {:X} \n", pc_print);
         // }
         // end debug
+        if mem.dma_active {
+            self.tick_dma(mem);
+        }
 
         self.tick_div_reg(mem);
         self.tick_tima_reg(mem);
@@ -314,14 +327,12 @@ impl Cpu {
                     // INC BC
                     self.registers.inc_bc();
                     // skip flags because the 16 bit ops don't touch them
-                    //self.registers.handle_flags(inst.name);
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x04 => {
                     // INC B
                     self.registers.inc_b();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -329,7 +340,6 @@ impl Cpu {
                 0x05 => {
                     // DEC B
                     self.registers.dec_b();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -408,7 +418,6 @@ impl Cpu {
                 0x0C => {
                     // INC C
                     self.registers.inc_c();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -416,7 +425,6 @@ impl Cpu {
                 0x0D => {
                     // DEC C
                     self.registers.dec_c();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -484,7 +492,6 @@ impl Cpu {
                 0x14 => {
                     // INC D
                     self.registers.inc_d();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -492,7 +499,6 @@ impl Cpu {
                 0x15 => {
                     // DEC D
                     self.registers.dec_d();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -508,10 +514,21 @@ impl Cpu {
                     // RLA
                     let c_flag = self.registers.get_c_flag();
                     let mut a_reg = self.registers.get_a();
+
+                    let bit7_was_set = (a_reg & 0b1000_0000) != 0;
+
                     a_reg <<= 1;
+
                     if c_flag > 0 {
                         a_reg |= 0b0000_0001;
                     }
+
+                    if bit7_was_set {
+                        self.registers.set_c_flag();
+                    } else {
+                        self.registers.clear_c_flag();
+                    }
+
                     self.registers.set_a(a_reg);
                     self.registers.clear_z_flag();
                     self.registers.clear_n_flag();
@@ -567,7 +584,6 @@ impl Cpu {
                 0x1C => {
                     // INC E
                     self.registers.inc_e();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -575,7 +591,6 @@ impl Cpu {
                 0x1D => {
                     // DEC E
                     self.registers.dec_e();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -666,7 +681,6 @@ impl Cpu {
                 0x24 => {
                     // INC H
                     self.registers.inc_h();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -674,7 +688,6 @@ impl Cpu {
                 0x25 => {
                     // DEC H
                     self.registers.dec_h();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -788,7 +801,6 @@ impl Cpu {
                 0x2C => {
                     // INC L
                     self.registers.inc_l();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -796,7 +808,6 @@ impl Cpu {
                 0x2D => {
                     // DEC L
                     self.registers.dec_l();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -951,7 +962,7 @@ impl Cpu {
                     }
 
                     self.inc_cycles_by_inst_val(inst.cycles);
-                },   
+                },
                 0x39 => {
                     // ADD HL SP
                     let first_operand = self.registers.get_hl();
@@ -981,7 +992,7 @@ impl Cpu {
                     let addr = self.registers.get_hl();
                     let val = mem.read(addr, OpSource::CPU);
                     self.registers.set_a(val);
-                    self.registers.dec_hl(); 
+                    self.registers.dec_hl_no_flags();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
@@ -995,7 +1006,6 @@ impl Cpu {
                 0x3C => {
                     // INC A
                     self.registers.inc_a();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1003,7 +1013,6 @@ impl Cpu {
                 0x3D => {
                     // DEC A
                     self.registers.dec_a();
-                    //self.registers.handle_flags(inst.name);
                     self.registers.set_n_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -1919,7 +1928,7 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA1 => {
-                    // AND B
+                    // AND C
                     let a = self.registers.get_a();
                     let b = self.registers.get_c(); 
                     let result = a & b;
@@ -2009,6 +2018,11 @@ impl Cpu {
                     let addr = self.registers.get_hl(); 
                     let b = mem.read(addr, OpSource::CPU); 
                     let result = a & b;
+                    if result == 0 {
+                        self.registers.set_z_flag();
+                    } else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(result);
                     self.registers.clear_n_flag();
                     self.registers.set_h_flag();
@@ -2052,7 +2066,7 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xA9 => {
-                    // XOR B
+                    // XOR C
                     let a = self.registers.get_a();
                     let b = self.registers.get_c(); 
                     let result = a ^ b;
@@ -2226,7 +2240,7 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0xB3 => {
-                    // OR C
+                    // OR E
                     let a = self.registers.get_a();
                     let b = self.registers.get_e();
                     let result = a | b;
@@ -2301,7 +2315,8 @@ impl Cpu {
                 0xB7 => {
                     // OR A
                     let a = self.registers.get_a();
-                    let result = a;
+                    let b = self.registers.get_a();
+                    let result = a | b;
                     if result == 0 {
                         self.registers.set_z_flag();
                     } else {
@@ -3422,7 +3437,12 @@ impl Cpu {
                     else {
                         self.registers.clear_c_flag();
                     }
-
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
                     self.registers.set_a(a);
                     //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
@@ -3793,19 +3813,25 @@ impl Cpu {
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x17 => {
-                    // RLA
+                    // RL A
                     let mut a = self.registers.get_a();
                     let carry_val = if self.registers.is_c_flag_set() { 1 } else { 0 };
 
-                    // Set the new Carry flag from the old bit 7
                     if (a & 0b1000_0000) != 0 {
                         self.registers.set_c_flag();
                     } else {
                         self.registers.clear_c_flag();
                     }
 
-                    // Shift A left and place the old carry value in the new bit 0
                     a = (a << 1) | carry_val;
+                    if a == 0 {
+                        self.registers.set_z_flag();
+                    }
+                    else {
+                        self.registers.clear_z_flag();
+                    }
+
+
                     self.registers.set_a(a);
 
                     self.registers.clear_z_flag();
@@ -4569,8 +4595,6 @@ impl Cpu {
                     let bit0 = b & 0b0000_0001;
                     b >>= 1;
                     self.registers.set_b(b);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4582,7 +4606,8 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.clear_n_flag();
-                    self.registers.clear_h_flag();                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.registers.clear_h_flag();
+                    self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
                 },
                 0x39 => {
@@ -4591,8 +4616,6 @@ impl Cpu {
                     let bit0 = c & 0b0000_0001;
                     c >>= 1;
                     self.registers.set_c(c);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4614,8 +4637,6 @@ impl Cpu {
                     let bit0 = d & 0b0000_0001;
                     d >>= 1;
                     self.registers.set_d(d);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4637,8 +4658,6 @@ impl Cpu {
                     let bit0 = e & 0b0000_0001;
                     e >>= 1;
                     self.registers.set_e(e);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4660,8 +4679,6 @@ impl Cpu {
                     let bit0 = h & 0b0000_0001;
                     h >>= 1;
                     self.registers.set_h(h);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4683,8 +4700,6 @@ impl Cpu {
                     let bit0 = l & 0b0000_0001;
                     l >>= 1;
                     self.registers.set_l(l);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4730,8 +4745,6 @@ impl Cpu {
                     let bit0 = a & 0b0000_0001;
                     a >>= 1;
                     self.registers.set_a(a);
-                    self.registers.clear_h_flag();
-                    self.registers.clear_n_flag();
                     if bit0 != 0 {
                         self.registers.set_c_flag();
                     } else {
@@ -4762,15 +4775,6 @@ impl Cpu {
                     self.registers.set_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
-                },
-                0xC3 => {
-                    // JP A16
-                    let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
-                    let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
-                    //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
-
-                    self.registers.set_pc(u16::from_le_bytes([lo, hi]));
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0x41 => {
                     // BIT 0 C

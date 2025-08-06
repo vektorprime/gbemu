@@ -37,6 +37,8 @@ pub struct Mbc {
     hram: Ram,
     pub restrict_vram_access: bool,
     pub reset_cpu_counter: bool,
+    pub dma_active: bool,
+    pub dma_cycles_remaining: u64,
 }
 
 
@@ -63,6 +65,8 @@ impl Mbc {
             hram: Ram::new(0xFF),
             restrict_vram_access: false,
             reset_cpu_counter: false,
+            dma_active: false,
+            dma_cycles_remaining: 0,
         }
     }
 
@@ -75,7 +79,7 @@ impl Mbc {
                 self.ram.memory[i] = byte;
             }
         }
-        print!("finished loading rom to mem");
+        print!("finished loading rom to mem\n");
     }
 
     pub fn get_tima_reg_interesting_bit(&self) -> u16 {
@@ -89,7 +93,7 @@ impl Mbc {
         } else if clock_select == 0b11  {
             return 1 << 7
         }
-        panic!("Unable to get mcycle count in get_tima_reg_tcycle_inc_count");
+        panic!("Unable to get mcycle count in get_tima_reg_tcycle_inc_count\n");
     }
 
     pub fn is_tac_bit2_enable_set(&self) -> bool {
@@ -129,7 +133,7 @@ impl Mbc {
                 self.mbc3_read(address)
             },
             _ => {
-                panic!("unknown RomType in mbc.read()");
+                panic!("unknown RomType in mbc.read()\n");
             }
         }
     }
@@ -369,17 +373,16 @@ impl Mbc {
             0xFF45 => self.hw_reg.lyc = byte,
             0xFF46 => {
 
-                    print!("writing to 0xFF46, DMA hw register \n");
-                    let base_add = 0xFE00;
-                    for i    in 0..160u16 {
-                        let add= (byte as u16) << 8;
-                        let val = self.read(add + i, op_src);
-                        self.write(base_add + i, val, op_src);
-                    }
-                    self.hw_reg.dma = byte;
-                    //self.hw_reg.dma = 0;
-
-
+                print!("writing to 0xFF46, DMA hw register \n");
+                self.dma_active = true;
+                self.dma_cycles_remaining = 160;
+                let read_add_base = (byte as u16) << 8;
+                let write_add_base = 0xFE00;
+                for i    in 0..160u16 {
+                    let val = self.read(read_add_base + i, op_src);
+                    self.write(write_add_base + i, val, op_src);
+                }
+                self.hw_reg.dma = byte;
             },
             0xFF47 => self.hw_reg.bgp = byte,
             0xFF48 => self.hw_reg.obp0 = byte,

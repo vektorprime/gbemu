@@ -72,8 +72,9 @@ pub struct Rom {
 
 impl Rom {
     pub fn new(file: &str) -> Self {
+        let data = fs::read(file).expect("Unable to read Rom file in Rom::new()");
         let mut rom = Rom {
-            data: fs::read(file).unwrap(),
+            data,
             rom_type: RomType::None,
             rom_size: RomSize::Zero,
             ram_size: RamSize::Zero,

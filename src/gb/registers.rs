@@ -228,20 +228,20 @@ impl Registers {
     }
 
     pub fn dec_a(&mut self) {
+        // wrap on underflow
         let original = self.a;
-        if original & 0x0F == 0x00 {
-            self.set_h_flag();
-        }
-        else {
-            self.clear_h_flag();
-        }
-       // wrap on underflow
         self.a = self.a.wrapping_sub(1);
         if self.a == 0 {
+            //print!("setting z flag");
             self.set_z_flag()
-        }
-        else {
+        }  else {
+            //print!("clearing z flag\n");
             self.clear_z_flag();
+        }
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }  else {
+            self.clear_h_flag();
         }
     }
 
@@ -325,22 +325,21 @@ impl Registers {
     }
 
     pub fn dec_c(&mut self) {
-        let original = self.c;
-        if original & 0x0F == 0x00 {
-            self.set_h_flag();
-        }
-        else {
-            self.clear_h_flag();
-        }
         // wrap on underflow
+        let original = self.c;
         self.c = self.c.wrapping_sub(1);
         if self.c == 0 {
+            //print!("setting z flag");
             self.set_z_flag()
-        }
-        else {
+        }  else {
+            //print!("clearing z flag\n");
             self.clear_z_flag();
         }
-
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }  else {
+            self.clear_h_flag();
+        }
     }
 
     pub fn get_d(&self) -> u8 {
@@ -413,18 +412,18 @@ impl Registers {
     pub fn dec_e(&mut self) {
         // wrap on underflow
         let original = self.e;
-        if original & 0x0F == 0x00 {
-            self.set_h_flag();
-        }
-        else {
-            self.clear_h_flag();
-        }
         self.e = self.e.wrapping_sub(1);
         if self.e == 0 {
+            //print!("setting z flag");
             self.set_z_flag()
-        }
-        else {
+        }  else {
+            //print!("clearing z flag\n");
             self.clear_z_flag();
+        }
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }  else {
+            self.clear_h_flag();
         }
     }
 
@@ -501,20 +500,20 @@ impl Registers {
     }
 
     pub fn dec_l(&mut self) {
+        // wrap on underflow
         let original = self.l;
-        if original & 0x0F == 0x00 {
-            self.set_h_flag();
-        }
-        else {
-            self.clear_h_flag();
-        }
-       // wrap on underflow
         self.l = self.l.wrapping_sub(1);
         if self.l == 0 {
+            //print!("setting z flag");
             self.set_z_flag()
-        }
-        else {
+        }  else {
+            //print!("clearing z flag\n");
             self.clear_z_flag();
+        }
+        if original & 0x0F == 0x00 {
+            self.set_h_flag();
+        }  else {
+            self.clear_h_flag();
         }
     }
 
@@ -575,19 +574,6 @@ impl Registers {
 
     }
 
-    pub fn dec_de(&mut self) {
-        let mut current = (self.d as u16) << 8 | (self.e as u16);
-        //dec should not handle underflows
-        current = current.wrapping_sub(1);
-        if self.get_de() == 0 {
-            self.set_z_flag()
-        }
-        else {
-            self.clear_z_flag();
-        }
-        self.set_de(current);
-    }
-
     pub fn dec_de_no_flags(&mut self) {
         let mut current = (self.d as u16) << 8 | (self.e as u16);
         //dec should not handle underflows
@@ -595,18 +581,6 @@ impl Registers {
         self.set_de(current);
     }
 
-    pub fn dec_bc(&mut self) {
-        let mut current = (self.b as u16) << 8 | (self.c as u16);
-        //dec should not handle underflows
-        current = current.wrapping_sub(1);
-        if self.get_bc() == 0 {
-            self.set_z_flag()
-        }
-        else {
-            self.clear_z_flag();
-        }
-        self.set_bc(current);
-    }
 
     pub fn dec_bc_no_flags(&mut self) {
         let mut current = (self.b as u16) << 8 | (self.c as u16);
@@ -663,18 +637,7 @@ impl Registers {
     }
 
 
-    pub fn dec_hl(&mut self) {
-        let mut current = (self.h as u16) << 8 | (self.l as u16);
-        //dec should not handle underflows
-        current = current.wrapping_sub(1);
-        if self.get_hl() == 0 {
-            self.set_z_flag()
-        }
-        else {
-            self.clear_z_flag();
-        }
-        self.set_hl(current);
-    }
+
     pub fn dec_hl_no_flags(&mut self) {
         let mut current = (self.h as u16) << 8 | (self.l as u16);
         //dec should not handle underflows
