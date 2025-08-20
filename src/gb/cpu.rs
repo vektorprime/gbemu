@@ -194,7 +194,8 @@ impl Cpu {
     pub fn enable_ime(&mut self) {
         self.ime = true;
     }
-    pub fn tick(&mut self, mem: &mut Mbc, bios: &Bios) -> u64 {
+
+    pub fn tick(&mut self, mem: &mut Mbc) -> u64 {
         //debug
         // let pc_print = self.registers.get_pc();
         // print!("pc - 0x{:X} \n", pc_print);
@@ -286,12 +287,14 @@ impl Cpu {
         self.last_mcycles_inc_val
     }
 
+
     pub fn fetch_next_inst(&mut self, mem: &Mbc) -> u8 {
         let pc_reg = self.registers.get_and_inc_pc();
         mem.read(pc_reg, OpSource::CPU)
     }
 
     pub fn fetch_next_cb_inst(&mut self, mem: &Mbc) -> u8 {
+        //  do NOT change this to get_and_inc_pc
         let pc_reg = self.registers.get_pc();
         mem.read(pc_reg, OpSource::CPU)
     }
@@ -3444,7 +3447,6 @@ impl Cpu {
                         self.registers.clear_z_flag();
                     }
                     self.registers.set_a(a);
-                    //self.registers.handle_flags(inst.name);
                     self.registers.clear_n_flag();
                     self.registers.clear_h_flag();
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -3834,7 +3836,6 @@ impl Cpu {
 
                     self.registers.set_a(a);
 
-                    self.registers.clear_z_flag();
                     self.registers.clear_n_flag();
                     self.registers.clear_h_flag();
 
@@ -8759,7 +8760,7 @@ impl Cpu {
         all_instructions.insert(0x06, Instruction {
             opcode: 0x06,
             name: "RLC (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -8815,7 +8816,7 @@ impl Cpu {
         all_instructions.insert(0x0E, Instruction {
             opcode: 0x0E,
             name: "RRC (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -8871,7 +8872,7 @@ impl Cpu {
         all_instructions.insert(0x16, Instruction {
             opcode: 0x16,
             name: "RL (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -8927,7 +8928,7 @@ impl Cpu {
         all_instructions.insert(0x1E, Instruction {
             opcode: 0x1E,
             name: "RR (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9039,7 +9040,7 @@ impl Cpu {
         all_instructions.insert(0x2E, Instruction {
             opcode: 0x2E,
             name: "SRA (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9095,7 +9096,7 @@ impl Cpu {
         all_instructions.insert(0x36, Instruction {
             opcode: 0x36,
             name: "SWAP (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9151,7 +9152,7 @@ impl Cpu {
         all_instructions.insert(0x3E, Instruction {
             opcode: 0x3E,
             name: "SRL (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9655,7 +9656,7 @@ impl Cpu {
         all_instructions.insert(0x86, Instruction {
             opcode: 0x86,
             name: "RES 0 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9711,7 +9712,7 @@ impl Cpu {
         all_instructions.insert(0x8E, Instruction {
             opcode: 0x8E,
             name: "RES 1 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9767,7 +9768,7 @@ impl Cpu {
         all_instructions.insert(0x96, Instruction {
             opcode: 0x96,
             name: "RES 2 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9823,7 +9824,7 @@ impl Cpu {
         all_instructions.insert(0x9E, Instruction {
             opcode: 0x9E,
             name: "RES 3 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9879,7 +9880,7 @@ impl Cpu {
         all_instructions.insert(0xA6, Instruction {
             opcode: 0xA6,
             name: "RES 4 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9935,7 +9936,7 @@ impl Cpu {
         all_instructions.insert(0xAE, Instruction {
             opcode: 0xAE,
             name: "RES 5 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -9991,7 +9992,7 @@ impl Cpu {
         all_instructions.insert(0xB6, Instruction {
             opcode: 0xB6,
             name: "RES 6 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10047,7 +10048,7 @@ impl Cpu {
         all_instructions.insert(0xBE, Instruction {
             opcode: 0xBE,
             name: "RES 7 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10103,7 +10104,7 @@ impl Cpu {
         all_instructions.insert(0xC6, Instruction {
             opcode: 0xC6,
             name: "SET 0 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10159,7 +10160,7 @@ impl Cpu {
         all_instructions.insert(0xCE, Instruction {
             opcode: 0xCE,
             name: "SET 1 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10215,7 +10216,7 @@ impl Cpu {
         all_instructions.insert(0xD6, Instruction {
             opcode: 0xD6,
             name: "SET 2 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10271,7 +10272,7 @@ impl Cpu {
         all_instructions.insert(0xDE, Instruction {
             opcode: 0xDE,
             name: "SET 3 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10327,7 +10328,7 @@ impl Cpu {
         all_instructions.insert(0xE6, Instruction {
             opcode: 0xE6,
             name: "SET 4 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10383,7 +10384,7 @@ impl Cpu {
         all_instructions.insert(0xEE, Instruction {
             opcode: 0xEE,
             name: "SET 5 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10439,7 +10440,7 @@ impl Cpu {
         all_instructions.insert(0xF6, Instruction {
             opcode: 0xF6,
             name: "SET 6 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });
@@ -10495,7 +10496,7 @@ impl Cpu {
         all_instructions.insert(0xFE, Instruction {
             opcode: 0xFE,
             name: "SET 7 (HL)",
-            cycles: 1,
+            cycles: 4,
             size: 2,
             
         });

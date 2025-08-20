@@ -11,7 +11,7 @@ use std::time::Duration;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum OpSource {
     CPU,
-    PPU
+    PPU,
 }
 
 pub const ROM_BANK_SIZE: u16 = 0x4000;
@@ -20,6 +20,7 @@ pub const RAM_BANK_SIZE: u16 = 0x4000;
 pub struct Mbc {
     pub hw_reg: HardwareRegisters,
     pub ram: Ram,
+    pub test_ram: Ram,
     pub boot_rom: Ram,
     pub rom: Option<Rom>,
     rom_bank: u8,
@@ -39,6 +40,7 @@ pub struct Mbc {
     pub reset_cpu_counter: bool,
     pub dma_active: bool,
     pub dma_cycles_remaining: u64,
+    pub is_testing_enabled: bool,
 }
 
 
@@ -48,6 +50,7 @@ impl Mbc {
         Mbc {
             hw_reg: HardwareRegisters::new(),
             ram: Ram::new(0x00),
+            test_ram: Ram::new(0x00),
             boot_rom: Ram::new(0x00),
             rom: None,
             rom_bank: 0,
@@ -67,10 +70,16 @@ impl Mbc {
             reset_cpu_counter: false,
             dma_active: false,
             dma_cycles_remaining: 0,
+            is_testing_enabled: false,
         }
     }
 
     pub fn load_rom_to_mem(&mut self) {
+
+        if self.rom.is_none() {
+            println!("unable to load rom to mem!");
+            return;
+        }
 
         for (mut i, byte) in self.rom.as_ref().unwrap().data.iter().copied().enumerate() {
             if  i >= self.ram.memory.len() {
@@ -105,6 +114,9 @@ impl Mbc {
     }
 
     pub fn read_rom(&self, address: u16, op_src: OpSource) -> u8 {
+
+
+
         if op_src == OpSource::CPU {
             if (0x8000..=0x9FFF).contains(&address) {
                 if self.restrict_vram_access {
@@ -119,7 +131,7 @@ impl Mbc {
             }
         }
 
-        let rom_type = self.rom.as_ref().unwrap().get_rom_type();
+        let rom_type = self.rom.as_ref().map(|rom| rom.get_rom_type()).unwrap_or(RomType::Rom_Only);
         match rom_type {
             RomType::Rom_Only => {
                 self.rom_only_read(address)
@@ -151,6 +163,12 @@ impl Mbc {
     }
 
     pub fn read(&self, address: u16, op_src: OpSource) -> u8 {
+        // this is only for CPU testing, then it's turned off
+        if self.is_testing_enabled {
+            return self.test_ram.read(address)
+        }
+
+
         // handle special reads: BIOS, hw reg, then ROM
         match address {
             // BIOS
@@ -247,6 +265,9 @@ impl Mbc {
     }
 
     pub fn write_rom(&mut self, address: u16, byte: u8) {
+
+
+
         if (0x8000..=0x9FFF).contains(&address) {
             if self.restrict_vram_access {
                 print!("attempted to write to VRAM during restricted access in write_rom, address is {:#x} \n", address);
@@ -262,7 +283,7 @@ impl Mbc {
             }
         }
 
-        let rom_type = self.rom.as_ref().unwrap().get_rom_type();
+        let rom_type = self.rom.as_ref().map(|rom| rom.get_rom_type()).unwrap_or(RomType::Rom_Only);
         match rom_type {
             RomType::Rom_Only => {
                 //self.ram.write(address, byte);
@@ -286,6 +307,13 @@ impl Mbc {
     }
 
     pub fn write(&mut self, address: u16, byte: u8, op_src: OpSource) {
+
+        // this is only for CPU testing, then it's turned off
+        if self.is_testing_enabled {
+            self.test_ram.write(address, byte);
+            return;
+        }
+
         // handle special writes: BIOS, hw reg, then ROM
         match address {
             //BIOS
