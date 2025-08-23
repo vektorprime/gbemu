@@ -544,7 +544,7 @@ impl Cpu {
                     let pc = self.registers.get_pc();
                     let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                     if pc_offset_signed < 0 {
-                        let neg_offset = pc_offset_signed.abs() as u8;
+                        let neg_offset = pc_offset_signed.unsigned_abs() as u8;
                         // need to +1 because we start counting on the next op
                         let new_pc = pc - (neg_offset as u16) + 1;
                         self.registers.set_pc(new_pc);
@@ -552,7 +552,7 @@ impl Cpu {
                     else {
                         let offset = mem.read(pc, OpSource::CPU) as u16;
                         // need to +1 because we start counting on the next op
-                        let new_pc = pc + offset + 1;
+                        let new_pc = pc.overflowing_add(offset).0.overflowing_add(1).0;
                         self.registers.set_pc(new_pc);
                     }
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -638,7 +638,7 @@ impl Cpu {
                         let pc = self.registers.get_pc();
                         let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
-                            let neg_offset = pc_offset_signed.abs() as u8;
+                            let neg_offset = pc_offset_signed.unsigned_abs() as u8;
                             // need to +1 because we start counting on the next op
                             let new_pc = pc - (neg_offset as u16) + 1;
                             self.registers.set_pc(new_pc);
@@ -647,7 +647,7 @@ impl Cpu {
                             let offset = mem.read(pc, OpSource::CPU) as u16;
                             // handle overflow in rust dev mode requires overflowing_add, release does not
                             // need to +1 because we start counting on the next op
-                            let new_pc = pc.overflowing_add(offset).0 + 1;
+                            let new_pc = pc.overflowing_add(offset).0.overflowing_add(1).0;
                             self.registers.set_pc(new_pc);
                         }
                     }
@@ -756,9 +756,9 @@ impl Cpu {
                         let pc = self.registers.get_pc();
                         let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
-                            let neg_offset = pc_offset_signed.abs() as u8;
+                            let neg_offset = pc_offset_signed.unsigned_abs() as u8;
                             // need to +1 because we start counting on the next op
-                            let new_pc = pc - (neg_offset as u16) + 1;
+                            let new_pc = pc.wrapping_sub(neg_offset as u16) + 1;
                             self.registers.set_pc(new_pc);
                         }
                         else {
@@ -839,9 +839,9 @@ impl Cpu {
                         let pc = self.registers.get_pc();
                         let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
-                            let neg_offset = pc_offset_signed.abs() as u8;
+                            let neg_offset = pc_offset_signed.unsigned_abs() as u8;
                             // need to +1 because we start counting on the next op
-                            let new_pc = pc - (neg_offset as u16) + 1;
+                            let new_pc = pc.wrapping_sub(neg_offset as u16) + 1;
                             self.registers.set_pc(new_pc);
                         }
                         else {
@@ -948,9 +948,9 @@ impl Cpu {
                         let pc = self.registers.get_pc();
                         let pc_offset_signed = mem.read(pc, OpSource::CPU) as i8;
                         if pc_offset_signed < 0 {
-                            let neg_offset = pc_offset_signed.abs() as u8;
+                            let neg_offset = pc_offset_signed.unsigned_abs() as u8;
                             // need to +1 because we start counting on the next op
-                            let new_pc = pc - (neg_offset as u16) + 1;
+                            let new_pc = pc.wrapping_sub(neg_offset as u16) + 1;
                             self.registers.set_pc(new_pc);
                         }
                         else {

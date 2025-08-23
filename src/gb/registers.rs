@@ -660,7 +660,7 @@ impl Registers {
         //pc was already incremented once during get_next_op
         if size > 1 {
             size -= 1;
-            self.pc += size as u16;
+            self.pc = self.pc.wrapping_add(size as u16);
         }
     }
 

@@ -50,13 +50,13 @@ fn main() {
 
     // rom is loaded after bios runs
     //emu.load_rom_file(String::from("tamagotchi.gb"));
-    //emu.load_rom_file(String::from("tetris.gb"));
+    emu.load_rom_file(String::from("tetris.gb"));
     //emu.load_rom_file(String::from("dmg-acid2.gb"));
-    //emu.load_rom_file(String::from("09-op-r-r.gb"));
     //emu.load_rom_file(String::from("daa.gb"));
-    emu.load_rom_file(String::from("cpu_instrs.gb"));
+    //emu.load_rom_file(String::from("cpu_instrs.gb"));
     //emu.load_rom_file(String::from("addams.gb"));
-    //emu.load_rom_file(String::from("boot_regs-A.gb"));
+    //emu.load_rom_file(String::from("drmario.gb"));
+    //emu.load_rom_file(String::from("mm2.gb"));
     emu.load_bios();
 
 
@@ -120,6 +120,19 @@ fn main() {
 
                     cloned_window_id = window_id.clone();
                     match win_event {
+                        WindowEvent::KeyboardInput {event: KeyEvent, ..} => {
+                            if let KeyEvent { physical_key, ..} = KeyEvent {
+                                match physical_key {
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyW)=> {
+                                        println!("pressed W key");
+                                    }
+                                    _ =>
+                                        {
+                                            println!("pressed some key");
+                                        }
+                                }
+                            }
+                        }
                         WindowEvent::RedrawRequested => {
                             if window_id == tile_win_id {
                                 //print!("in match win_event redraw requested match window_id for tile_win\n");

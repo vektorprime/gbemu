@@ -6,7 +6,7 @@ use crate::gb::hwregisters::HardwareRegisters;
 
 use std::thread::sleep;
 use std::time::Duration;
-
+use crate::gb::joypad::Joypad;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum OpSource {
@@ -41,6 +41,7 @@ pub struct Mbc {
     pub dma_active: bool,
     pub dma_cycles_remaining: u64,
     pub is_testing_enabled: bool,
+    pub joypad: Joypad,
 }
 
 
@@ -71,6 +72,7 @@ impl Mbc {
             dma_active: false,
             dma_cycles_remaining: 0,
             is_testing_enabled: false,
+            joypad: Joypad::new(),
         }
     }
 
@@ -80,6 +82,13 @@ impl Mbc {
             println!("unable to load rom to mem!");
             return;
         }
+        
+        // let rom_data = &self.rom.as_ref().unwrap().data;
+        // if rom_data.len() > self.ram.memory.len() {
+        //     self.ram.memory.resize(rom_data.len(), 0);
+        // }
+        // self.ram.memory.copy_from_slice(rom_data);
+
 
         for (mut i, byte) in self.rom.as_ref().unwrap().data.iter().copied().enumerate() {
             if  i >= self.ram.memory.len() {
@@ -183,7 +192,11 @@ impl Mbc {
                 }
             },
             // Joypad and serial
-            0xFF00 => self.hw_reg.joyp,
+            //0xFF00 => self.hw_reg.joyp,
+            0xFF00 => {
+                self.joypad.get_joypad_state()
+            },
+
             0xFF01 => self.hw_reg.sb,
             0xFF02 => self.hw_reg.sc,
 
@@ -330,7 +343,26 @@ impl Mbc {
 
 
             // Joypad and serial
-            0xFF00 => self.hw_reg.joyp = byte,
+            // writing 0x20 means select buttons
+            // writing 0x10 means select direction keys
+            0xFF00 => {
+                println!("writing to joyp hwreg byte {:#x}", byte);
+                if byte & 0x10 == 0x00 {
+                    self.joypad.select_dpad = true;
+                    self.joypad.select_buttons = false;
+                }
+                else if byte & 0x20 == 0x00 {
+                    self.joypad.select_buttons = true;
+                    self.joypad.select_dpad = false;
+
+                }
+                else if byte & 0x30 == 0x30 {
+                    self.joypad.select_buttons = false;
+                    self.joypad.select_dpad = false;
+                }
+
+            },
+
             // 0xFF01 => self.hw_reg.sb = byte,
             0xFF01 => {
                 //print!("{}", byte as char);

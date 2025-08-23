@@ -81,7 +81,7 @@ impl HardwareRegisters {
             boot_rom_control: 0,
             ie: 0,
 
-            joyp: 0,
+            joyp: 0x0F,
             sb: 0,
             sc: 0,
 
