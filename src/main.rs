@@ -190,66 +190,25 @@ fn main() {
                         },
                         WindowEvent::Resized(size) => {
                             if cloned_window_id == tile_win_id {
-                                //print!("in match event_id for tile_win\n");
-                                if tile_win.input.update(&cloned_event) {
-                                    // Close events
-                                    if tile_win.input.key_pressed(KeyCode::Escape) || tile_win.input.close_requested() {
-                                        elwt.exit();
-                                        return;
-                                    }
-
-                                    // Resize the window
-                                    if let Some(size) = tile_win.input.window_resized() {
-                                        if let Err(err) = tile_win.frame.resize_surface(size.width, size.height) {
-                                            elwt.exit();
-                                            return;
-                                        }
-                                    }
-                                    tile_win.window.request_redraw();
+                                //println!("requesting resize of tile_win\n");
+                                if let Err(err) = tile_win.frame.resize_surface(size.width, size.height) {
+                                    elwt.exit();
+                                    return;
                                 }
-
                             }
 
                             else if cloned_window_id == bg_map_win_id {
-                                //print!("in match event_id for bg_map_win\n");
-
-                                if bg_map_win.input.update(&cloned_event) {
-                                    // Close events
-                                    if bg_map_win.input.key_pressed(KeyCode::Escape) || bg_map_win.input.close_requested() {
-                                        elwt.exit();
-                                        return;
-                                    }
-                                    //0..2 Resize the window
-                                    if let Some(size) = bg_map_win.input.window_resized() {
-                                        if let Err(err) = bg_map_win.frame.resize_surface(size.width, size.height) {
-                                            elwt.exit();
-                                            return;
-                                        }
-                                    }
-
-                                    bg_map_win.window.request_redraw();
-
+                                //println!("requesting resize of bg_map_win\n");
+                                if let Err(err) = bg_map_win.frame.resize_surface(size.width, size.height) {
+                                    elwt.exit();
+                                    return;
                                 }
                             }
                             else if cloned_window_id == game_win_id {
-                                //print!("in match event_id for bg_map_win\n");
-
-                                if game_win.input.update(&cloned_event) {
-                                    // Close events
-                                    if game_win.input.key_pressed(KeyCode::Escape) || game_win.input.close_requested() {
-                                        elwt.exit();
-                                        return;
-                                    }
-
-                                    if let Some(size) = game_win.input.window_resized() {
-                                        if let Err(err) = game_win.frame.resize_surface(size.width, size.height) {
-                                            elwt.exit();
-                                            return;
-                                        }
-                                    }
-
-                                    game_win.window.request_redraw();
-
+                                //println!("requesting resize of tile_win\n");
+                                if let Err(err) = game_win.frame.resize_surface(size.width, size.height) {
+                                    elwt.exit();
+                                    return;
                                 }
                             }
 
@@ -353,7 +312,7 @@ fn main() {
                 tw_current_time = Instant::now();
                 tw_frames_this_sec = 0;
             }
-            
+
             if bgmw_current_time.elapsed().as_secs() < one_sec  {
                 if bgmw_frames_this_sec < bgmw_max_fps {
                     {
