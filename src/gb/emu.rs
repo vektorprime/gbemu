@@ -60,9 +60,9 @@ impl Emu {
     pub fn test_cpu(&mut self) {
         println!("TESTING CPU");
         let all_cpu_tests = get_all_tests();
-        println!("Got all tests, starting testing");
+        //println!("Got all tests, starting testing");
         for test in &all_cpu_tests {
-            println!("executing test {}", test.name);
+            //println!("executing test {}", test.name);
             // setup state
                 // registers
             setup_initial_registers(&mut self.test_cpu.registers, &test.initial_test_state);

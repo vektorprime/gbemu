@@ -115,21 +115,51 @@ fn main() {
             let mut cloned_window_id = WindowId::clone(&tile_win_id);
 
             match event {
-
+                //extract the WindowEvent struct so we can use window_id and win_event
                 Event::WindowEvent { window_id, event: win_event } => {
 
                     cloned_window_id = window_id.clone();
                     match win_event {
-                        WindowEvent::KeyboardInput {event: KeyEvent, ..} => {
-                            if let KeyEvent { physical_key, ..} = KeyEvent {
-                                match physical_key {
+                        WindowEvent::KeyboardInput {event: key_event, ..} => {
+
+                            if window_id == tile_win_id {
+                                println!("matched tile_win_id");
+                                match key_event.physical_key {
                                     winit::keyboard::PhysicalKey::Code(KeyCode::KeyW)=> {
                                         println!("pressed W key");
+                                    },
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyA)=> {
+                                        println!("pressed A key");
+                                    },
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyS)=> {
+                                        println!("pressed S key");
+                                    },
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyD)=> {
+                                        println!("pressed D key");
+                                    },
+                                    _ => {
+                                        println!("pressed some key");
                                     }
-                                    _ =>
-                                        {
-                                            println!("pressed some key");
-                                        }
+                                }
+                            }
+                            else if window_id == game_win_id {
+                                println!("matched game_win_id");
+                                match key_event.physical_key {
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyW)=> {
+                                        println!("pressed W key");
+                                    },
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyA)=> {
+                                        println!("pressed A key");
+                                    },
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyS)=> {
+                                        println!("pressed S key");
+                                    },
+                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyD)=> {
+                                        println!("pressed D key");
+                                    },
+                                    _ => {
+                                        println!("pressed some key");
+                                    }
                                 }
                             }
                         }
@@ -138,161 +168,235 @@ fn main() {
                                 //print!("in match win_event redraw requested match window_id for tile_win\n");
                                 // Draw the current frame
                                 if render_state_cloned == PPUEvent::RenderEvent(RenderState::Render) && !skip_render {
-
-                                    if tw_current_time.elapsed().as_secs() < one_sec  {
-                                        if tw_frames_this_sec < tw_max_fps {
-                                            {
-                                                let mut tw_buffer_unlocked = tile_win_buffer.lock().unwrap();
-                                                let mut tw_pixels = tile_win.frame.frame_mut();
-                                                tw_pixels.copy_from_slice(&tw_buffer_unlocked);
-                                            }
-
-                                            tile_win.frame.render().unwrap();
-                                            tile_win.window.request_redraw();
-                                            tw_frames_this_sec += 1;
-                                        }
-
-                                    }
-                                    else {
-                                        //print!("sec has elapsed in main tile viewer drawing\n");
-                                        tw_current_time = Instant::now();
-                                        tw_frames_this_sec = 0;
-                                    }
+                                    tile_win.frame.render().unwrap();
                                 }
                             }
-                            if window_id == bg_map_win_id {
+                            else if window_id == bg_map_win_id {
                                 //print!("in match win_event redraw requested match window_id for bg_map_win\n");
                                 // Draw the current frame
 
                                 if render_state_cloned == PPUEvent::RenderEvent(RenderState::Render) && !skip_render {
-
-                                    if bgmw_current_time.elapsed().as_secs() < one_sec  {
-                                        if bgmw_frames_this_sec < bgmw_max_fps {
-                                            {
-                                                let mut bgmw_buffer_unlocked = bg_map_win_buffer.lock().unwrap();
-                                                let mut bgmw_pixels = bg_map_win.frame.frame_mut();
-                                                bgmw_pixels.copy_from_slice(&bgmw_buffer_unlocked);
-                                            }
-
-                                            bg_map_win.frame.render().unwrap();
-                                            bg_map_win.window.request_redraw();
-                                            bgmw_frames_this_sec += 1;
-
-                                        }
-                                    }
-                                    else {
-                                        //print!("sec has elapsed in main tile viewer drawing\n");
-                                        bgmw_current_time = Instant::now();
-                                        bgmw_frames_this_sec = 0;
-                                    }
+                                    bg_map_win.frame.render().unwrap();
                                 }
                             }
-                            if window_id == game_win_id {
+                            else if window_id == game_win_id {
                                 //print!("in match win_event redraw requested match window_id for bg_map_win\n");
                                 // Draw the current frame
 
                                 if render_state_cloned == PPUEvent::RenderEvent(RenderState::Render) && !skip_render {
-
-                                    if gw_current_time.elapsed().as_secs() < one_sec  {
-                                        if gw_frames_this_sec < gw_max_fps {
-                                            {
-                                                let mut gw_buffer_unlocked = game_win_buffer.lock().unwrap();
-                                                let mut gw_pixels = game_win.frame.frame_mut();
-                                                gw_pixels.copy_from_slice(&gw_buffer_unlocked);
-                                            }
-
-                                            game_win.frame.render().unwrap();
-                                            game_win.window.request_redraw();
-                                            gw_frames_this_sec += 1;
-                                        }
-                                    }
-                                    else {
-                                        //print!("sec has elapsed in main tile viewer drawing\n");
-                                        gw_current_time = Instant::now();
-                                        gw_frames_this_sec = 0;
-                                    }
+                                    game_win.frame.render().unwrap();
                                 }
                             }
+                        },
+                        WindowEvent::Resized(size) => {
+                            if cloned_window_id == tile_win_id {
+                                //print!("in match event_id for tile_win\n");
+                                if tile_win.input.update(&cloned_event) {
+                                    // Close events
+                                    if tile_win.input.key_pressed(KeyCode::Escape) || tile_win.input.close_requested() {
+                                        elwt.exit();
+                                        return;
+                                    }
 
+                                    // Resize the window
+                                    if let Some(size) = tile_win.input.window_resized() {
+                                        if let Err(err) = tile_win.frame.resize_surface(size.width, size.height) {
+                                            elwt.exit();
+                                            return;
+                                        }
+                                    }
+                                    tile_win.window.request_redraw();
+                                }
+
+                            }
+
+                            else if cloned_window_id == bg_map_win_id {
+                                //print!("in match event_id for bg_map_win\n");
+
+                                if bg_map_win.input.update(&cloned_event) {
+                                    // Close events
+                                    if bg_map_win.input.key_pressed(KeyCode::Escape) || bg_map_win.input.close_requested() {
+                                        elwt.exit();
+                                        return;
+                                    }
+                                    //0..2 Resize the window
+                                    if let Some(size) = bg_map_win.input.window_resized() {
+                                        if let Err(err) = bg_map_win.frame.resize_surface(size.width, size.height) {
+                                            elwt.exit();
+                                            return;
+                                        }
+                                    }
+
+                                    bg_map_win.window.request_redraw();
+
+                                }
+                            }
+                            else if cloned_window_id == game_win_id {
+                                //print!("in match event_id for bg_map_win\n");
+
+                                if game_win.input.update(&cloned_event) {
+                                    // Close events
+                                    if game_win.input.key_pressed(KeyCode::Escape) || game_win.input.close_requested() {
+                                        elwt.exit();
+                                        return;
+                                    }
+
+                                    if let Some(size) = game_win.input.window_resized() {
+                                        if let Err(err) = game_win.frame.resize_surface(size.width, size.height) {
+                                            elwt.exit();
+                                            return;
+                                        }
+                                    }
+
+                                    game_win.window.request_redraw();
+
+                                }
+                            }
 
                         },
+                        WindowEvent::CloseRequested => {
+                            // I can't implement a per window close yet because of how the object is used and passed around
+                            // todo redo the window closing
+                            if cloned_window_id == tile_win_id {
+                                //print!("in match event_id for tile_win\n");
+
+                                    elwt.exit();
+
+                                // if tile_win.input.update(&cloned_event) {
+                                // }
+
+                            }
+
+                            else if cloned_window_id == bg_map_win_id {
+                                //print!("in match event_id for bg_map_win\n");
+                                    elwt.exit();
+
+                                // if bg_map_win.input.update(&cloned_event) {
+                                // }
+                            }
+                            else if cloned_window_id == game_win_id {
+                                elwt.exit();
+                                //print!("in match event_id for bg_map_win\n");
+                                    //drop(game_win.window);
+                                    //elwt.exit();
+
+                                // if game_win.input.update(&cloned_event) {
+                                //
+                                // }
+                            }
+                        }
                         _ => { }
                     }
                 },
-                _ => {
 
-                }
-            }
-            if cloned_window_id == tile_win_id {
-                //print!("in match event_id for tile_win\n");
-                if tile_win.input.update(&cloned_event) {
-                    // Close events
-                    if tile_win.input.key_pressed(KeyCode::Escape) || tile_win.input.close_requested() {
-                        elwt.exit();
-                        return;
-                    }
-
-                    // Resize the window
-                    if let Some(size) = tile_win.input.window_resized() {
-                        if let Err(err) = tile_win.frame.resize_surface(size.width, size.height) {
-                            elwt.exit();
-                            return;
-                        }
-                    }
-                    tile_win.window.request_redraw();
-                }
-
+                _ => { }
             }
 
-            if cloned_window_id == bg_map_win_id {
-                //print!("in match event_id for bg_map_win\n");
-
-                if bg_map_win.input.update(&cloned_event) {
-                    // Close events
-                    if bg_map_win.input.key_pressed(KeyCode::Escape) || bg_map_win.input.close_requested() {
-                        elwt.exit();
-                        return;
-                    }
-                    //0..2 Resize the window
-                    if let Some(size) = bg_map_win.input.window_resized() {
-                        if let Err(err) = bg_map_win.frame.resize_surface(size.width, size.height) {
-                            elwt.exit();
-                            return;
-                        }
-                    }
-
-                    bg_map_win.window.request_redraw();
-
-                }
-            }
-            if cloned_window_id == game_win_id {
-                //print!("in match event_id for bg_map_win\n");
-
-                if game_win.input.update(&cloned_event) {
-                    // Close events
-                    if game_win.input.key_pressed(KeyCode::Escape) || game_win.input.close_requested() {
-                        elwt.exit();
-                        return;
-                    }
-                    //0..2 Resize the window
-                    if let Some(size) = game_win.input.window_resized() {
-                        if let Err(err) = game_win.frame.resize_surface(size.width, size.height) {
-                            elwt.exit();
-                            return;
-                        }
-                    }
-
-                    game_win.window.request_redraw();
-
-                }
-            }
-
-
+            // // Handle input updates for each window
+            // if tile_win.input.update(&cloned_event) {
+            //     if tile_win.input.key_pressed(KeyCode::Escape) || tile_win.input.close_requested() {
+            //         elwt.exit();
+            //     }
+            //     if let Some(size) = tile_win.input.window_resized() {
+            //         if let Err(err) = tile_win.frame.resize_surface(size.width, size.height) {
+            //             eprintln!("Failed to resize tile window: {}", err);
+            //             elwt.exit();
+            //         }
+            //     }
+            //     tile_win.window.request_redraw();
+            // }
+            //
+            // if bg_map_win.input.update(&cloned_event) {
+            //     if bg_map_win.input.key_pressed(KeyCode::Escape) || bg_map_win.input.close_requested() {
+            //         elwt.exit();
+            //     }
+            //     if let Some(size) = bg_map_win.input.window_resized() {
+            //         if let Err(err) = bg_map_win.frame.resize_surface(size.width, size.height) {
+            //             eprintln!("Failed to resize bg_map window: {}", err);
+            //             elwt.exit();
+            //         }
+            //     }
+            //     bg_map_win.window.request_redraw();
+            // }
+            //
+            // if  game_win.input.update(&cloned_event) {
+            //     if game_win.input.key_pressed(KeyCode::Escape) || game_win.input.close_requested() {
+            //         elwt.exit();
+            //     }
+            //     if let Some(size) = game_win.input.window_resized() {
+            //         if let Err(err) = game_win.frame.resize_surface(size.width, size.height) {
+            //             eprintln!("Failed to resize game window: {}", err);
+            //             elwt.exit();
+            //         }
+            //     }
+            //     game_win.window.request_redraw();
+            // }
             //bg_map_win.window.request_redraw();
             //tile_win.window.request_redraw();
 
-        // // tile_win.window.request_redraw();
-            // // bg_map_win.window.request_redraw();
+            if tw_current_time.elapsed().as_secs() < one_sec  {
+                if tw_frames_this_sec < tw_max_fps {
+                    {
+                        let mut tw_buffer_unlocked = tile_win_buffer.lock().unwrap();
+                        let mut tw_pixels = tile_win.frame.frame_mut();
+                        tw_pixels.copy_from_slice(&tw_buffer_unlocked);
+                    }
+
+                    tile_win.frame.render().unwrap();
+                    tile_win.window.request_redraw();
+                    tw_frames_this_sec += 1;
+                }
+
+            }
+            else {
+                //print!("sec has elapsed in main tile viewer drawing\n");
+                tw_current_time = Instant::now();
+                tw_frames_this_sec = 0;
+            }
+            
+            if bgmw_current_time.elapsed().as_secs() < one_sec  {
+                if bgmw_frames_this_sec < bgmw_max_fps {
+                    {
+                        let mut bgmw_buffer_unlocked = bg_map_win_buffer.lock().unwrap();
+                        let mut bgmw_pixels = bg_map_win.frame.frame_mut();
+                        bgmw_pixels.copy_from_slice(&bgmw_buffer_unlocked);
+                    }
+
+                    bg_map_win.frame.render().unwrap();
+                    bg_map_win.window.request_redraw();
+                    bgmw_frames_this_sec += 1;
+
+                }
+            }
+            else {
+                //print!("sec has elapsed in main tile viewer drawing\n");
+                bgmw_current_time = Instant::now();
+                bgmw_frames_this_sec = 0;
+            }
+
+            if gw_current_time.elapsed().as_secs() < one_sec  {
+                if gw_frames_this_sec < gw_max_fps {
+                    {
+                        let mut gw_buffer_unlocked = game_win_buffer.lock().unwrap();
+                        let mut gw_pixels = game_win.frame.frame_mut();
+                        gw_pixels.copy_from_slice(&gw_buffer_unlocked);
+                    }
+
+                    game_win.frame.render().unwrap();
+                    game_win.window.request_redraw();
+                    gw_frames_this_sec += 1;
+                }
+            }
+            else {
+                //print!("sec has elapsed in main tile viewer drawing\n");
+                gw_current_time = Instant::now();
+                gw_frames_this_sec = 0;
+            }
+
+
+            // game_win.window.request_redraw();
+            // tile_win.window.request_redraw();
+            // bg_map_win.window.request_redraw();
         }).expect("Unable to run event loop in GBWindow");
     } else {
         loop {
