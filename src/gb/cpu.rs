@@ -29,6 +29,7 @@ pub struct Cpu {
     debug_print_pc: bool,
     counter: u16,
     last_counter: u16,
+    is_initial_ime_set: bool,
 }
 
 impl Cpu { 
@@ -54,6 +55,7 @@ impl Cpu {
             debug_print_pc: false,
             counter: 0,
             last_counter: 0,
+            is_initial_ime_set: false,
         } 
     } 
 
@@ -121,30 +123,29 @@ impl Cpu {
         if self.ime {
             // check that each interrupt is enabled and requested, then handle
 
-
             if mbc.hw_reg.is_vblank_bit0_interrupt_requested_and_enabled() {
-                //print!("executing vblank_bit0_interrupt\n");
+                print!("executing vblank_bit0_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Vblank_40);
                 mbc.hw_reg.clear_if_vblank_bit0();
             }
 
-            else if mbc.hw_reg.is_lcd_stat_bit1_interrupt_requested_and_enabled() {
-                //print!("executing lcd_stat_bit1_interrupt\n");
+             else if mbc.hw_reg.is_lcd_stat_bit1_interrupt_requested_and_enabled() {
+                print!("executing lcd_stat_bit1_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Stat_48);
                 mbc.hw_reg.clear_if_lcd_bit1();
             }
-            else if mbc.hw_reg.is_timer_bit2_interrupt_requested_and_enabled() {
-                //print!("executing timer_bit2_interrupt\n");
+             else if mbc.hw_reg.is_timer_bit2_interrupt_requested_and_enabled() {
+                print!("executing timer_bit2_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Timer_50);
                 mbc.hw_reg.clear_if_timer_bit2();
             }
-            else if mbc.hw_reg.is_serial_bit3_interrupt_requested_and_enabled() {
-                //print!("executing serial_bit3_interrupt\n");
+             else if mbc.hw_reg.is_serial_bit3_interrupt_requested_and_enabled() {
+                print!("executing serial_bit3_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Serial_58);
                 mbc.hw_reg.clear_if_serial_bit3();
             }
-            else if mbc.hw_reg.is_joypad_bit4_interrupt_requested_and_enabled() {
-                //print!("executing joypad_bit4_interrupt\n");
+             else if mbc.hw_reg.is_joypad_bit4_interrupt_requested_and_enabled() {
+                print!("executing joypad_bit4_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Joypad_60);
                 mbc.hw_reg.clear_if_joypad_bit4();
             }
@@ -188,10 +189,12 @@ impl Cpu {
     }
 
     pub fn disable_ime(&mut self) {
+        print!("disabling IME\n");
         self.ime = false;
     }
 
     pub fn enable_ime(&mut self) {
+        print!("enabling IME\n");
         self.ime = true;
     }
 
@@ -206,12 +209,23 @@ impl Cpu {
         //     return 160u64;
         // }
 
+        // per pandocs ime is disabled when rom starts
+
+        // if !self.is_initial_ime_set {
+        //     self.disable_ime();
+        //     self.is_initial_ime_set = true;
+        // }
+
         if self.registers.get_pc() == 0x100 {
             print!("----------- \n");
             print!("pc - 0x100 \n");
             print!("----------- \n");
-            // per pandocs ime is disabled when rom starts
-            self.disable_ime();
+            if self.ime {
+                print!("ime flag set\n");
+            } else {
+                print!("ime flag not set\n");
+            }
+
             self.debug_print_pc = true;
         }
 
@@ -1480,7 +1494,8 @@ impl Cpu {
                 },
                 0x76 => {
                     // HALT
-                    self.halted = true;
+                    print!("HALT WANTS TO EXECUTE BUT NOT IMPLEMENTED\n");
+                    //self.halted = true;
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
@@ -2789,10 +2804,8 @@ impl Cpu {
                     //set pc to 16 bit add
                     self.registers.set_pc(ret_addr);
                     // shrink stack by 2
-                    let new_sp = self.registers.get_sp() + 2;
-                    self.registers.set_sp(new_sp);
+                    self.registers.set_sp(sp + 2);
                     // set pc to ret addr
-                    self.registers.set_pc(ret_addr);
                     self.enable_ime();
                     self.inc_cycles_by_inst_val(inst.cycles);
                 },
@@ -3089,6 +3102,8 @@ impl Cpu {
                 0xF3 => {
                     // DI
                     // set IME to false immediately
+                    print!("executing DI opcode\n");
+
                     self.disable_ime();
 
                     self.inc_cycles_by_inst_val(inst.cycles);
@@ -3206,6 +3221,7 @@ impl Cpu {
                 0xFB => {
                     // EI
                     // set IME to enable AFTER the next inst. executes
+                    print!("executing EI opcode\n");
                     self.pending_enable_ime = true;
 
                     self.inc_cycles_by_inst_val(inst.cycles);

@@ -1029,8 +1029,8 @@ impl Ppu {
             let mode_1_v_blank_first_tcycle = 65_664;
             //if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline {
             if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame  {
-                //mbc.hw_reg.set_ie_vblank_bit0();
-                // print!("entering mode_1_v_blank \n");
+                mbc.hw_reg.set_if_vblank_bit0();
+                 print!("entering mode_1_v_blank \n");
                 self.fetcher.win_y_pos = 0;
                 self.fetcher.tile_y_pos = 0;
                 // reset tile x pos every frame. It's & with 0x1F in the fetcher step 1

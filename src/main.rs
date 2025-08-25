@@ -2,26 +2,20 @@
 #![forbid(unsafe_code)]
 
 
+use winit::keyboard::NativeKey::Unidentified;
 use std::env;
 use pixels::{Error, Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::keyboard::KeyCode;
+use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::window::{WindowBuilder, WindowId};
 use winit_input_helper::WinitInputHelper;
 
-use crate::gb::graphics::ppu::{PPUEvent, RenderState};
- use std::thread;
- use std::sync::{Arc, Mutex, mpsc};
+
+use std::thread;
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
-//screen
-
-// const WIDTH: u32 = 160;
-// const HEIGHT: u32 = 144;
-
-
-
 
 mod gb;  
 
@@ -29,6 +23,8 @@ use gb::bios::ColorMode;
 use crate::gb::emu::*;
 use crate::gb::gbwindow::*;
 use crate::gb::constants::*;
+use crate::gb::graphics::ppu::{PPUEvent, RenderState};
+use crate::gb::joypad::Joypad;
 
 
 fn main() {
@@ -41,12 +37,13 @@ fn main() {
     // these are for quick debugging
     let skip_render = false;
     let skip_windows = false;
-    let debug = true; // true doesn't panic if CPU ticks take longer than a sec
+    let is_debug = true; // true doesn't panic if CPU ticks take longer than a sec
     /////////////////////////////////////
 
     // setup emu
-
-    let mut emu = Emu::new(ColorMode::Gray, debug);
+    let mut joypad = Arc::new(Mutex::new(Joypad::new()));
+    let mut joypad_arc = Arc::clone(&joypad);
+    let mut emu = Emu::new(ColorMode::Gray, joypad_arc, is_debug);
 
     // rom is loaded after bios runs
     //emu.load_rom_file(String::from("tamagotchi.gb"));
@@ -122,45 +119,28 @@ fn main() {
                     match win_event {
                         WindowEvent::KeyboardInput {event: key_event, ..} => {
 
-                            if window_id == tile_win_id {
-                                println!("matched tile_win_id");
-                                match key_event.physical_key {
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyW)=> {
-                                        println!("pressed W key");
-                                    },
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyA)=> {
-                                        println!("pressed A key");
-                                    },
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyS)=> {
-                                        println!("pressed S key");
-                                    },
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyD)=> {
-                                        println!("pressed D key");
-                                    },
-                                    _ => {
-                                        println!("pressed some key");
-                                    }
-                                }
-                            }
-                            else if window_id == game_win_id {
+                            // I only need to handle key presses for the game window atm
+                            if window_id == game_win_id {
                                 println!("matched game_win_id");
-                                match key_event.physical_key {
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyW)=> {
-                                        println!("pressed W key");
-                                    },
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyA)=> {
-                                        println!("pressed A key");
-                                    },
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyS)=> {
-                                        println!("pressed S key");
-                                    },
-                                    winit::keyboard::PhysicalKey::Code(KeyCode::KeyD)=> {
-                                        println!("pressed D key");
-                                    },
-                                    _ => {
-                                        println!("pressed some key");
+                                match key_event {
+                                    KeyEvent {
+                                        physical_key,
+                                        state,
+                                        ..
+                                    } => {
+                                        match physical_key {
+                                            PhysicalKey::Code(key) => {
+                                                let mut joypad_unlocked = joypad.lock().unwrap();
+                                                joypad_unlocked.handle_input(key, state);
+                                            },
+                                            PhysicalKey::Unidentified(native_key_code) => {
+                                                println!("Unidentified key pressed");
+                                            }
+
+                                        }
                                     }
                                 }
+
                             }
                         }
                         WindowEvent::RedrawRequested => {

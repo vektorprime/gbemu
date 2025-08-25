@@ -6,6 +6,7 @@ use crate::gb::graphics::ppu::*;
 use crate::gb::testcpu::*;
 use crate::gb::hwregisters::HardwareRegisters;
 use crate::gb::gbwindow::*;
+use crate::gb::joypad::Joypad;
 
 use std::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
@@ -25,10 +26,11 @@ pub struct Emu {
     pub is_cpu_tested: bool,
     pub test_mbc: Box<Mbc>,
     pub test_cpu: Cpu,
+    pub joypad: Arc<Mutex<Joypad>>
 }
 
 impl Emu {
-    pub fn new(color_mode: ColorMode, debug: bool) -> Self {
+    pub fn new(color_mode: ColorMode, joypad: Arc<Mutex<Joypad>>, debug: bool) -> Self {
         Emu {
             cpu: Cpu::new(),
             mbc: Box::new(Mbc::new()), // mbc has rom and ram
@@ -42,6 +44,7 @@ impl Emu {
             is_cpu_test_enabled: true,
             test_mbc: Box::new(Mbc::new()),
             test_cpu: Cpu::new(),
+            joypad,
         }
     }
 
@@ -110,6 +113,13 @@ impl Emu {
             self.test_mbc.is_testing_enabled = false;
         }
 
+        //joypad
+        {
+            let mut joypad_unlocked = self.joypad.lock().unwrap();
+            joypad_unlocked.sync_state(&mut self.mbc);
+        }
+
+        //
         let mcycles_per_sec: u64 = 1_053_360;
         let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed().as_secs();

@@ -41,7 +41,7 @@ pub struct Mbc {
     pub dma_active: bool,
     pub dma_cycles_remaining: u64,
     pub is_testing_enabled: bool,
-    pub joypad: Joypad,
+    pub is_joypad_pending_update_from_reg: bool,
 }
 
 
@@ -72,7 +72,7 @@ impl Mbc {
             dma_active: false,
             dma_cycles_remaining: 0,
             is_testing_enabled: false,
-            joypad: Joypad::new(),
+            is_joypad_pending_update_from_reg: false,
         }
     }
 
@@ -194,7 +194,8 @@ impl Mbc {
             // Joypad and serial
             //0xFF00 => self.hw_reg.joyp,
             0xFF00 => {
-                self.joypad.get_joypad_state()
+                //self.joypad.get_state()
+                self.hw_reg.joyp
             },
 
             0xFF01 => self.hw_reg.sb,
@@ -207,7 +208,7 @@ impl Mbc {
             0xFF07 => self.hw_reg.tac,
 
             // Interrupt flags
-            0xFF0F => self.hw_reg.intflags,
+            0xFF0F => self.hw_reg.interrupt_flags,
 
             // LCD and scrolling
             0xFF40 => self.hw_reg.lcdc,
@@ -262,7 +263,11 @@ impl Mbc {
             },
 
             // Interrupt enable
-            0xFFFF => self.hw_reg.ie,
+            0xFFFF => {
+                print!("reading IE register, value is {}\n", self.hw_reg.ie);
+                self.hw_reg.ie
+            }
+
             //
             // 0x8000..=0x9FFF=> {
             //     if self.restrict_vram_access {
@@ -345,22 +350,12 @@ impl Mbc {
             // Joypad and serial
             // writing 0x20 means select buttons
             // writing 0x10 means select direction keys
+            // writing 0x30 means nither, lower nibble should read 0xF
             0xFF00 => {
                 println!("writing to joyp hwreg byte {:#x}", byte);
-                if byte & 0x10 == 0x00 {
-                    self.joypad.select_dpad = true;
-                    self.joypad.select_buttons = false;
-                }
-                else if byte & 0x20 == 0x00 {
-                    self.joypad.select_buttons = true;
-                    self.joypad.select_dpad = false;
-
-                }
-                else if byte & 0x30 == 0x30 {
-                    self.joypad.select_buttons = false;
-                    self.joypad.select_dpad = false;
-                }
-
+                let bit_4_and_5 = byte & 0b0011_0000;
+                self.hw_reg.joyp |= bit_4_and_5;
+                self.is_joypad_pending_update_from_reg = true;
             },
 
             // 0xFF01 => self.hw_reg.sb = byte,
@@ -416,7 +411,10 @@ impl Mbc {
 
 
             // Interrupt flags
-            0xFF0F => self.hw_reg.intflags = byte,
+            0xFF0F => {
+                print!("writing value {} to IF register\n", byte);
+                self.hw_reg.interrupt_flags = byte
+            },
 
             // LCD and scrolling
             0xFF40 => self.hw_reg.lcdc = byte,
@@ -501,8 +499,13 @@ impl Mbc {
             }
 
             // Interrupt enable
-            0xFFFF => self.hw_reg.ie = byte,
-
+            // 0xFFFF => self.hw_reg.ie = byte,
+            
+            0xFFFF => {
+                print!("writing value {} to IE register \n", byte);
+                self.hw_reg.ie = byte;
+            },
+            
             // 0x8000..=0x9FFF=> {
             //     if self.restrict_vram_access {
             //         print!("attempted to write to VRAM during restricted access");

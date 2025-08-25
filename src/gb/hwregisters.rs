@@ -33,7 +33,7 @@ pub struct HardwareRegisters {
     pub tac: u8,  // FF07
 
     // Interrupt flags
-    pub intflags: u8, // FF0F
+    pub interrupt_flags: u8, // FF0F
 
     // Audio (NR10–NR52)
     pub nr10: u8, // FF10
@@ -81,7 +81,7 @@ impl HardwareRegisters {
             boot_rom_control: 0,
             ie: 0,
 
-            joyp: 0x0F,
+            joyp: 0xFF,
             sb: 0,
             sc: 0,
 
@@ -90,7 +90,7 @@ impl HardwareRegisters {
             tma: 0,
             tac: 0,
 
-            intflags: 0, // IF
+            interrupt_flags: 0, // IF
 
             nr10: 0,
             nr11: 0,
@@ -282,7 +282,7 @@ impl HardwareRegisters {
         if self.is_if_joypad_bit4_set() {
             //print!("if joypad int requested\n");
             if self.is_ie_joypad_bit4_set() {
-                //print!("if joypad int requested and ie bit is enabled\n");
+                print!("if joypad int requested and ie bit is enabled\n");
                 return true
             }
         }
@@ -295,22 +295,22 @@ impl HardwareRegisters {
     }
 
     pub fn clear_if_vblank_bit0(&mut self) {
-        self.intflags &= 0b1111_1110;
+        self.interrupt_flags &= 0b1111_1110;
     }
 
     pub fn clear_if_lcd_bit1(&mut self) {
-        self.intflags &= 0b1111_1101;
+        self.interrupt_flags &= 0b1111_1101;
     }
 
     pub fn clear_if_timer_bit2(&mut self) {
-        self.intflags &= 0b1111_1011;
+        self.interrupt_flags &= 0b1111_1011;
     }
     pub fn clear_if_serial_bit3(&mut self) {
-        self.intflags &= 0b1111_0111;
+        self.interrupt_flags &= 0b1111_0111;
     }
 
     pub fn clear_if_joypad_bit4(&mut self) {
-        self.intflags &= 0b1110_1111;
+        self.interrupt_flags &= 0b1110_1111;
     }
 
     pub fn is_lcd_stat_bit1_interrupt_enabled(&self) -> bool {
@@ -403,22 +403,22 @@ pub fn is_ie_vblank_bit0_set(&self) -> bool {
 
     // if
     pub fn set_if_vblank_bit0(&mut self) {
-        self.intflags |= 0b0000_0001;
+        self.interrupt_flags |= 0b0000_0001;
     }
     pub fn set_if_lcd_stat_bit1(&mut self) {
-        self.intflags |= 0b0000_0010;
+        self.interrupt_flags |= 0b0000_0010;
     }
     pub fn set_if_timer_bit2(&mut self) {
-        self.intflags |= 0b0000_0100;
+        self.interrupt_flags |= 0b0000_0100;
     }
     pub fn set_if_serial_bit3(&mut self) {
-        self.intflags |= 0b0000_1000;
+        self.interrupt_flags |= 0b0000_1000;
     }
     pub fn set_if_joypad_bit4(&mut self) {
-        self.intflags |= 0b0001_0000;
+        self.interrupt_flags |= 0b0001_0000;
     }
     pub fn is_if_vblank_bit0_set(&self) -> bool {
-        if self.intflags & 0b0000_0001 == 0b0000_0001 {
+        if self.interrupt_flags & 0b0000_0001 == 0b0000_0001 {
             true
         } else {
             false
@@ -426,7 +426,7 @@ pub fn is_ie_vblank_bit0_set(&self) -> bool {
     }
 
     pub fn is_if_lcd_stat_bit1_set(&self) -> bool {
-        if self.intflags & 0b0000_0010 == 0b0000_0010 {
+        if self.interrupt_flags & 0b0000_0010 == 0b0000_0010 {
             true
         } else {
             false
@@ -434,14 +434,14 @@ pub fn is_ie_vblank_bit0_set(&self) -> bool {
     }
 
     pub fn is_if_timer_bit2_set(&self) -> bool {
-        if self.intflags & 0b0000_0100 == 0b0000_0100 {
+        if self.interrupt_flags & 0b0000_0100 == 0b0000_0100 {
             true
         } else {
             false
         }
     }
     pub fn is_if_serial_bit3_set(&self) -> bool {
-        if self.intflags & 0b0000_1000 == 0b0000_1000 {
+        if self.interrupt_flags & 0b0000_1000 == 0b0000_1000 {
             true
         } else {
             false
@@ -449,7 +449,7 @@ pub fn is_ie_vblank_bit0_set(&self) -> bool {
     }
 
     pub fn is_if_joypad_bit4_set(&self) -> bool {
-        if self.intflags & 0b0001_0000 == 0b0001_0000 {
+        if self.interrupt_flags & 0b0001_0000 == 0b0001_0000 {
             true
         } else {
             false
