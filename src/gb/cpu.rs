@@ -121,8 +121,11 @@ impl Cpu {
 
     pub fn handle_interrupts(&mut self, mbc: &mut Mbc) {
         if self.ime {
+            // an interrupt should unhalt the CPU
+            if self.halted {
+                self.halted = false;
+            }
             // check that each interrupt is enabled and requested, then handle
-
             if mbc.hw_reg.is_vblank_bit0_interrupt_requested_and_enabled() {
                 print!("executing vblank_bit0_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Vblank_40);
@@ -266,15 +269,28 @@ impl Cpu {
             self.tick_dma(mem);
         }
 
+        self.handle_interrupts(mem);
+
+        //halt skips time ticking
+        if self.halted && self.ime {
+            // the first return may be something other than 1
+            let cycles_to_return = self.last_mcycles_inc_val;
+            self.last_mcycles_inc_val = 1;
+            return cycles_to_return;
+        }
+
+
         self.tick_div_reg(mem);
         self.tick_tima_reg(mem);
-        self.handle_interrupts(mem);
+
+
 
         // load rom here in case we want to test skipping bios
         if !self.rom_loaded {
             mem.load_rom_to_mem();
             self.rom_loaded = true;
         }
+
         let mut opcode = self.fetch_next_inst(mem);
         //if CB, read another byte, else decode and execute
         let mut is_cb_opcode = false;
@@ -1494,8 +1510,8 @@ impl Cpu {
                 },
                 0x76 => {
                     // HALT
-                    print!("HALT WANTS TO EXECUTE BUT NOT IMPLEMENTED\n");
-                    //self.halted = true;
+                    //print!("Halting CPU\n");
+                    self.halted = true;
 
                     self.inc_cycles_by_inst_val(inst.cycles);
                     self.registers.inc_pc_by_inst_val(inst.size);
