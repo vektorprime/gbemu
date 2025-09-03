@@ -41,7 +41,8 @@ impl Emu {
             sec_mcycles: 0, // tracking max mcycles per sec
             current_time: Instant::now(),
             is_cpu_tested: false,
-            is_cpu_test_enabled: true,
+            //todo re-enable
+            is_cpu_test_enabled: false,
             test_mbc: Box::new(Mbc::new()),
             test_cpu: Cpu::new(),
             joypad,

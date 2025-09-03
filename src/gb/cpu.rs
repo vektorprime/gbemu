@@ -63,7 +63,7 @@ impl Cpu {
         if mbc.dma_cycles_remaining != 0 {
             mbc.dma_cycles_remaining -= 1;
             if mbc.dma_cycles_remaining == 0 {
-                print!("No DMA cycles left, ending DMA tick\n");
+                //print!("No DMA cycles left, ending DMA tick\n");
                 mbc.dma_active = false;
             }
         }
@@ -127,28 +127,28 @@ impl Cpu {
             }
             // check that each interrupt is enabled and requested, then handle
             if mbc.hw_reg.is_vblank_bit0_interrupt_requested_and_enabled() {
-                print!("executing vblank_bit0_interrupt\n");
+                //print!("executing vblank_bit0_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Vblank_40);
                 mbc.hw_reg.clear_if_vblank_bit0();
             }
 
              else if mbc.hw_reg.is_lcd_stat_bit1_interrupt_requested_and_enabled() {
-                print!("executing lcd_stat_bit1_interrupt\n");
+                //print!("executing lcd_stat_bit1_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Stat_48);
                 mbc.hw_reg.clear_if_lcd_bit1();
             }
              else if mbc.hw_reg.is_timer_bit2_interrupt_requested_and_enabled() {
-                print!("executing timer_bit2_interrupt\n");
+                //print!("executing timer_bit2_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Timer_50);
                 mbc.hw_reg.clear_if_timer_bit2();
             }
              else if mbc.hw_reg.is_serial_bit3_interrupt_requested_and_enabled() {
-                print!("executing serial_bit3_interrupt\n");
+                //print!("executing serial_bit3_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Serial_58);
                 mbc.hw_reg.clear_if_serial_bit3();
             }
              else if mbc.hw_reg.is_joypad_bit4_interrupt_requested_and_enabled() {
-                print!("executing joypad_bit4_interrupt\n");
+                //print!("executing joypad_bit4_interrupt\n");
                 self.execute_interrupt(mbc, Interrupt::Joypad_60);
                 mbc.hw_reg.clear_if_joypad_bit4();
             }
@@ -169,55 +169,58 @@ impl Cpu {
 
     }
 
-
-
     pub fn tick_tima_reg(&mut self, mbc: &mut Mbc) {
         if mbc.is_tac_bit2_enable_set() {
             let interesting_bit = mbc.get_tima_reg_interesting_bit();
+
             let last_bit = self.last_counter & interesting_bit;
-            if last_bit == 0 {
-                let current_bit = self.counter & interesting_bit;
-                if current_bit != 0 {
-                    // this is a rising edge, we should inc tima here
-                    let result =  mbc.hw_reg.tima.overflowing_add(1);
-                    if result.1 {
-                        mbc.hw_reg.tima = mbc.hw_reg.tma;
-                        mbc.hw_reg.set_if_timer_bit2();
-                    } else {
-                        mbc.hw_reg.tima = result.0;
-                    }
+            let current_bit = self.counter & interesting_bit;
+
+            // falling edge: 1 -> 0
+            if last_bit != 0 && current_bit == 0 {
+                let (new_val, overflowed) = mbc.hw_reg.tima.overflowing_add(1);
+                if overflowed {
+                    // TIMA overflow: reload TMA and request timer interrupt
+                    mbc.hw_reg.tima = mbc.hw_reg.tma;
+                    mbc.hw_reg.set_if_timer_bit2();
+                } else {
+                    mbc.hw_reg.tima = new_val;
                 }
             }
         }
     }
 
+    // pub fn tick_tima_reg(&mut self, mbc: &mut Mbc) {
+    //     if mbc.is_tac_bit2_enable_set() {
+    //         let interesting_bit = mbc.get_tima_reg_interesting_bit();
+    //         let last_bit = self.last_counter & interesting_bit;
+    //         if last_bit == 0 {
+    //             let current_bit = self.counter & interesting_bit;
+    //             if current_bit != 0 {
+    //                 // this is a rising edge, we should inc tima here
+    //                 let result =  mbc.hw_reg.tima.overflowing_add(1);
+    //                 if result.1 {
+    //                     mbc.hw_reg.tima = mbc.hw_reg.tma;
+    //                     mbc.hw_reg.set_if_timer_bit2();
+    //                 } else {
+    //                     mbc.hw_reg.tima = result.0;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
+
     pub fn disable_ime(&mut self) {
-        print!("disabling IME\n");
+        //print!("disabling IME\n");
         self.ime = false;
     }
 
     pub fn enable_ime(&mut self) {
-        print!("enabling IME\n");
+        //print!("enabling IME\n");
         self.ime = true;
     }
 
     pub fn tick(&mut self, mem: &mut Mbc) -> u64 {
-        //debug
-        // let pc_print = self.registers.get_pc();
-        // print!("pc - 0x{:X} \n", pc_print);
-        // let dma_add: u16 = 0xFF46;
-        // if mem.read(dma_add, OpSource::CPU) != 0 {
-        //     //print!("returning 160 cycles because there was a DMA transfer\n");
-        //     mem.write(dma_add, 0, OpSource::CPU);
-        //     return 160u64;
-        // }
-
-        // per pandocs ime is disabled when rom starts
-
-        // if !self.is_initial_ime_set {
-        //     self.disable_ime();
-        //     self.is_initial_ime_set = true;
-        // }
 
         if self.registers.get_pc() == 0x100 {
             print!("----------- \n");
@@ -251,19 +254,6 @@ impl Cpu {
         //     print!("pc - {:X} \n", pc_print);
         // }
 
-
-        // if self.registers.get_pc() == 0x1DB {
-        //     let pc_print = self.registers.get_pc();
-        //     print!("pc - {:X} \n", pc_print);
-        // }
-        // if self.registers.get_pc() == 0x1FE {
-        //     let pc_print = self.registers.get_pc();
-        //     print!("pc - {:X} \n", pc_print);
-        // }
-        // if self.registers.get_pc() <= 0x100 {
-        //     let pc_print = self.registers.get_pc();
-        //     //print!("pc - {:X} \n", pc_print);
-        // }
         // end debug
         if mem.dma_active {
             self.tick_dma(mem);
@@ -680,12 +670,13 @@ impl Cpu {
                             let new_pc = pc.overflowing_add(offset).0.overflowing_add(1).0;
                             self.registers.set_pc(new_pc);
                         }
+                        self.inc_cycles_by_inst_val(3);
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
-                },     
+                },
                 0x21 => {
                     // LD HL D16
                     let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
@@ -797,12 +788,13 @@ impl Cpu {
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
                         }
+                        self.inc_cycles_by_inst_val(3);
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
-                },   
+                },
                 0x29 => {
                     // ADD HL HL
                     let a = self.registers.get_hl();
@@ -880,12 +872,13 @@ impl Cpu {
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
                         }
+                        self.inc_cycles_by_inst_val(3);
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
-                },   
+                },
                 0x31 => {
                     // LD SP D16
                     let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
@@ -989,12 +982,12 @@ impl Cpu {
                             let new_pc = pc + offset + 1;
                             self.registers.set_pc(new_pc);
                         }
+                        self.inc_cycles_by_inst_val(3);
                     }
                     else {
                         self.registers.inc_pc_by_inst_val(inst.size);
                     }
-
-                    self.inc_cycles_by_inst_val(inst.cycles);
+                    self.inc_cycles_by_inst_val(2);
                 },
                 0x39 => {
                     // ADD HL SP
@@ -2454,8 +2447,12 @@ impl Cpu {
                         let hi = mem.read(address + 1, OpSource::CPU);
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                         self.registers.set_sp(address + 2);
+                        self.inc_cycles_by_inst_val(5);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
+                    else {
+                        self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
+                    }
                 },
                 0xC1 => {
                     // POP BC
@@ -2473,11 +2470,12 @@ impl Cpu {
                         let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
                         let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                        self.inc_cycles_by_inst_val(4);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xC3 => {
                     // JP A16
@@ -2490,8 +2488,8 @@ impl Cpu {
                 0xC4 => {
                     // CALL NZ A16
                     // if z is 0, set pc to a16, and push addr pc + 2 to stack
-                    let ret_addr = self.registers.get_pc() + 2;
                     if !self.registers.is_z_flag_set() {
+                        let ret_addr = self.registers.get_pc() + 2;
                         // get the called address and set pc to it
                         let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
                         let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
@@ -2508,11 +2506,13 @@ impl Cpu {
                         mem.write(sp_addr, ret_part_1, OpSource::CPU);
                         let ret_part_2 = (ret_addr >> 8) as u8;
                         mem.write(sp_addr + 1, ret_part_2, OpSource::CPU);
+
+                        self.inc_cycles_by_inst_val(6);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xC5 => {
                     // PUSH BC
@@ -2572,11 +2572,11 @@ impl Cpu {
                         // shrink stack by 2
                         let new_sp = self.registers.get_sp() + 2;
                         self.registers.set_sp(new_sp);
+                        self.inc_cycles_by_inst_val(5);
                     } else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
                     }
-
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xC9 => {
                     // RET
@@ -2600,11 +2600,12 @@ impl Cpu {
                         let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                        self.inc_cycles_by_inst_val(4);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 // 0xCB does not exist because it's used as a prefix for next inst. set
                 0xCC => {
@@ -2625,11 +2626,12 @@ impl Cpu {
                         mem.write(new_sp, lo_pc, OpSource::CPU);          // write low byte
                         mem.write(new_sp + 1, hi_pc, OpSource::CPU);      // write high byte
                        // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
-                        self.registers.set_pc(target_addr); //
+                        self.registers.set_pc(target_addr);
+                        self.inc_cycles_by_inst_val(6);
                     } else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xCD => {
                     // CALL A16
@@ -2686,14 +2688,16 @@ impl Cpu {
                     // RET NC
                     if !self.registers.is_c_flag_set() {
                         let address = self.registers.get_sp();
-                        self.registers.set_pc(address);
                         let lo = mem.read(address, OpSource::CPU);
                         let hi = mem.read(address + 1, OpSource::CPU);
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
                         self.registers.set_sp(address + 2);
+                        self.inc_cycles_by_inst_val(5);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
-                    self.registers.inc_pc_by_inst_val(inst.size);
+                    else {
+                        self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
+                    }
                 },
                 0xD1 => {
                     // POP DE
@@ -2712,17 +2716,18 @@ impl Cpu {
                         let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                        self.inc_cycles_by_inst_val(4);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xD4 => {
                     // CALL NC A16
                     // if c is 0, set pc to a16, and push addr pc + 2 to stack
-                    let ret_addr = self.registers.get_pc() + 2;
                     if !self.registers.is_c_flag_set() {
+                        let ret_addr = self.registers.get_pc() + 2;
                         // get the called address and set pc to it
                         let lo = mem.read(self.registers.get_pc(), OpSource::CPU);
                         let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
@@ -2739,11 +2744,12 @@ impl Cpu {
                         mem.write(sp_addr, ret_part_1, OpSource::CPU);
                         let ret_part_2 = (ret_addr >> 8) as u8;
                         mem.write(sp_addr + 1, ret_part_2, OpSource::CPU);
+                        self.inc_cycles_by_inst_val(6);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xD5 => {
                     // PUSH DE
@@ -2804,11 +2810,11 @@ impl Cpu {
                         self.registers.set_pc(ret_addr);
                         // shrink stack by 2
                         self.registers.set_sp(sp + 2);
-
+                        self.inc_cycles_by_inst_val(5);
                     } else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(2);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xD9 => {
                     // RETI
@@ -2832,11 +2838,12 @@ impl Cpu {
                         let hi = mem.read(self.registers.get_pc() + 1, OpSource::CPU);
                         //print!("Jumping to add {}\n", u16::from_le_bytes([lo, hi]));
                         self.registers.set_pc(u16::from_le_bytes([lo, hi]));
+                        self.inc_cycles_by_inst_val(4);
                     }
                     else {
                         self.registers.set_pc(self.registers.get_pc() + 2);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xDC => {
                     // CALL C A16
@@ -2857,11 +2864,12 @@ impl Cpu {
                         mem.write(new_sp + 1, hi_pc, OpSource::CPU);      // write high byte
                        // print!("calling add {:X}, pushing add {:X} \n", target_addr, return_addr );
 
-                        self.registers.set_pc(target_addr); //
+                        self.registers.set_pc(target_addr);
+                        self.inc_cycles_by_inst_val(6);
                     } else {
                         self.registers.inc_pc_by_inst_val(inst.size);
+                        self.inc_cycles_by_inst_val(3);
                     }
-                    self.inc_cycles_by_inst_val(inst.cycles);
                 },
                 0xDE => {
                     // SUBC A D8

@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use crate::gb::graphics::pixel::GBPixel;
 
 pub enum FifoOpError {
-    LenExceeded,
+    FifoFull,
     Empty,
 }
 pub struct Fifo {
@@ -20,10 +20,12 @@ impl Fifo {
 
     pub fn push(&mut self, pixel: GBPixel) -> Result<(), FifoOpError> {
         if self.data.len() >= self.max_size {
-            return Err(FifoOpError::LenExceeded);
+            Err(FifoOpError::FifoFull)
         }
-        self.data.push_back(pixel);
-        Ok(())
+        else {
+            self.data.push_back(pixel);
+            Ok(())
+        }
     }
 
     pub fn pop(&mut self) -> Result<GBPixel, FifoOpError> {

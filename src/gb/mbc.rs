@@ -105,7 +105,7 @@ impl Mbc {
         if clock_select == 0b00  {
             return 1 << 9
         } else if clock_select == 0b01  {
-            return 1 << 2
+            return 1 << 3
         } else if clock_select == 0b10  {
             return 1 << 5
         } else if clock_select == 0b11  {
@@ -195,6 +195,7 @@ impl Mbc {
             //0xFF00 => self.hw_reg.joyp,
             0xFF00 => {
                 //self.joypad.get_state()
+                //print!("reading FF00 (joypad) value {:#x} \n", self.hw_reg.joyp);
                 self.hw_reg.joyp
             },
 
@@ -264,7 +265,7 @@ impl Mbc {
 
             // Interrupt enable
             0xFFFF => {
-                print!("reading IE register, value is {}\n", self.hw_reg.ie);
+                //print!("reading IE register, value is {}\n", self.hw_reg.ie);
                 self.hw_reg.ie
             }
 
@@ -352,9 +353,9 @@ impl Mbc {
             // writing 0x10 means select direction keys
             // writing 0x30 means nither, lower nibble should read 0xF
             0xFF00 => {
-                println!("writing to joyp hwreg byte {:#x}", byte);
-                let bit_4_and_5 = byte & 0b0011_0000;
-                self.hw_reg.joyp |= bit_4_and_5;
+                //println!("writing to FF00 (joypad) byte {:#x}", byte);
+                let jp_mask = self.hw_reg.joyp & 0b0000_1111;
+                self.hw_reg.joyp = jp_mask | byte;
                 self.is_joypad_pending_update_from_reg = true;
             },
 
@@ -412,7 +413,7 @@ impl Mbc {
 
             // Interrupt flags
             0xFF0F => {
-                print!("writing value {} to IF register\n", byte);
+                //print!("writing value {} to IF register\n", byte);
                 self.hw_reg.interrupt_flags = byte
             },
 
@@ -431,7 +432,7 @@ impl Mbc {
             0xFF45 => self.hw_reg.lyc = byte,
             0xFF46 => {
 
-                print!("writing to 0xFF46, DMA hw register \n");
+                //print!("writing to 0xFF46, DMA hw register \n");
                 self.dma_active = true;
                 self.dma_cycles_remaining = 160;
                 let read_add_base = (byte as u16) << 8;
@@ -502,7 +503,7 @@ impl Mbc {
             // 0xFFFF => self.hw_reg.ie = byte,
             
             0xFFFF => {
-                print!("writing value {} to IE register \n", byte);
+                //print!("writing value {} to IE register \n", byte);
                 self.hw_reg.ie = byte;
             },
             
@@ -715,7 +716,7 @@ impl Mbc {
             // write to VRAM
             let vram_base_size: u16 = 0x8000;
             if address == 0x9800 {
-                print!("writing {:#X} to address 0x9800\n", byte);
+                //print!("writing {:#X} to address 0x9800\n", byte);
             }
             self.vram.write(address - vram_base_size, byte);
             return;

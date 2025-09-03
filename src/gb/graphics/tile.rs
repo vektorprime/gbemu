@@ -29,7 +29,7 @@ pub fn get_tile(mbc: &Mbc, tile_idx: u8, tile_type: TileType) -> Tile {
     let mut temp_tile: [u8; 16] = [0; 16];
     let idx = if address == 0x9000 { // handle special case of lcdc bit 4 being 0
         if (tile_idx as i8) < 0 { // handle negative
-            let neg_offset = ((tile_idx as i8).abs() as u16) * 16;
+            let neg_offset = ((tile_idx as i8).unsigned_abs() as u16) * 16;
             let add = address - neg_offset;
             for y in 0..16 {
                 temp_tile[y] = mbc.read(add + (y as u16), OpSource::PPU);
@@ -47,6 +47,31 @@ pub fn get_tile(mbc: &Mbc, tile_idx: u8, tile_type: TileType) -> Tile {
         }
     };
 
+
+    new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
+    new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
+    new_tile.decode_tile_row(temp_tile[4], temp_tile[5], 2);
+    new_tile.decode_tile_row(temp_tile[6], temp_tile[7], 3);
+    new_tile.decode_tile_row(temp_tile[8], temp_tile[9], 4);
+    new_tile.decode_tile_row(temp_tile[10], temp_tile[11], 5);
+    new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
+    new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
+
+    new_tile
+}
+
+
+pub fn get_tile_at_8000(mbc: &Mbc, tile_idx: u8) -> Tile {
+
+    // this func is for testing to see if the tile viewer can always show all tiles it finds, not just active ones
+    let address: u16 =  0x8000;
+
+    let mut new_tile = Tile::new();
+    // every 16 bytes is a tile
+    let mut temp_tile: [u8; 16] = [0; 16];
+        for y in 0..16 {
+            temp_tile[y] = mbc.read(address + (tile_idx as u16 * 16) + (y as u16), OpSource::PPU);
+        }
 
     new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
     new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
