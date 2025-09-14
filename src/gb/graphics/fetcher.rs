@@ -646,8 +646,9 @@ impl Fetcher {
         // todo re-enable after fixing draw, re-analyze to determine if needed
         // let pixels_to_skip =  fifo.data.len();
         // if pixels_to_skip > 0 {
-        //     self.pixels_to_mark_skipped += pixels_to_skip as u8;
-        //     fifo.data.clear();
+        //     // self.pixels_to_mark_skipped += pixels_to_skip as u8;
+        //     // fifo.data.clear();
+        //     return Err(FetcherError::FifoFull);
         // }
 
         // todo if tile is flipped horizontally push lsb first, else push msb first

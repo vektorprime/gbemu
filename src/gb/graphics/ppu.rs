@@ -524,7 +524,7 @@ impl Ppu {
         let tcycle_budget = tcycles.clone();
         let mut gw_buffer_unlocked = gw_buffer.lock().unwrap();
 
-        for x in 0..tcycle_budget {
+        for x in 0..8 {
             // I don't think we need this unless we set the fifo back to 16
             if x == 8 {
                 // fifo is 16 pixels but we only want to pull in chunks of 8
