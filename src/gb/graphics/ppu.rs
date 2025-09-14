@@ -842,10 +842,9 @@ impl Ppu {
         // the pc counter was inc slow but that was due to other reasons
         if !mbc.hw_reg.is_lcdc_lcd_and_ppu_enable_bit7_enabled() {
            //print!("lcdc bit 7 not enabled yet, skipping ppu tick \n");
-            mbc.hw_reg.ly = 0;
-            self.tcycle_in_scanline = 0;
-            self.tcycle_in_frame = 0;
-            //mbc.hw_reg.stat = 0;
+           //  mbc.hw_reg.ly = 0;
+           //  self.tcycle_in_scanline = 0;
+           //  self.tcycle_in_frame = 0;
             // Clear mode bits (0–1) and coincidence flag (bit 2) but preserve interrupt enable bits (3,4,5,6):
             mbc.hw_reg.stat = mbc.hw_reg.stat & 0b1111_1000;
             return PPUEvent::RenderEvent(RenderState::NoRender);
@@ -900,7 +899,6 @@ impl Ppu {
         self.tcycle_in_frame += tcycle;
         // these will be changes in mode 3 if it finishes early
 
-        let current_scanline = mbc.hw_reg.ly;
         self.current_scanline = mbc.hw_reg.ly;
         //moved the mode 0-3 limits to self so that I can change mode 0 and keep its state
 
@@ -910,7 +908,7 @@ impl Ppu {
         //let mode_2_oam_scan_last_cycle: u64 = 80;
         //print!("current scan line is {}\n", current_scanline);
         //print!("current tcycle_in_scanline is {}\n", self.tcycle_in_scanline);
-        if current_scanline < self.mode_1_v_blank_first_scan_line {
+        if self.current_scanline < self.mode_1_v_blank_first_scan_line {
 
             let mode_2_first_dot: u64 = 0;
             let current_dot = self.tcycle_in_scanline - tcycle;
@@ -918,7 +916,7 @@ impl Ppu {
             //if self.tcycle_in_scanline < self.mode_2_oam_scan_last_tcycle && !self.started_mode_2_in_frame {
             // if current_dot == mode_2_first_dot && !self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
             if !self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
-                 // print!("entering mode_2_oam_scan \n");
+                //print!("entering mode_2_oam_scan \n");
                 //reset oam idx so we check it every scan line
                 //self.sprites_in_oam_idx = 0;
                 // todo switch to using these in mode 2 as it's more accurate according to pandocs
@@ -941,6 +939,7 @@ impl Ppu {
                 // always reset pixels in frame because that's what the buffer writer uses as an index
                 self.pixel_in_scanline = 0;
                 self.fetcher.finished_sprites_in_scanline = false;
+                self.fetcher.remaining_bg_pixels_before_switching_layer = 0;
                 //clear it every scanline
                 self.sprites.clear();
                 self.sprites.reserve(10);
@@ -959,7 +958,7 @@ impl Ppu {
 
             if self.tcycle_in_scanline >= self.mode_3_drawing_first_tcycle  && self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 // Mode 3 is between 172 and 289 dots, let's call it 172
-                 // print!("entering mode_3_draw \n");
+                //print!("entering mode_3_draw \n");
                 mbc.restrict_vram_access = true;
                 //reset fifos
                 self.sprite_fifo.data.clear();
@@ -1017,7 +1016,7 @@ impl Ppu {
 
 
             if self.tcycle_in_scanline >= self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
-                 // print!("entering mode_0_h_blank \n");
+                //print!("entering mode_0_h_blank \n");
                 mbc.restrict_vram_access = false;
 
                 // Mode 0 is the remainder of the dots left in the scan line (final dot is 456)
@@ -1033,8 +1032,10 @@ impl Ppu {
             // last 10 scan lines are mode 1
             // 4560 dots or 10 scan lines (each scan line is 456 dots)
             //print!("tcycle in frame is {} and mode 1, 2, 3, and 0 bool are {}, {}, {}, {}\n", self.tcycle_in_frame, self.started_mode_1_in_frame, self.started_mode_2_in_scanline, self.started_mode_3_in_scanline, self.started_mode_0_in_scanline );
+
+
             let mode_1_v_blank_first_tcycle = 65_664;
-            //if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline {
+            // I don't check for other mode bools because they reset after the scanline
             if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame  {
                 mbc.hw_reg.set_if_vblank_bit0();
                  //print!("entering mode_1_v_blank \n");
@@ -1054,6 +1055,8 @@ impl Ppu {
                 self.mode_1_v_blank(mbc, &tcycle);
             }
         }
+
+        // everything below here happens every tick
 
         // // //if all modes  are done cycle back
         // if self.started_mode_2_in_frame && self.started_mode_3_in_frame &&
@@ -1080,8 +1083,11 @@ impl Ppu {
         // max ly is 153 because there are 153 scanlines
         let max_ly_value = 153;
         if mbc.hw_reg.ly >= max_ly_value {
+            self.tcycle_in_scanline = 0;
+            self.pixel_in_scanline = 0;
             mbc.hw_reg.ly = 0;
             self.tcycle_in_frame = 0;
+            self.pixel_in_frame = 0;
             self.started_mode_2_in_scanline = false;
             self.started_mode_3_in_scanline = false;
             self.started_mode_0_in_scanline = false;
@@ -1090,10 +1096,10 @@ impl Ppu {
             //print!("ly hw reg is max, resetting to 0 \n");
         }
 
-        let max_draw_ly_value = 143;
-        if mbc.hw_reg.ly > max_draw_ly_value {
-            self.pixel_in_frame = 0;
-        }
+        // let max_draw_ly_value = 143;
+        // if mbc.hw_reg.ly > max_draw_ly_value {
+        //     self.pixel_in_frame = 0;
+        // }
 
         //let max_tcycle_in_mode_3_draw: u64 = 23_040;
         //let max_tcycle_in_mode_3_draw: u64 = 24_768;

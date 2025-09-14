@@ -119,6 +119,7 @@ impl Fetcher {
         // }
         // self.tcycle_budget -= 2;
 
+        // the BG draws perfectly if I disable the sprite logic, so I know sprites are the issue
         if !self.finished_sprites_in_scanline {
             let current_dot = self.current_tile_x_pos as u8 * 8;
             let dot_range = current_dot + 7;

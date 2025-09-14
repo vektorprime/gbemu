@@ -3126,7 +3126,7 @@ impl Cpu {
                 0xF3 => {
                     // DI
                     // set IME to false immediately
-                    print!("executing DI opcode\n");
+                    //print!("executing DI opcode\n");
 
                     self.disable_ime();
 
@@ -3245,7 +3245,7 @@ impl Cpu {
                 0xFB => {
                     // EI
                     // set IME to enable AFTER the next inst. executes
-                    print!("executing EI opcode\n");
+                    //print!("executing EI opcode\n");
                     self.pending_enable_ime = true;
 
                     self.inc_cycles_by_inst_val(inst.cycles);

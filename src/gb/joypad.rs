@@ -70,19 +70,19 @@ impl Joypad {
            //println!("updating joypad from reg");
 
             let byte = mbc.hw_reg.joyp;
-            if byte & 0x30 == 0x30 {
-                self.select_buttons = false;
-                self.select_dpad = false;
-                self.a = false;
-                self.b = false;
-                self.select = false;
-                self.start = false;
-                self.right = false;
-                self.left = false;
-                self.up = false;
-                self.down = false;
-            }
-            else if byte & 0x20 == 0x00 {
+            // if byte == 0xFF {
+            //     self.select_buttons = false;
+            //     self.select_dpad = false;
+            //     self.a = false;
+            //     self.b = false;
+            //     self.select = false;
+            //     self.start = false;
+            //     self.right = false;
+            //     self.left = false;
+            //     self.up = false;
+            //     self.down = false;
+            // }
+            if byte & 0x20 == 0x00 {
                 self.select_buttons = true;
                 self.select_dpad = false;
             }
@@ -101,40 +101,65 @@ impl Joypad {
         // interrupt only triggered when bit goes from 1 to 0 (key pressed)
         if state == ElementState::Pressed {
             //println!("ElementState is Pressed, setting is_pending_joypad_interrupt_trigger to true");
-            self.is_pending_joypad_interrupt_trigger = true;
 
             match key {
                 KeyCode::KeyW => {
-                    self.up = true;
-                    println!("pressed up");
+                    if !self.up {
+                        self.up = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed up");
+                    }
+
                 },
                 KeyCode::KeyA => {
-                    self.left = true;
-                    println!("pressed left");
+                    if !self.left {
+                        self.left = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed left");
+                    }
                 },
                 KeyCode::KeyS => {
-                    self.down = true;
-                    println!("pressed down");
+                    if !self.down {
+                        self.down = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed down");
+                    }
                 },
                 KeyCode::KeyD => {
-                    self.right = true;
-                    println!("pressed right");
+                    if !self.right {
+                        self.right = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed right");
+
+                    }
                 },
                 KeyCode::KeyK => {
-                    self.b = true;
-                    println!("pressed b");
+                    if !self.b {
+                        self.b = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed b");
+                    }
                 },
                 KeyCode::KeyL => {
-                    self.a = true;
-                    println!("pressed a");
+                    if !self.a {
+                        self.a = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed a");
+                    }
                 },
                 KeyCode::Backspace => {
-                    self.select = true;
-                    println!("pressed select");
+                    if !self.select {
+                        self.select = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed select");
+                    }
                 },
                 KeyCode::Enter => {
-                    self.start = true;
-                    println!("pressed start");
+                    if !self.start {
+                        self.start = true;
+                        self.is_pending_joypad_interrupt_trigger = true;
+                        println!("pressed start");
+                    }
                 },
                 _ => {
                     println!("unrecognized key in Joypad.handle_input()");
@@ -187,6 +212,7 @@ impl Joypad {
 
     pub fn get_state_as_u8(&self) -> u8 {
         let mut state: u8 = 0xFF;
+
         if self.select_dpad {
             state &= 0b1110_1111;
             if self.right == true {
@@ -218,40 +244,6 @@ impl Joypad {
                 }
         }
 
-        // if self.select_dpad || self.select_buttons {
-        //     if self.select_dpad == true {
-        //         state &= 0b0010_1111;
-        //     }
-        //     else if self.select_buttons == true {
-        //         state &= 0b0001_1111;
-        //     }
-        //
-        //     if self.a_right == true {
-        //         state &= 0b1111_1110;
-        //     }
-        //     if self.b_left == true {
-        //         state &= 0b1111_1101;
-        //     }
-        //     if self.select_up == true {
-        //         state &= 0b1111_1011;
-        //     }
-        //     if self.start_down == true {
-        //         state &= 0b1111_0111
-        //     }
-        // }
-        //
-        // if self.a_right == true {
-        //     state &= 0b1111_1110;
-        // }
-        // if self.b_left == true {
-        //     state &= 0b1111_1101;
-        // }
-        // if self.select_up == true {
-        //     state &= 0b1111_1011;
-        // }
-        // if self.start_down == true {
-        //     state &= 0b1111_0111
-        // }
         state
     }
 }

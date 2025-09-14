@@ -356,6 +356,9 @@ impl Mbc {
                 //println!("writing to FF00 (joypad) byte {:#x}", byte);
                 let jp_mask = self.hw_reg.joyp & 0b0000_1111;
                 self.hw_reg.joyp = jp_mask | byte;
+                if byte == 0x30 {
+                    self.hw_reg.joyp = 0xFF;
+                }
                 self.is_joypad_pending_update_from_reg = true;
             },
 
@@ -428,7 +431,10 @@ impl Mbc {
                 //print!("writing {} to SCX\n", byte);
                 self.hw_reg.scx = byte;
             },
-            0xFF44 => self.hw_reg.ly = 0, // writing to LY resets it
+            0xFF44 =>  {
+                self.hw_reg.ly = 0;
+                print!("unhandled write to LY\n");
+            }, // writing to LY resets it
             0xFF45 => self.hw_reg.lyc = byte,
             0xFF46 => {
 
