@@ -24,8 +24,6 @@ pub struct Emu {
     pub current_time: Instant,
     pub is_cpu_test_enabled: bool,
     pub is_cpu_tested: bool,
-    pub test_mbc: Box<Mbc>,
-    pub test_cpu: Cpu,
     pub joypad: Arc<Mutex<Joypad>>
 }
 
@@ -41,10 +39,7 @@ impl Emu {
             sec_mcycles: 0, // tracking max mcycles per sec
             current_time: Instant::now(),
             is_cpu_tested: false,
-            //todo re-enable
-            is_cpu_test_enabled: false,
-            test_mbc: Box::new(Mbc::new()),
-            test_cpu: Cpu::new(),
+            is_cpu_test_enabled: true,
             joypad,
         }
     }
@@ -61,28 +56,31 @@ impl Emu {
     //     self.ppu.load_all_tiles(&self.mbc);
     // }
 
-    pub fn test_cpu(&mut self) {
+    pub fn test_cpu() {
         println!("TESTING CPU");
         let all_cpu_tests = get_all_tests();
+        let mut test_cpu = Cpu::new();
+        let mut test_mbc =  Box::new(Mbc::new());
+        test_mbc.is_testing_enabled = true;
         //println!("Got all tests, starting testing");
         for test in &all_cpu_tests {
             //println!("executing test {}", test.name);
             // setup state
                 // registers
-            setup_initial_registers(&mut self.test_cpu.registers, &test.initial_test_state);
+            setup_initial_registers(&mut test_cpu.registers, &test.initial_test_state);
             // ram
             for ram_entry in &test.initial_test_state.test_ram {
-                self.test_mbc.write(ram_entry.0, ram_entry.1, OpSource::CPU);
+                test_mbc.write(ram_entry.0, ram_entry.1, OpSource::CPU);
             }
             // setup done
 
             // execute cpu
-            self.test_cpu.tick(&mut self.test_mbc);
+            test_cpu.tick(&mut test_mbc);
 
 
             // check state
                 // registers
-                let failed_registers = compare_registers(&self.test_cpu.registers, &test.final_test_state);
+                let failed_registers = compare_registers(&test_cpu.registers, &test.final_test_state);
                 if !failed_registers.is_empty() {
                     println!("Failed registers:");
                     for register in &failed_registers {
@@ -96,7 +94,7 @@ impl Emu {
                 // ram
             // clean up registers and ram
             for ram_entry in &test.initial_test_state.test_ram {
-                self.test_mbc.write(ram_entry.0, 0, OpSource::CPU);
+                test_mbc.write(ram_entry.0, 0, OpSource::CPU);
             }
             // print result
             // if result says all CPU tests passed, continue
@@ -108,10 +106,8 @@ impl Emu {
     //pub fn tick(&mut self, tile_frame: &mut [u8], game_frame: &mut [u8]) -> RenderState {
     pub fn tick(&mut self, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>) -> PPUEvent {
         if self.is_cpu_test_enabled && !self.is_cpu_tested {
-            self.test_mbc.is_testing_enabled = true;
-            self.test_cpu();
+            Emu::test_cpu();
             self.is_cpu_tested = true;
-            self.test_mbc.is_testing_enabled = false;
         }
 
         //joypad

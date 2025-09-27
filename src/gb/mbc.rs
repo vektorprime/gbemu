@@ -26,7 +26,7 @@ pub struct Mbc {
     rom_bank: u8,
     ram_bank: u8,
     wr_ram_bank: bool,
-    pub rom_ram: RomRam,
+    pub rom_ram: Ram32,
     //pub need_tile_update: bool,
     //pub need_bg_map_update: bool,
     pub rom_bank_mode: RomBankMode,
@@ -57,7 +57,7 @@ impl Mbc {
             rom_bank: 0,
             ram_bank: 0,
             wr_ram_bank: false,
-            rom_ram: RomRam::new(),
+            rom_ram: Ram32::new(),
             // need_tile_update: false,
             // need_bg_map_update: false,
             rom_bank_mode: RomBankMode::Simple,
@@ -818,6 +818,7 @@ impl Mbc {
             let base = (self.ram_bank as u32) * 0x2000;
             let offset = (address as u32) - 0xA000;
             let calculated_address = base + offset;
+            // todo find a better way to handle this
             self.rom_ram.write(calculated_address, byte);
         }
         panic!("attempted an unhandled write inside mbc3_write address {} byte {:X}", address, byte);

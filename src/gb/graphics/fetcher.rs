@@ -118,7 +118,7 @@ impl Fetcher {
         //     return Err(FetcherError::NotEnoughTcycles);
         // }
         // self.tcycle_budget -= 2;
-
+        // todo I should fetch both bg and sprite tiles, let the code decide later which fifo pixels to actually draw
         // the BG draws perfectly if I disable the sprite logic, so I know sprites are the issue
         if !self.finished_sprites_in_scanline {
             let current_dot = self.current_tile_x_pos as u8 * 8;
@@ -135,7 +135,7 @@ impl Fetcher {
                         let sprite_x_pos = x.byte1_x_pos - 8;
                         if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
                             self.remaining_bg_pixels_before_switching_layer = sprite_x_pos - current_dot;
-                            print!("self.remaining_bg_pixels_before_switching_layer is {}\n", self.remaining_bg_pixels_before_switching_layer);
+                            //print!("self.remaining_bg_pixels_before_switching_layer is {}\n", self.remaining_bg_pixels_before_switching_layer);
                         }
                     }
                 }
@@ -300,7 +300,7 @@ impl Fetcher {
             if self.remaining_bg_pixels_before_switching_layer != 0 {
                 self.remaining_bg_pixels_before_switching_layer -= 1;
                 if self.remaining_bg_pixels_before_switching_layer == 0 {
-                    print!("breaking out of FIFO push early due to switching layer\n");
+                    //print!("breaking out of FIFO push early due to switching layer\n");
                     self.active_layer = Layer::SPRITE;
                     self.current_step = 1;
                     return Ok(())
@@ -515,7 +515,7 @@ impl Fetcher {
         let mut sprite_priority = false;
         let mut idx_to_remove = 0;
         let mut found_sprite = false;
-        // todo I see now the problem here is that I am assuming sprites start at the tile boundary, which they don't
+
         if !sprites.is_empty() {
             for (i, x) in sprites.iter().enumerate() {
                 let sprite_x_pos = x.byte1_x_pos - 8;

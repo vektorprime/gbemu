@@ -30,14 +30,14 @@ impl Ram {
 }
 
 
-pub struct RomRam {
+pub struct Ram32 {
     pub memory: [u8; 131071],
 }
 
 
-impl RomRam {
+impl Ram32 {
     pub fn new() -> Self {
-        RomRam {
+        Ram32 {
             memory: [0xFF; 131071],
         }
     }
