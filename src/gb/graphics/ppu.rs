@@ -526,11 +526,11 @@ impl Ppu {
 
         for x in 0..8 {
             // I don't think we need this unless we set the fifo back to 16
-            if x == 8 {
-                // fifo is 16 pixels but we only want to pull in chunks of 8
-                //print!("breaking out of mode_3_mix_pixels_and_draw for loop early because we popped 8 pixels\n");
-                break;
-            }
+            // if x == 8 {
+            //     // fifo is 16 pixels but we only want to pull in chunks of 8
+            //     //print!("breaking out of mode_3_mix_pixels_and_draw for loop early because we popped 8 pixels\n");
+            //     break;
+            // }
 
             match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
                 (Ok(bg_px), Err(_)) => {
@@ -939,7 +939,6 @@ impl Ppu {
                 // always reset pixels in frame because that's what the buffer writer uses as an index
                 self.pixel_in_scanline = 0;
                 self.fetcher.finished_sprites_in_scanline = false;
-                self.fetcher.remaining_bg_pixels_before_sprite = 0;
                 //clear it every scanline
                 self.sprites.clear();
                 self.sprites.reserve(10);

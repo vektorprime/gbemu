@@ -126,22 +126,22 @@ impl Fetcher {
         // }
         // self.tcycle_budget -= 2;
 
-        // todo reenable
-        // self.remaining_bg_pixels_before_sprite = 8;
-        // if !self.finished_sprites_in_scanline {
-        //     let current_dot = self.current_bg_tile_x_pos as u8 * 8;
-        //     let dot_range = current_dot + 7;
-        //     // check if we need to stop fetching bg_win and switch to the sprite fetcher
-        //     if !sprites.is_empty() {
-        //         for (i, x) in sprites.iter().enumerate() {
-        //             let sprite_x_pos = x.byte1_x_pos - 8;
-        //             if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
-        //                 self.remaining_bg_pixels_before_sprite = sprite_x_pos - current_dot;
-        //                 //print!("self.remaining_bg_pixels_before_switching_layer is {}\n", self.remaining_bg_pixels_before_sprite);
-        //             }
-        //         }
-        //     }
-        // }
+        // todo toggle off for working bg and partial working sprites
+        self.remaining_bg_pixels_before_sprite = 8;
+        if !self.finished_sprites_in_scanline {
+            let current_dot = self.current_bg_tile_x_pos as u8 * 8;
+            let dot_range = current_dot + 7;
+            // check if we need to stop fetching bg_win and switch to the sprite fetcher
+            if !sprites.is_empty() {
+                for (i, x) in sprites.iter().enumerate() {
+                    let sprite_x_pos = x.byte1_x_pos - 8;
+                    if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
+                        self.remaining_bg_pixels_before_sprite = sprite_x_pos - current_dot;
+                        //print!("self.remaining_bg_pixels_before_switching_layer is {}\n", self.remaining_bg_pixels_before_sprite);
+                    }
+                }
+            }
+        }
 
         //print!("tcycle_budget is {}\n", self.tcycle_budget);
 
@@ -304,13 +304,13 @@ impl Fetcher {
             //todo testing this
 
             // // this is used to skip pushing pixels when the sprite starts at an offset that's not divisible by 8
-            // if self.remaining_bg_pixels_before_sprite > 0 {
-            //     self.remaining_bg_pixels_before_sprite -= 1;
-            // }
-            // else {
-            //     self.scan_for_sprites_in_last_fetch = true;
-            //     break;
-            // }
+            if self.remaining_bg_pixels_before_sprite > 0 {
+                self.remaining_bg_pixels_before_sprite -= 1;
+            }
+            else {
+                self.scan_for_sprites_in_last_fetch = true;
+                break;
+            }
 
         }
 
@@ -529,8 +529,6 @@ impl Fetcher {
 
         if !sprites.is_empty() {
             // check previous fetch for sprites that started at an offset not divisible by 8
-            if self.scan_for_sprites_in_last_fetch {
-                // I don't add 1 to the current_sprite_tile_x_pos because this function runs before the BG one, which means it's already behind
                 for (i, x) in sprites.iter().enumerate() {
                     let sprite_x_pos = x.byte1_x_pos - 8;
                     if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
@@ -542,22 +540,6 @@ impl Fetcher {
                         break;
                     }
                 }
-            }
-            else {
-                // do the normal check for sprites at 8 byte boundaries
-                for (i, x) in sprites.iter().enumerate() {
-                    let sprite_x_pos = x.byte1_x_pos - 8;
-                    //if sprite_x_pos >= current_dot && sprite_x_pos <= dot_range {
-                    if sprite_x_pos == current_dot {
-                        //self.dot_in_scanline += 8;
-                        sprite_num = x.byte2_tile_num as usize;
-                        sprite_priority = x.get_byte3_sprite_flags_bit7_priority();
-                        idx_to_remove = i;
-                        found_sprite = true;
-                        break;
-                    }
-                }
-            }
 
         }
         if found_sprite {
@@ -570,7 +552,6 @@ impl Fetcher {
             }
         }
         else {
-            self.current_sprite_tile_x_pos += 1;
             return Err(FetcherError::NoSpriteFound)
         }
 
