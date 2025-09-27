@@ -47,6 +47,7 @@ fn main() {
 
     // rom is loaded after bios runs
     //emu.load_rom_file(String::from("tamagotchi.gb"));
+    // one of my opcodes must be broken because tetris breaks after starting
     //emu.load_rom_file(String::from("tetris.gb"));
     emu.load_rom_file(String::from("dmg-acid2.gb"));
     //emu.load_rom_file(String::from("daa.gb"));

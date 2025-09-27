@@ -939,7 +939,7 @@ impl Ppu {
                 // always reset pixels in frame because that's what the buffer writer uses as an index
                 self.pixel_in_scanline = 0;
                 self.fetcher.finished_sprites_in_scanline = false;
-                self.fetcher.remaining_bg_pixels_before_switching_layer = 0;
+                self.fetcher.remaining_bg_pixels_before_sprite = 0;
                 //clear it every scanline
                 self.sprites.clear();
                 self.sprites.reserve(10);
@@ -988,16 +988,22 @@ impl Ppu {
                     tcycles_res.0
                 };
 
-                match self.fetcher.active_layer {
-                    Layer::BG | Layer::WIN => {
-                        //print!("matched BG layer in ppu.tick \n");
-                        self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprite_fifo, &mut self.sprites, tcycle);
-                    },
-                    Layer::SPRITE => {
-                        //print!("matched sprite layer in ppu.tick \n");
-                        self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
-                    },
-                }
+                // match self.fetcher.active_layer {
+                //     Layer::BG | Layer::WIN => {
+                //         //print!("matched BG layer in ppu.tick \n");
+                //         self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprite_fifo, &mut self.sprites, tcycle);
+                //     },
+                //     Layer::SPRITE => {
+                //         //print!("matched sprite layer in ppu.tick \n");
+                //         self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
+                //     },
+                // }
+
+                self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprites, tcycle);
+                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos - 1;
+                self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
+
+
 
                 match self.mode_3_mix_pixels_and_draw(mbc, gw, &tcycle) {
                     Ok(_) => {},
@@ -1042,7 +1048,8 @@ impl Ppu {
                 self.fetcher.win_y_pos = 0;
                 self.fetcher.current_tile_y_pos = 0;
                 // reset tile x pos every frame. It's & with 0x1F in the fetcher step 1
-                self.fetcher.current_tile_x_pos = 0;
+                self.fetcher.current_bg_tile_x_pos = 0;
+                self.fetcher.current_sprite_tile_x_pos = 0;
                 //only draw these tiles once per frame in mode 3
 
                 self.drew_tiles_in_mode_3 = false;

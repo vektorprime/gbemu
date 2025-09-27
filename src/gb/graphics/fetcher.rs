@@ -32,24 +32,27 @@ pub struct Fetcher {
     //pub switched_to_window_layer: bool,
     //pub switched_to_sprite_layer: bool,
     pub start_of_rendering: bool,
-    pub current_tile_x_pos: u16,
+    pub current_bg_tile_x_pos: u16,
+    pub current_sprite_tile_x_pos: u16,
     pub current_tile_y_pos: u8,
     pub win_x_pos: u8,
     pub win_y_pos: u8,
     //pub dot_in_scanline: u8,
     pub tcycle_budget: u8,
     pub row_in_tile: u8,
-    pub current_step: u8,
+    pub bg_layer_current_step: u8,
+    pub sprite_layer_current_step: u8,
     pub current_tile_num: u16,
     pub current_tile_low_byte: u8,
     pub current_tile_high_byte: u8,
     pub current_priority: bool,
-    pub need_to_resume: bool,
+    pub bg_layer_need_to_resume: bool,
+    pub sprite_layer_need_to_resume: bool,
     pub pixels_to_mark_skipped: u8,
-    pub remaining_bg_pixels_before_switching_layer: u8,
+    pub remaining_bg_pixels_before_sprite: u8,
     pub fetcher_end_of_scanline: bool,
     pub finished_sprites_in_scanline: bool,
-
+    pub scan_for_sprites_in_last_fetch: bool
 }
 
 impl Fetcher {
@@ -60,23 +63,27 @@ impl Fetcher {
             // switched_to_window_layer: false,
             // switched_to_sprite_layer: false,
             start_of_rendering: false,
-            current_tile_x_pos: 0,
+            current_bg_tile_x_pos: 0,
+            current_sprite_tile_x_pos: 0,
             current_tile_y_pos: 0,
             win_x_pos: 0,
             win_y_pos: 0,
             //dot_in_scanline: 0,
             tcycle_budget: 0,
             row_in_tile: 0,
-            current_step: 0,
+            bg_layer_current_step: 0,
+            sprite_layer_current_step: 0,
             current_tile_num: 0,
             current_tile_low_byte: 0,
             current_tile_high_byte: 0,
             current_priority: false,
-            need_to_resume: false,
+            bg_layer_need_to_resume: false,
+            sprite_layer_need_to_resume: false,
             pixels_to_mark_skipped: 0,
-            remaining_bg_pixels_before_switching_layer: 0,
+            remaining_bg_pixels_before_sprite: 0,
             fetcher_end_of_scanline: false,
             finished_sprites_in_scanline: false,
+            scan_for_sprites_in_last_fetch: false,
         }
     }
 
@@ -84,7 +91,7 @@ impl Fetcher {
         if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() {
             // are we in a window pixel
              //if mbc.hw_reg.ly >= mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
+            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
                  if mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
                      return 0x9C00
                  } else {
@@ -110,37 +117,31 @@ impl Fetcher {
         }
     }
 
-    pub fn bg_win_step_1_get_tile_num(&mut self, mbc: &Mbc, fifo: &mut Fifo, sprites: &Vec<Sprite>, tcycles: u64) -> Result<usize, FetcherError> {
-        self.current_step = 1;
+    pub fn bg_win_step_1_get_tile_num(&mut self, mbc: &Mbc, fifo: &mut Fifo, sprites: &mut Vec<Sprite>, tcycles: u64) -> Result<usize, FetcherError> {
+        self.bg_layer_current_step = 1;
         // todo re-enable cycle budget to make it cycle accurate, but it skews the image
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles);
         // }
         // self.tcycle_budget -= 2;
-        // todo I should fetch both bg and sprite tiles, let the code decide later which fifo pixels to actually draw
-        // the BG draws perfectly if I disable the sprite logic, so I know sprites are the issue
-        if !self.finished_sprites_in_scanline {
-            let current_dot = self.current_tile_x_pos as u8 * 8;
-            let dot_range = current_dot + 7;
-            // check if we need to stop fetching bg_win and switch to the sprite fetcher
-            if !sprites.is_empty() {
-                if sprites.iter().any(|&x| x.byte1_x_pos - 8  == current_dot) {
-                    //print!("switching to sprite layer \n");
-                    self.active_layer = Layer::SPRITE;
-                    return Err(FetcherError::SwitchedToSpriteLayer);
-                }
-                else {
-                    for (i, x) in sprites.iter().enumerate() {
-                        let sprite_x_pos = x.byte1_x_pos - 8;
-                        if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
-                            self.remaining_bg_pixels_before_switching_layer = sprite_x_pos - current_dot;
-                            //print!("self.remaining_bg_pixels_before_switching_layer is {}\n", self.remaining_bg_pixels_before_switching_layer);
-                        }
-                    }
-                }
-            }
-        }
+
+        // todo reenable
+        // self.remaining_bg_pixels_before_sprite = 8;
+        // if !self.finished_sprites_in_scanline {
+        //     let current_dot = self.current_bg_tile_x_pos as u8 * 8;
+        //     let dot_range = current_dot + 7;
+        //     // check if we need to stop fetching bg_win and switch to the sprite fetcher
+        //     if !sprites.is_empty() {
+        //         for (i, x) in sprites.iter().enumerate() {
+        //             let sprite_x_pos = x.byte1_x_pos - 8;
+        //             if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
+        //                 self.remaining_bg_pixels_before_sprite = sprite_x_pos - current_dot;
+        //                 //print!("self.remaining_bg_pixels_before_switching_layer is {}\n", self.remaining_bg_pixels_before_sprite);
+        //             }
+        //         }
+        //     }
+        // }
 
         //print!("tcycle_budget is {}\n", self.tcycle_budget);
 
@@ -149,14 +150,15 @@ impl Fetcher {
         if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && self.active_layer != Layer::WIN {
             // are we in a window pixel
             //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
-                self.active_layer = Layer::WIN;
-                //print!("switching to WIN layer\n");
-                //todo add 6 tcycle of delay because fetcher needs to fetch 8 pixels from first win tile
-                self.win_x_pos = 0;
-                self.win_y_pos = 0;
-                //self.dot_in_scanline = 0;
-            }
+            // todo re-enable win layer after perfecting BG and sprite pixels, mm2 is a game that uses win layer
+            // if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
+            //     self.active_layer = Layer::WIN;
+            //     print!("switching to WIN layer\n");
+            //     //todo add 6 tcycle of delay because fetcher needs to fetch 8 pixels from first win tile
+            //     self.win_x_pos = 0;
+            //     self.win_y_pos = 0;
+            //     //self.dot_in_scanline = 0;
+            // }
         }
         // check if we need to disable switched_to_window_layer every scan line
         if self.active_layer == Layer::WIN {
@@ -188,17 +190,17 @@ impl Fetcher {
             // get bg
             //print!("scx is {} \n", mbc.hw_reg.scx);
 
-            let x = (((mbc.hw_reg.scx as u16 / 8) + self.current_tile_x_pos as u16 ) & 0x1F);
+            let x = (((mbc.hw_reg.scx as u16 / 8) + self.current_bg_tile_x_pos as u16 ) & 0x1F);
             // handles pixel row
             let y = (((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) / 8) * 32;
             let tile_index = mbc.read(tile_base_add + x + y, OpSource::PPU) as usize;
-            self.current_step = 2;
+            self.bg_layer_current_step = 2;
             Ok(tile_index)
         }
     }
 
     pub fn bg_win_step_2_fetch_tile_data_low(&mut self, mbc: &Mbc, tile_num: usize, ) -> Result<u8, FetcherError> {
-        self.current_step = 2;
+        self.bg_layer_current_step = 2;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles);
@@ -223,13 +225,13 @@ impl Fetcher {
             (0x9000i32 + (tile_num_signed as i32) * 16 + row_offset as i32) as u16
         };
 
-        self.current_step = 3;
+        self.bg_layer_current_step = 3;
         Ok(mbc.read(addr, OpSource::PPU))
     }
 
 
     pub fn bg_win_step_3_fetch_tile_data_high(&mut self, mbc: &Mbc, tile_num: usize) -> Result<u8, FetcherError> {
-        self.current_step = 3;
+        self.bg_layer_current_step = 3;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles);
@@ -251,13 +253,13 @@ impl Fetcher {
             (0x9000i32 + (signed_index as i32) * 16 + row_offset as i32 + 1) as u16
         };
 
-        self.current_step = 4;
+        self.bg_layer_current_step = 4;
         Ok(mbc.read(addr, OpSource::PPU))
     }
 
 
     pub fn bg_win_step_4_push_pixels_to_fifo(&mut self, mbc: &Mbc, tile_num: usize, tile_low_byte: u8, tile_high_byte: u8, fifo: &mut Fifo) -> Result<(), FetcherError> {
-        self.current_step = 4;
+        self.bg_layer_current_step = 4;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles)
@@ -267,6 +269,7 @@ impl Fetcher {
 
         if self.active_layer == Layer::BG || self.active_layer == Layer::SPRITE {
             if !fifo.data.is_empty() {
+                print!("BG FIFO not empty, can't push\n");
                 return Err(FetcherError::FifoNotEmpty);
             }
         }
@@ -275,12 +278,13 @@ impl Fetcher {
         let raw_pixels = GBPixel::decode_pixels_from_bytes(tile_low_byte, tile_high_byte);
         for p in raw_pixels {
 
-            let skip = if self.pixels_to_mark_skipped > 0 {
+            let mut skip = if self.pixels_to_mark_skipped > 0 {
                 self.pixels_to_mark_skipped -= 1;
                 true
             } else {
                 false
             };
+
 
             match fifo.push(
                 GBPixel {
@@ -296,17 +300,21 @@ impl Fetcher {
                     panic!("Unhandled error in fifo push\n");
                 }
             }
-            // break out early because next px should be a sprite
-            if self.remaining_bg_pixels_before_switching_layer != 0 {
-                self.remaining_bg_pixels_before_switching_layer -= 1;
-                if self.remaining_bg_pixels_before_switching_layer == 0 {
-                    //print!("breaking out of FIFO push early due to switching layer\n");
-                    self.active_layer = Layer::SPRITE;
-                    self.current_step = 1;
-                    return Ok(())
-                }
-            }
+
+            //todo testing this
+
+            // // this is used to skip pushing pixels when the sprite starts at an offset that's not divisible by 8
+            // if self.remaining_bg_pixels_before_sprite > 0 {
+            //     self.remaining_bg_pixels_before_sprite -= 1;
+            // }
+            // else {
+            //     self.scan_for_sprites_in_last_fetch = true;
+            //     break;
+            // }
+
         }
+
+
         if self.active_layer == Layer::WIN {
             self.win_x_pos += 1;
             //self.dot_in_scanline += 8;
@@ -318,7 +326,7 @@ impl Fetcher {
                 self.win_x_pos = 0;
             }
         } else { // BG layer
-            self.current_tile_x_pos += 1;
+            self.current_bg_tile_x_pos += 1;
             //print!("{}\n", self.tile_x_pos);
             // don't need to reset tile_x_pos because we & it with 0x1F
             // if self.tile_x_pos == 32 {
@@ -330,19 +338,19 @@ impl Fetcher {
             // }
         }
         // needed because it's used in the scan line calc in func get_tile_map_address_in_bg_win_step_1
-        if self.current_tile_x_pos == 20 {
-            self.current_tile_x_pos = 0;
+        if self.current_bg_tile_x_pos == 20 {
+            self.current_bg_tile_x_pos = 0;
         }
-        self.current_step = 1;
+        self.bg_layer_current_step = 1;
         Ok(())
     }
 
-    pub fn handle_bg_win_layer(&mut self, mbc: &Mbc, bg_win_fifo: &mut Fifo, sprite_fifo: &mut Fifo, sprites: &mut Vec<Sprite>, tcycles: u64)  {
+    pub fn handle_bg_win_layer(&mut self, mbc: &Mbc, bg_win_fifo: &mut Fifo, sprites: &mut Vec<Sprite>, tcycles: u64)  {
        // tcycles handled upstream in ppu tick when matching layer
 
-        if self.need_to_resume && self.current_step > 1 {
-            self.need_to_resume = false;
-            match self.current_step {
+        if self.bg_layer_need_to_resume && self.bg_layer_current_step > 1 {
+            self.bg_layer_need_to_resume = false;
+            match self.bg_layer_current_step {
                 2 => {
                     let low_byte = match self.bg_win_step_2_fetch_tile_data_low(mbc, self.current_tile_num as usize) {
                         Ok(low_byte) => {
@@ -369,11 +377,12 @@ impl Fetcher {
                             panic!("unknown error in handle_bg_win_layer's high_byte");
                         }
                     };
-                    if self.start_of_rendering {
-                        // first fetch of scan line has a delay and must restart
-                        self.start_of_rendering = false;
-                        return;
-                    }
+                    // this is skewing the image do NOT enable
+                    // if self.start_of_rendering {
+                    //     // first fetch of scan line has a delay and must restart
+                    //     self.start_of_rendering = false;
+                    //     return;
+                    // }
                     self.bg_win_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, low_byte, high_byte, bg_win_fifo);
                 },
                 3 => {
@@ -389,11 +398,12 @@ impl Fetcher {
                             panic!("unknown error in handle_bg_win_layer's high_byte");
                         }
                     };
-                    if self.start_of_rendering {
-                        // first fetch of scan line has a delay and must restart
-                        self.start_of_rendering = false;
-                        return;
-                    }
+                    // this is skewing the image do NOT enable
+                    // if self.start_of_rendering {
+                    //     // first fetch of scan line has a delay and must restart
+                    //     self.start_of_rendering = false;
+                    //     return;
+                    // }
                     match self.bg_win_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, bg_win_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
@@ -430,8 +440,8 @@ impl Fetcher {
         }
         else {
             // I set need_to_resume to false here too because I may be resuming step 1 and that will fall into this match
-            self.need_to_resume = false;
-            match self.bg_win_step_1_get_tile_num(mbc, bg_win_fifo, sprites, tcycles) {
+            self.bg_layer_need_to_resume = false;
+            match self.bg_win_step_1_get_tile_num(mbc, bg_win_fifo, sprites,  tcycles) {
                 Ok(tile_num) => {
                     self.current_tile_num = tile_num as u16;
                     let low_byte = match self.bg_win_step_2_fetch_tile_data_low(mbc, self.current_tile_num as usize) {
@@ -459,11 +469,12 @@ impl Fetcher {
                             panic!("unknown error in handle_bg_win_layer's high_byte");
                         }
                     };
-                    if self.start_of_rendering {
-                        // first fetch of scan line has a delay and must restart
-                        self.start_of_rendering = false;
-                        return;
-                    }
+                    // this is skewing the image do NOT enable
+                    // if self.start_of_rendering {
+                    //     // first fetch of scan line has a delay and must restart
+                    //     self.start_of_rendering = false;
+                    //     return;
+                    // }
                     match self.bg_win_step_4_push_pixels_to_fifo(mbc, self.current_tile_num as usize, self.current_tile_low_byte, self.current_tile_high_byte, bg_win_fifo) {
                         Ok(_) => {},
                         Err(FetcherError::NotEnoughTcycles) => {
@@ -478,17 +489,17 @@ impl Fetcher {
                             panic!("unknown error in handle_bg_win_layer's step 4");
                         }
                     }                }
-                Err(FetcherError::SwitchedToSpriteLayer) => {
-                    // first time switching to layer must be handled here as well as upstream in mode_3_draw
-                    //print!("switched to sprite layer\n");
-                    self.handle_sprite_layer(mbc, sprite_fifo, sprites, tcycles);
-                },
+                // Err(FetcherError::SwitchedToSpriteLayer) => {
+                //     // first time switching to layer must be handled here as well as upstream in mode_3_draw
+                //     //print!("switched to sprite layer\n");
+                //     self.handle_sprite_layer(mbc, sprite_fifo, sprites, tcycles);
+                // },
                 Err(FetcherError::NotEnoughTcycles) => {
                     print!("not enough tcycles, skipping");
                 },
                 _ => {
                     // todo handle all other errors
-                    print!("Unhandled error in handle_bg_win_layer\n");
+                    panic!("Unhandled error in handle_bg_win_layer\n");
 
                 }
             }
@@ -499,7 +510,7 @@ impl Fetcher {
 
 
     pub fn sprite_step_1_get_tile_num(&mut self, mbc: &Mbc, fifo: &mut Fifo, sprites: &mut Vec<Sprite>, tcycles: u64) -> Result<(usize, bool), FetcherError> {
-        self.current_step = 1;
+        self.bg_layer_current_step = 1;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles)
@@ -507,9 +518,9 @@ impl Fetcher {
         // self.tcycle_budget -= 2;
 
         // sprites are already sorted by X and filtered by Y from mode_2_oam_scan
-        let current_tile_x_pos = self.current_tile_x_pos as u8;
         // do NOT -8 this
-        let current_dot = current_tile_x_pos * 8;
+
+        let current_dot = (self.current_sprite_tile_x_pos as u8) * 8;
         let dot_range = current_dot + 7;
         let mut sprite_num: usize = 0;
         let mut sprite_priority = false;
@@ -517,18 +528,37 @@ impl Fetcher {
         let mut found_sprite = false;
 
         if !sprites.is_empty() {
-            for (i, x) in sprites.iter().enumerate() {
-                let sprite_x_pos = x.byte1_x_pos - 8;
-                if sprite_x_pos >= current_dot && sprite_x_pos <= dot_range {
-                //if sprite_x_pos == current_dot {
-                    //self.dot_in_scanline += 8;
-                    sprite_num = x.byte2_tile_num as usize;
-                    sprite_priority = x.get_byte3_sprite_flags_bit7_priority();
-                    idx_to_remove = i;
-                    found_sprite = true;
-                    break;
+            // check previous fetch for sprites that started at an offset not divisible by 8
+            if self.scan_for_sprites_in_last_fetch {
+                // I don't add 1 to the current_sprite_tile_x_pos because this function runs before the BG one, which means it's already behind
+                for (i, x) in sprites.iter().enumerate() {
+                    let sprite_x_pos = x.byte1_x_pos - 8;
+                    if sprite_x_pos  >= current_dot && sprite_x_pos <= dot_range {
+                        sprite_num = x.byte2_tile_num as usize;
+                        sprite_priority = x.get_byte3_sprite_flags_bit7_priority();
+                        idx_to_remove = i;
+                        found_sprite = true;
+                        self.scan_for_sprites_in_last_fetch = false;
+                        break;
+                    }
                 }
             }
+            else {
+                // do the normal check for sprites at 8 byte boundaries
+                for (i, x) in sprites.iter().enumerate() {
+                    let sprite_x_pos = x.byte1_x_pos - 8;
+                    //if sprite_x_pos >= current_dot && sprite_x_pos <= dot_range {
+                    if sprite_x_pos == current_dot {
+                        //self.dot_in_scanline += 8;
+                        sprite_num = x.byte2_tile_num as usize;
+                        sprite_priority = x.get_byte3_sprite_flags_bit7_priority();
+                        idx_to_remove = i;
+                        found_sprite = true;
+                        break;
+                    }
+                }
+            }
+
         }
         if found_sprite {
             if !sprites.is_empty() {
@@ -540,11 +570,12 @@ impl Fetcher {
             }
         }
         else {
+            self.current_sprite_tile_x_pos += 1;
             return Err(FetcherError::NoSpriteFound)
         }
 
 
-        self.current_step = 2;
+        self.bg_layer_current_step = 2;
         return Ok((sprite_num, sprite_priority));
         // if self.tile_x_pos as u8 * 8 >= 160 {
         //     return Err(FetcherError::EndOfScanLine);
@@ -586,7 +617,7 @@ impl Fetcher {
     // }
 
     pub fn sprite_step_2_fetch_tile_data_low(&mut self, mbc: &Mbc, tile_num: usize) -> Result<u8, FetcherError> {
-        self.current_step = 2;
+        self.sprite_layer_current_step = 2;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles)
@@ -597,7 +628,7 @@ impl Fetcher {
 
         let fine_y = ((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) % 8;
         let row_offset = 2 * fine_y;
-        self.current_step = 3;
+        self.sprite_layer_current_step = 3;
         return Ok(mbc.read(address + (tile_num as u16 * 16) + row_offset, OpSource::PPU))
     }
 
@@ -618,7 +649,7 @@ impl Fetcher {
     // }
 
     pub fn sprite_step_3_fetch_tile_data_high(&mut self, mbc: &Mbc, tile_num: usize) -> Result<u8, FetcherError>  {
-        self.current_step = 2;
+        self.sprite_layer_current_step = 3;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles)
@@ -629,14 +660,14 @@ impl Fetcher {
 
         let fine_y = ((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) % 8;
         let row_offset = 2 * fine_y;
-        self.current_step = 3;
+        self.sprite_layer_current_step = 4;
         return Ok(mbc.read(address + (tile_num as u16 * 16) + row_offset + 1, OpSource::PPU))
     }
 
 
 
     pub fn sprite_step_4_push_pixels_to_fifo(&mut self, mbc: &Mbc, tile_num: usize, tile_low_byte: u8, tile_high_byte: u8, priority: bool, fifo: &mut Fifo) -> Result<(), FetcherError>  {
-        self.current_step = 4;
+        self.sprite_layer_current_step = 4;
         // if self.tcycle_budget < 2 {
         //     self.need_to_resume = true;
         //     return Err(FetcherError::NotEnoughTcycles)
@@ -683,18 +714,18 @@ impl Fetcher {
         }
 
         //  // these are still used in step 1 of sprite
-          self.current_tile_x_pos += 1;
+          self.current_sprite_tile_x_pos += 1;
          // needed because it's used in the scan line calc in func get_tile_map_address_in_bg_win_step_1
-        if self.current_tile_x_pos == 20 {
-            self.current_tile_x_pos = 0;
+        if self.current_sprite_tile_x_pos == 20 {
+            self.current_sprite_tile_x_pos = 0;
         }
-        self.current_step = 1;
+        self.sprite_layer_current_step = 1;
         Ok(())
     }
     pub fn handle_sprite_layer(&mut self, mbc: &Mbc, sprite_fifo: &mut Fifo, sprites: &mut Vec<Sprite>, tcycles: u64) {
-        if self.need_to_resume && self.current_step > 1 {
-            self.need_to_resume = false;
-            match self.current_step {
+        if self.sprite_layer_need_to_resume && self.sprite_layer_current_step > 1 {
+            self.sprite_layer_need_to_resume = false;
+            match self.sprite_layer_current_step {
                 2 => {
                     let low_byte = match self.sprite_step_2_fetch_tile_data_low(mbc, self.current_tile_num as usize) {
                         Ok(low_byte) => {
@@ -781,7 +812,7 @@ impl Fetcher {
         }
         else {
             // I set need_to_resume to false here too because I may be resuming step 1 and that will fall into this match
-            self.need_to_resume = false;
+            self.sprite_layer_need_to_resume = false;
             let sprite_step_1_result =  self.sprite_step_1_get_tile_num(mbc, sprite_fifo, sprites, tcycles);
             match sprite_step_1_result {
                 Ok((tile_num, priority)) => {
