@@ -93,7 +93,7 @@ impl Fetcher {
         if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() {
             // are we in a window pixel
              //if mbc.hw_reg.ly >= mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
+            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).wrapping_sub(7) as u16 {
                  if mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
                      return 0x9C00
                  } else {
@@ -152,7 +152,7 @@ impl Fetcher {
             // are we in a window pixel
             //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
             // todo re-enable win layer after perfecting BG and sprite pixels, mm2 is a game that uses win layer
-            // if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
+            // if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).wrapping_sub(7) as u16 {
             //     self.active_layer = Layer::WIN;
             //     print!("switching to WIN layer\n");
             //     self.win_x_pos = 0;

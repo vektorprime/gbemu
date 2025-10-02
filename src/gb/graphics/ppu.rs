@@ -207,7 +207,7 @@ impl Ppu {
         }
 
         // how many sprite entries have we scanned so far?
-        let current_entry = self.mode_2_oam_scan_current_tcycle.saturating_sub(tcycles as u16) / tcycle_per_oam;
+        let current_entry = self.mode_2_oam_scan_current_tcycle.wrapping_sub(tcycles as u16) / tcycle_per_oam;
         let final_entry   = self.mode_2_oam_scan_current_tcycle / tcycle_per_oam;
 
         // iterate only over the new entries
@@ -1008,9 +1008,8 @@ impl Ppu {
 
                 self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprites, tcycle);
 
-                //sat sub breaks the drawing
-                //self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_sprite_tile_x_pos.saturating_sub(1);
-                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos - 1;
+
+                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos.wrapping_sub(1);
 
                 self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
 
