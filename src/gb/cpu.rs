@@ -237,8 +237,10 @@ impl Cpu {
         }
 
         // if self.debug_print_pc {
-        //         let pc_print = self.registers.get_pc();
-        //         print!("pc - {:X} \n", pc_print);
+        //         let pc = self.registers.get_pc();
+        //         if !(pc == 0x21C || pc == 0x21D || pc == 0x21E) {
+        //             print!("pc - {:X} \n", pc);
+        //         }
         // }
         //  if mem.hw_reg.sc == 0x81 {
         //     print!("{}", mem.hw_reg.sb as char);
@@ -573,7 +575,7 @@ impl Cpu {
                     else {
                         let offset = mem.read(pc, OpSource::CPU) as u16;
                         // need to +1 because we start counting on the next op
-                        let new_pc = pc.overflowing_add(offset).0.overflowing_add(1).0;
+                        let new_pc = pc.wrapping_add(offset).wrapping_add(1);
                         self.registers.set_pc(new_pc);
                     }
                     self.inc_cycles_by_inst_val(inst.cycles);

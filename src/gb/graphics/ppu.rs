@@ -536,14 +536,14 @@ impl Ppu {
             match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
                 (Ok(mut bg_px), Err(_)) => {
                     // push bg_px
-                    // if !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
-                    //     //print!("lcdc bit 0 is off\n");
-                    //     bg_px = GBPixel {
-                    //         color: PaletteColor::White,
-                    //         bg_priority: false,
-                    //         skip: false,
-                    //     };
-                    // }
+                    if !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
+                        //print!("lcdc bit 0 is off\n");
+                        bg_px = GBPixel {
+                            color: PaletteColor::White,
+                            bg_priority: false,
+                            skip: false,
+                        };
+                    }
                    self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px)?
                 },
                 (Err(_), Ok(sp_px)) => {
@@ -870,11 +870,13 @@ impl Ppu {
         //     mbc.hw_reg.clear_stat_lyc_eq_ly_bit2();
         // }
         // Handle LYC=LY coincidence
-        let prev_coincidence = mbc.hw_reg.is_stat_lyc_eq_ly_bit2_set();
+        let was_lyc_bit2_set_at_start = mbc.hw_reg.is_stat_lyc_eq_ly_bit2_set();
 
         if mbc.hw_reg.lyc == mbc.hw_reg.ly {
+            //print!("hw reg STAT lyc == ly\n");
             mbc.hw_reg.set_stat_lyc_eq_ly_bit2();
-            if !prev_coincidence && mbc.hw_reg.is_stat_lyc_int_sel_bit6_set() {
+            if !was_lyc_bit2_set_at_start && mbc.hw_reg.is_stat_lyc_int_sel_bit6_set() {
+                //print!("setting hw reg IF lcd stat bit 1\n");
                 mbc.hw_reg.set_if_lcd_stat_bit1(); // fire interrupt only on transition
             }
         } else {

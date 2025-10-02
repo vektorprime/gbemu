@@ -422,7 +422,7 @@ impl Mbc {
 
             // LCD and scrolling
             0xFF40 => {
-                print!("writing value {:x} to LCDC register\n", byte);
+                //print!("writing value {:x} to LCDC register\n", byte);
                 self.hw_reg.lcdc = byte
             },
             0xFF41 => self.hw_reg.stat = byte,
