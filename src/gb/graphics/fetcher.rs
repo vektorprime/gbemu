@@ -705,7 +705,7 @@ impl Fetcher {
                     skip, }
             ) {
                 Ok(()) => {
-                    print!("");
+                    //print!("");
                 },
                 Err(FifoOpError::FifoFull) => {
                     // todo handle this error

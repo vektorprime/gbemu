@@ -536,14 +536,14 @@ impl Ppu {
             match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
                 (Ok(mut bg_px), Err(_)) => {
                     // push bg_px
-                    if !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
-                        //print!("lcdc bit 0 is off\n");
-                        bg_px = GBPixel {
-                            color: PaletteColor::White,
-                            bg_priority: false,
-                            skip: false,
-                        };
-                    }
+                    // if !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
+                    //     //print!("lcdc bit 0 is off\n");
+                    //     bg_px = GBPixel {
+                    //         color: PaletteColor::White,
+                    //         bg_priority: false,
+                    //         skip: false,
+                    //     };
+                    // }
                    self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px)?
                 },
                 (Err(_), Ok(sp_px)) => {
@@ -1008,7 +1008,9 @@ impl Ppu {
 
                 self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprites, tcycle);
 
-                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_sprite_tile_x_pos.saturating_sub(1);
+                //sat sub breaks the drawing
+                //self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_sprite_tile_x_pos.saturating_sub(1);
+                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos - 1;
 
                 self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
 
