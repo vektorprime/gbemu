@@ -55,12 +55,12 @@ pub fn compare_registers(registers: &Registers, final_test_state: &TestState) ->
     }
 
     let b = registers.get_b();
-    if registers.get_b() != final_test_state.b {
+    if b != final_test_state.b {
         failed_registers.push(FailedRegister::b(b));
     }
 
     let c = registers.get_c();
-    if registers.get_c() != final_test_state.c {
+    if c != final_test_state.c {
         failed_registers.push(FailedRegister::c(c));
     }
 
@@ -175,6 +175,7 @@ pub fn get_all_tests() ->  Vec<Test> {
     let mut all_tests: Vec<Test> = Vec::new();
     let all_files = get_all_files_in_directory("tests");
     for file in &all_files {
+        //print!("reading file {}\n", file);
         read_test_file(file, &mut all_tests);
     }
     all_tests

@@ -21,7 +21,7 @@ impl GBPixel {
             skip: false,
         }
     }
-    pub fn decode_pixels_from_bytes(byte1: u8, byte2: u8) -> [PaletteColor; 8] {
+    pub fn decode_pixels_from_bytes(byte1: u8, byte2: u8, x_flip: bool) -> [PaletteColor; 8] {
         let mut colors = [PaletteColor::White; 8];
 
         let b0: u8 = 0b0000_0001;
@@ -103,14 +103,26 @@ impl GBPixel {
             PaletteColor::from_u8(p1 | p2)
         };
 
-        colors[0] = pixel0;
-        colors[1] = pixel1;
-        colors[2] = pixel2;
-        colors[3] = pixel3;
-        colors[4] = pixel4;
-        colors[5] = pixel5;
-        colors[6] = pixel6;
-        colors[7] = pixel7;
+        if x_flip {
+            colors[0] = pixel7;
+            colors[1] = pixel6;
+            colors[2] = pixel5;
+            colors[3] = pixel4;
+            colors[4] = pixel3;
+            colors[5] = pixel2;
+            colors[6] = pixel1;
+            colors[7] = pixel0;
+        } else {
+            colors[0] = pixel0;
+            colors[1] = pixel1;
+            colors[2] = pixel2;
+            colors[3] = pixel3;
+            colors[4] = pixel4;
+            colors[5] = pixel5;
+            colors[6] = pixel6;
+            colors[7] = pixel7;
+        }
+
 
         colors
     }

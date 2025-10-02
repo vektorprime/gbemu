@@ -351,7 +351,7 @@ impl Mbc {
             // Joypad and serial
             // writing 0x20 means select buttons
             // writing 0x10 means select direction keys
-            // writing 0x30 means nither, lower nibble should read 0xF
+            // writing 0x30 means neither, lower nibble should read 0xF
             0xFF00 => {
                 //println!("writing to FF00 (joypad) byte {:#x}", byte);
                 let jp_mask = self.hw_reg.joyp & 0b0000_1111;
@@ -421,7 +421,10 @@ impl Mbc {
             },
 
             // LCD and scrolling
-            0xFF40 => self.hw_reg.lcdc = byte,
+            0xFF40 => {
+                print!("writing value {:x} to LCDC register\n", byte);
+                self.hw_reg.lcdc = byte
+            },
             0xFF41 => self.hw_reg.stat = byte,
             0xFF42 => {
                 //print!("writing {} to SCY\n", byte);

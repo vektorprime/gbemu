@@ -123,6 +123,7 @@ impl Cpu {
         if self.ime {
             // an interrupt should unhalt the CPU
             if self.halted {
+                //print!("unhalting CPU\n");
                 self.halted = false;
             }
             // check that each interrupt is enabled and requested, then handle
@@ -1503,7 +1504,7 @@ impl Cpu {
                 },
                 0x76 => {
                     // HALT
-                    //print!("Halting CPU\n");
+                    // print!("Halting CPU\n");
                     self.halted = true;
 
                     self.inc_cycles_by_inst_val(inst.cycles);

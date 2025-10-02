@@ -43,7 +43,6 @@ impl Joypad {
             b: false,
             select: false,
             start: false,
-
             select_dpad: false,
             select_buttons: false,
             is_reg_pending_update_from_obj: false,
@@ -91,7 +90,6 @@ impl Joypad {
                 self.select_buttons = false;
             }
 
-
             mbc.is_joypad_pending_update_from_reg = false;
         }
     }
@@ -109,7 +107,6 @@ impl Joypad {
                         self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed up");
                     }
-
                 },
                 KeyCode::KeyA => {
                     if !self.left {
@@ -130,7 +127,6 @@ impl Joypad {
                         self.right = true;
                         self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed right");
-
                     }
                 },
                 KeyCode::KeyK => {

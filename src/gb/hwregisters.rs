@@ -211,6 +211,13 @@ impl HardwareRegisters {
     pub fn is_lcdc_obj_size_bit2_enabled(&self) -> bool {
         if self.lcdc & 0b0000_0100 == 0b0000_0100 { true } else { false }
     }
+    pub fn is_lcdc_obj_enable_bit1_enabled(&self) -> bool {
+        if self.lcdc & 0b0000_0010 == 0b0000_0010 { true } else { false }
+    }
+
+    pub fn is_lcdc_bg_and_win_enable_bit0_enabled(&self) -> bool {
+        if self.lcdc & 0b0000_0001 == 0b0000_0001 { true } else { false }
+    }
 
 
     // check both ie and if

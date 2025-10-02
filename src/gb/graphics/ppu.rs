@@ -495,12 +495,13 @@ impl Ppu {
 
         // todo validate logic of skipping pixels for sprites
         // return white if the pixel is to be skipped, this is for the horizontal per-pixel scrolling
-        let rgba =  if !px.skip {
-            px.color.get_rgba_code()
+        let rgba =  if px.skip {
+            [0xFF, 0xFF, 0xFF, 0xFF]
         } else {
             //print!("pixel is to be skipped\n");
-            [0xFF, 0xFF, 0xFF, 0xFF]
+            px.color.get_rgba_code()
         };
+
         let pixel_loc = (self.pixel_in_frame as usize) * 4;
         // let pixel_loc = (self.current_scanline as usize * 160 * 4) + (self.pixel_in_scanline as usize * 4);
         gw_buffer_unlocked[pixel_loc..pixel_loc + 4 ].copy_from_slice(&rgba);
@@ -533,8 +534,16 @@ impl Ppu {
             // }
 
             match (self.bg_win_fifo.pop(), self.sprite_fifo.pop()) {
-                (Ok(bg_px), Err(_)) => {
+                (Ok(mut bg_px), Err(_)) => {
                     // push bg_px
+                    if !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
+                        //print!("lcdc bit 0 is off\n");
+                        bg_px = GBPixel {
+                            color: PaletteColor::White,
+                            bg_priority: false,
+                            skip: false,
+                        };
+                    }
                    self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px)?
                 },
                 (Err(_), Ok(sp_px)) => {
@@ -549,7 +558,6 @@ impl Ppu {
                     } else {
                         // push sp_px
                         self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, sp_px)?
-
                     }
                 },
                 (Err(_), Err(_)) => {
@@ -999,7 +1007,9 @@ impl Ppu {
                 // }
 
                 self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprites, tcycle);
-                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos - 1;
+
+                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_sprite_tile_x_pos.saturating_sub(1);
+
                 self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
 
 
