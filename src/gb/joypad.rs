@@ -69,18 +69,7 @@ impl Joypad {
            //println!("updating joypad from reg");
 
             let byte = mbc.hw_reg.joyp;
-            // if byte == 0xFF {
-            //     self.select_buttons = false;
-            //     self.select_dpad = false;
-            //     self.a = false;
-            //     self.b = false;
-            //     self.select = false;
-            //     self.start = false;
-            //     self.right = false;
-            //     self.left = false;
-            //     self.up = false;
-            //     self.down = false;
-            // }
+
             if byte & 0x20 == 0x00 {
                 self.select_buttons = true;
                 self.select_dpad = false;

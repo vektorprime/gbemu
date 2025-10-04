@@ -201,17 +201,17 @@ impl Ppu {
         let tcycle_per_oam: u16 = 2;
 
         // accumulate budget
-        self.mode_2_oam_scan_current_tcycle += tcycles as u16;
+        //self.mode_2_oam_scan_current_tcycle += tcycles as u16;
         if self.mode_2_oam_scan_current_tcycle > mode_2_max_tcycles {
             self.mode_2_oam_scan_current_tcycle = mode_2_max_tcycles;
         }
 
         // how many sprite entries have we scanned so far?
-        let current_entry = self.mode_2_oam_scan_current_tcycle.wrapping_sub(tcycles as u16) / tcycle_per_oam;
-        let final_entry   = self.mode_2_oam_scan_current_tcycle / tcycle_per_oam;
+        // let current_entry = self.mode_2_oam_scan_current_tcycle.wrapping_sub(tcycles as u16) / tcycle_per_oam;
+        // let final_entry   = self.mode_2_oam_scan_current_tcycle / tcycle_per_oam;
 
         // iterate only over the new entries
-        for entry in current_entry..final_entry {
+        for entry in 0..40 {
             if self.sprites.len() == 10 {
                 break;
             }
@@ -226,21 +226,35 @@ impl Ppu {
             let sprite_y = sprite.byte0_y_pos;
             let sprite_x = sprite.byte1_x_pos;
 
-            if sprite_x > 0 && sprite_y <= mbc.hw_reg.ly.wrapping_add(16) {
+            if sprite_y <= mbc.hw_reg.ly.saturating_add(16) {
                 let height = if mbc.hw_reg.is_lcdc_obj_size_bit2_enabled() { 16 } else { 8 };
-                if sprite_y.wrapping_add(height) > mbc.hw_reg.ly.wrapping_add(16) {
+                if sprite_y.saturating_add(height) > mbc.hw_reg.ly.saturating_add(16) {
                     self.sprites.push(sprite);
                     if self.sprites.len() == 10 {
                         break;
                     }
                 }
             }
+
+            // if sprite_x > 0 && sprite_y <= mbc.hw_reg.ly.saturating_add(16) {
+            //     let height = if mbc.hw_reg.is_lcdc_obj_size_bit2_enabled() { 16 } else { 8 };
+            //     if sprite_y.saturating_add(height) > mbc.hw_reg.ly.saturating_add(16) {
+            //         self.sprites.push(sprite);
+            //         if self.sprites.len() == 10 {
+            //             break;
+            //         }
+            //     }
+            // }
         }
 
         // sort once after scan is done or after hitting 10
         if self.mode_2_oam_scan_current_tcycle >= mode_2_max_tcycles || self.sprites.len() == 10 {
             self.sprites.sort_by(|a, b| a.byte1_x_pos.cmp(&b.byte1_x_pos));
         }
+        // // sort once after scan is done or after hitting 10
+        // if self.mode_2_oam_scan_current_tcycle >= mode_2_max_tcycles || self.sprites.len() == 10 {
+        //     self.sprites.sort_by(|a, b| a.byte1_x_pos.cmp(&b.byte1_x_pos));
+        // }
     }
 
     // pub fn mode_2_oam_scan(&mut self, mbc: &mut Mbc, tcycles: u64)   {
@@ -941,6 +955,7 @@ impl Ppu {
                 // delay rendering 6 tcycle so the PPU can fetch the first tile's data
                 // delay rendering 8 more tcycles because PPU does a fake render of this tile
                 self.fetcher.start_of_rendering = true; // outside of if
+                self.fetcher.window_layer_active_in_scanline = false;
                 self.set_stat_ppu_mode(mbc, PPUMode::Mode_2_OAM_Scan);
                 // need to skip this many pixels when rendering, mark them skipped in fetcher and skip in mode_3_draw
                 self.fetcher.pixels_to_mark_skipped = mbc.hw_reg.scx % 8;
@@ -953,6 +968,7 @@ impl Ppu {
                 self.sprites.clear();
                 self.sprites.reserve(10);
                 self.mode_2_oam_scan_current_tcycle = 0;
+                self.mode_2_oam_scan(mbc, tcycle);
 
                 self.started_mode_2_in_scanline = true;
             }
@@ -960,7 +976,7 @@ impl Ppu {
             // mode 2 is dot 0-80
             if self.tcycle_in_scanline < self.mode_2_oam_scan_last_tcycle && self.started_mode_2_in_scanline && !self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 // pause for 80 tcycles
-                self.mode_2_oam_scan(mbc, tcycle);
+                // self.mode_2_oam_scan(mbc, tcycle);
 
             }
 
@@ -975,6 +991,7 @@ impl Ppu {
                 self.fetcher.tcycle_budget = 0;
                 //self.fetcher.tile_x_coord = 0;
                 // always reset the layer before we start
+               
                 self.fetcher.active_layer = Layer::BG;
                 self.set_stat_ppu_mode(mbc, PPUMode::Mode_3_Draw);
                 self.started_mode_3_in_scanline = true;
@@ -1010,8 +1027,7 @@ impl Ppu {
 
                 self.fetcher.handle_bg_win_layer(mbc, &mut self.bg_win_fifo, &mut self.sprites, tcycle);
 
-
-                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos.wrapping_sub(1);
+                self.fetcher.current_sprite_tile_x_pos = self.fetcher.current_bg_tile_x_pos.saturating_sub(1);
 
                 self.fetcher.handle_sprite_layer(mbc, &mut self.sprite_fifo, &mut self.sprites, tcycle);
 
@@ -1020,8 +1036,9 @@ impl Ppu {
                 match self.mode_3_mix_pixels_and_draw(mbc, gw, &tcycle) {
                     Ok(_) => {},
                     Err(PPUEvent::EndOfScanLine) => {
-                        print!("finished scan line early, switching to mode 0 H blank \n");
-                        self.mode_0_h_blank_first_tcycle = self.tcycle_in_scanline;
+                        // This is required because my ppu and fetcher are out of sync and I could end up resetting vars in fetcher but be in same LY position
+                        //print!("finished scan line early, switching to mode 0 H blank \n");
+                        self.tcycle_in_scanline = self.mode_0_h_blank_first_tcycle;
                     },
                     Err(PPUEvent::BufferOverflow) => {
                        // reset everything since we finished the pixels
@@ -1088,7 +1105,7 @@ impl Ppu {
 
         // reset tcycle in scan line because max is 456
         // also inc LY
-        // todo switch to tcycle_in_scanline % 456 and save that as budget for next scanline?
+        // note for later, switch to tcycle_in_scanline % 456 and save that as budget for next scanline?
         if self.tcycle_in_scanline >= 456 {
             // this print is very freq
             //print!("tcycle_in_scanline >= 456, incrementing LY \n");

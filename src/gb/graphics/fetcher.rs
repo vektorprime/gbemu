@@ -27,7 +27,7 @@ pub enum Layer {
 
 
 pub struct Fetcher {
-    pub window_layer_active_in_lcdc: bool,
+    pub window_layer_active_in_scanline: bool,
     pub active_layer: Layer,
     //pub switched_to_window_layer: bool,
     //pub switched_to_sprite_layer: bool,
@@ -59,7 +59,7 @@ pub struct Fetcher {
 impl Fetcher {
     pub fn new() -> Self {
         Fetcher {
-            window_layer_active_in_lcdc: false,
+            window_layer_active_in_scanline: false,
             active_layer: Layer::BG,
             // switched_to_window_layer: false,
             // switched_to_sprite_layer: false,
@@ -90,10 +90,12 @@ impl Fetcher {
     }
 
     pub fn get_tile_map_address_in_bg_win_step_1(&self, mbc: &Mbc) -> u16 {
-        if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() {
+        if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
             // are we in a window pixel
-             //if mbc.hw_reg.ly >= mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).wrapping_sub(7) as u16 {
+
+            //if mbc.hw_reg.ly >= mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
+            //if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
+            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) as i16 >= (mbc.hw_reg.wx as i16 - 7) {
                  if mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
                      return 0x9C00
                  } else {
@@ -148,55 +150,52 @@ impl Fetcher {
 
         let tile_base_add = self.get_tile_map_address_in_bg_win_step_1(mbc);
         // check if we need to switch to window layer
-        if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && self.active_layer != Layer::WIN {
+            //if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() && self.active_layer != Layer::WIN {
+            if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled()  {
             // are we in a window pixel
-            //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-            // todo re-enable win layer after perfecting BG and sprite pixels, mm2 is a game that uses win layer
-            // if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).wrapping_sub(7) as u16 {
-            //     self.active_layer = Layer::WIN;
-            //     print!("switching to WIN layer\n");
-            //     self.win_x_pos = 0;
-            //     self.win_y_pos = 0;
-            //     //self.dot_in_scanline = 0;
-            // }
-        }
-        // check if we need to disable switched_to_window_layer every scan line
-        if self.active_layer == Layer::WIN {
-            //print!("switching from BG layer to WIN\n");
-            if mbc.hw_reg.ly < mbc.hw_reg.wy || !mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() {
+                //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
+                // doesn't need saturating sub because I am using i16
+                if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) as i16 >= (mbc.hw_reg.wx as i16 - 7) {
+                    // print!("LY is {}, and WY is {}\n",mbc.hw_reg.ly, mbc.hw_reg.wy);
+                    // print!("WX is {} \n", (mbc.hw_reg.wx).wrapping_sub(7));
+                    self.active_layer = Layer::WIN;
+                    print!("switching to WIN layer\n");
+                    if !self.window_layer_active_in_scanline {
+                        self.window_layer_active_in_scanline = true;
+                        self.win_x_pos = 0;
+                    }
+                }
+            } else {
                 self.active_layer = Layer::BG;
             }
-        }
+
+        // // check if we need to disable switched_to_window_layer every scan line
+        // moved this logic above
+        // if self.active_layer == Layer::WIN {
+        //     //print!("switching from BG layer to WIN\n");
+        //     if mbc.hw_reg.ly < mbc.hw_reg.wy || !mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() || !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
+        //         self.active_layer = Layer::BG;
+        //     }
+        // }
+
         // get window tile index
-        if self.active_layer == Layer::WIN {
-
-            // todo limit tile_index to 384 and return no more drawing needed result
+        let tile_index = if self.active_layer == Layer::WIN {
             //print!("getting win tile index in bg_win_step_1_get_tile_num \n");
-            //let tile_index = mbc.read(tile_base_add + self.win_x_pos as u16 + (self.win_y_pos  * TILES_IN_WIN_ROW) as u16, OpSource::PPU) as usize;
-            //let tile_index = mbc.read(tile_base_add  + (32 * (self.win_y_pos / 8)) as u16, OpSource::PPU) as usize;
-            let win_x = (self.win_x_pos / 8) & 0x1F;
-            let win_y = (self.win_y_pos / 8) * 32;
-            let tile_index = mbc.read(tile_base_add + win_x as u16 + win_y as u16, OpSource::PPU) as usize;
-            // not needed as I have win x and y
-            // self.row_in_tile += 1;
-            // //reset to row 0 when we go to a new tile
-            // if self.row_in_tile == ROWS_OF_PIXELS_IN_TILE { self.row_in_tile = 0; }
-
-            Ok(tile_index)
+            let win_x = self.win_x_pos;
+            // let win_y = ((mbc.hw_reg.ly - mbc.hw_reg.wy) / 8) * 32;
+            let win_y: u16 = (mbc.hw_reg.ly as u16 - mbc.hw_reg.wy as u16) / 8;
+            mbc.read(tile_base_add + win_x as u16 + win_y as u16, OpSource::PPU) as usize
         } else {
+            // bg index
             //print!("getting bg tile index in bg_win_step_1_get_tile_num \n");
-            // i doubt window would end mid scan line but let's save this note
-            // reset the window_y_pos and window_y_pos since they aren't being used, and we may have stopped mid scan line.
-            // get bg
             //print!("scx is {} \n", mbc.hw_reg.scx);
-
             let x = (((mbc.hw_reg.scx as u16 / 8) + self.current_bg_tile_x_pos as u16 ) & 0x1F);
             // handles pixel row
             let y = (((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) / 8) * 32;
-            let tile_index = mbc.read(tile_base_add + x + y, OpSource::PPU) as usize;
-            self.bg_layer_current_step = 2;
-            Ok(tile_index)
-        }
+            mbc.read(tile_base_add + x + y, OpSource::PPU) as usize
+        };
+        self.bg_layer_current_step = 2;
+        Ok(tile_index)
     }
 
     pub fn bg_win_step_2_fetch_tile_data_low(&mut self, mbc: &Mbc, tile_num: usize, ) -> Result<u8, FetcherError> {
@@ -210,7 +209,9 @@ impl Fetcher {
         // Determine which tile data area
         let use_unsigned = mbc.hw_reg.is_lcdc_bg_win_tile_data_area_bit4_enabled();
         let row_offset: u16 = if self.active_layer == Layer::WIN {
-            2 * (self.win_y_pos as u16 % 8)
+            //2 * (self.win_y_pos as u16 % 8)
+            //(2 * (mbc.hw_reg.ly - mbc.hw_reg.wy) * 32 % 8) as u16
+            (2 * (mbc.hw_reg.ly - mbc.hw_reg.wy)  % 8) as u16
         } else {
             let fine_y = ((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) % 8;
             2 * fine_y
@@ -240,7 +241,9 @@ impl Fetcher {
 
         let use_unsigned = mbc.hw_reg.is_lcdc_bg_win_tile_data_area_bit4_enabled();
         let row_offset: u16 = if self.active_layer == Layer::WIN {
-            2 * (self.win_y_pos as u16 % 8)
+            // 2 * (self.win_y_pos as u16 % 8)
+            //(2 * (mbc.hw_reg.ly - mbc.hw_reg.wy) * 32 % 8) as u16
+            (2 * (mbc.hw_reg.ly - mbc.hw_reg.wy)  % 8) as u16
         } else {
             let fine_y = ((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) % 8;
             2 * fine_y
@@ -267,18 +270,14 @@ impl Fetcher {
         //
         // self.tcycle_budget -= 2;
 
-        if self.active_layer == Layer::BG || self.active_layer == Layer::SPRITE {
+
             if !fifo.data.is_empty() {
                 print!("BG FIFO not empty, can't push\n");
                 return Err(FetcherError::FifoNotEmpty);
             }
-        }
 
-
-        // todo if tile is flipped horizontally push lsb first, else push msb first
         let raw_pixels = GBPixel::decode_pixels_from_bytes(tile_low_byte, tile_high_byte, false);
         for p in raw_pixels {
-
 
 
             let mut skip = if self.pixels_to_mark_skipped > 0 {
@@ -305,8 +304,6 @@ impl Fetcher {
                 }
             }
 
-            //todo testing this
-
             // // this is used to skip pushing pixels when the sprite starts at an offset that's not divisible by 8
             if self.remaining_bg_pixels_before_sprite > 0 {
                 self.remaining_bg_pixels_before_sprite -= 1;
@@ -321,30 +318,21 @@ impl Fetcher {
 
         if self.active_layer == Layer::WIN {
             self.win_x_pos += 1;
-            //self.dot_in_scanline += 8;
-            //if self.dot_in_scanline >= 160 { self.dot_in_scanline = 0; }
-            //advance the y and reset 0 in the grid so we always know our position
-            if self.win_x_pos == TILES_IN_WIN_ROW {
-                //self.dot_in_scanline = 0;
-                self.win_y_pos += 1;
-                self.win_x_pos = 0;
-            }
-        } else { // BG layer
-            self.current_bg_tile_x_pos += 1;
-            //print!("{}\n", self.tile_x_pos);
-            // don't need to reset tile_x_pos because we & it with 0x1F
-            // if self.tile_x_pos == 32 {
-            //     self.tile_x_pos = 0;
-            //     self.tile_y_pos += 1;
-            //     if self.tile_y_pos == 32 {
-            //         self.tile_y_pos = 0;
-            //     }
+            // if self.win_x_pos == TILES_IN_WIN_ROW {
+            //     self.win_y_pos += 1;
+            //     self.win_x_pos = 0;
             // }
+
         }
+
+
+        self.current_bg_tile_x_pos += 1;
         // needed because it's used in the scan line calc in func get_tile_map_address_in_bg_win_step_1
         if self.current_bg_tile_x_pos == 20 {
             self.current_bg_tile_x_pos = 0;
+            self.win_x_pos = 0;
         }
+
         self.bg_layer_current_step = 1;
         Ok(())
     }
@@ -550,10 +538,10 @@ impl Fetcher {
         }
 
         let sprite = if found_sprite {
-           sprites.remove(idx_to_remove)
-        }
-        else {
-            return Err(FetcherError::NoSpriteFound)
+                sprites.remove(idx_to_remove)
+            }
+            else {
+                return Err(FetcherError::NoSpriteFound)
         };
 
 
@@ -871,7 +859,14 @@ impl Fetcher {
                 Err(FetcherError::NoSpriteFound) => {
                     //panic!("Could not find tile num for sprite");
                     //print!("Could not find tile num for sprite\n");
+                    // todo, I believe this is the issue where the window is not drawing
+
                     self.active_layer = Layer::BG;
+
+                    // if self.active_layer == Layer::SPRITE {
+                    //     self.active_layer = Layer::BG;
+                    // }
+
                 },
                 Err(FetcherError::EndOfScanLine) => {
                     //todo handle end of scanline
