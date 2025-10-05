@@ -51,6 +51,9 @@ pub struct Ppu {
     sprite_fifo: Fifo,
     tcycle_in_frame: u64,
     tcycle_in_scanline: u64,
+    tcycle_skipped_in_scanline: u64,
+    max_tcycle_in_scanline: u64,
+    max_tcycle_in_frame: u64,
     pixel_in_scanline: u64,
     started_mode_0_in_scanline: bool,
     started_mode_1_in_frame: bool,
@@ -83,6 +86,9 @@ impl Ppu {
             sprite_fifo: Fifo::new(),
             tcycle_in_frame: 0,
             tcycle_in_scanline: 0,
+            tcycle_skipped_in_scanline: 0,
+            max_tcycle_in_scanline: 456,
+            max_tcycle_in_frame: 70_224,
             pixel_in_scanline: 0,
             started_mode_0_in_scanline: false,
             started_mode_1_in_frame: false,
@@ -521,7 +527,7 @@ impl Ppu {
         gw_buffer_unlocked[pixel_loc..pixel_loc + 4 ].copy_from_slice(&rgba);
         self.pixel_in_frame += 1;
         self.pixel_in_scanline += 1;
-        if self.pixel_in_scanline == 160 {
+        if self.pixel_in_scanline >= 160 {
             self.pixel_in_scanline = 0;
             return Err(PPUEvent::EndOfScanLine)
         }
@@ -857,6 +863,9 @@ impl Ppu {
     }
 
     pub fn tick(&mut self, mbc: &mut Mbc, tw: &Arc<Mutex<Vec<u8>>>, bgmw: &Arc<Mutex<Vec<u8>>>, gw: &Arc<Mutex<Vec<u8>>>, cycles: u64) -> PPUEvent {
+        self.mode_0_h_blank_first_tcycle = 369;
+        self.max_tcycle_in_scanline = 456;
+
         let tcycle = cycles * 4;
         
         // don't tick ppu unless the lcdc says ppu is on
@@ -904,19 +913,6 @@ impl Ppu {
             print!("ppu init complete \n");
         }
 
-        // if mbc.need_tile_update {
-        //     //self.load_all_tiles(&mbc);
-        //     //print!("need tile_update \n");
-        //     mbc.need_tile_update = false;
-        // }
-        
-        // if mbc.need_bg_map_update {
-        //     //self.load_bg_tile_map(&mbc);
-        //     //print!("need bg_tile_map update \n");
-        //     mbc.need_bg_map_update = false;
-        // }
-
-
         // go through all PPU modes
         // mode 2 + 3 + 0 stop after scan line 143
         self.tcycle_in_scanline += tcycle;
@@ -925,9 +921,6 @@ impl Ppu {
 
         self.current_scanline = mbc.hw_reg.ly;
         //moved the mode 0-3 limits to self so that I can change mode 0 and keep its state
-
-
-
 
         //let mode_2_oam_scan_last_cycle: u64 = 80;
         //print!("current scan line is {}\n", current_scanline);
@@ -1006,13 +999,9 @@ impl Ppu {
                     self.drew_tiles_in_mode_3 = true;
                 }
                 // todo fix why this is reaching > 255
-                let tcycles_res = self.fetcher.tcycle_budget.overflowing_add(tcycle as u8);
-                self.fetcher.tcycle_budget = if tcycles_res.1 {
-                    print!("self.fetcher.tcycle_budget overflowed\n");
-                    255
-                } else {
-                    tcycles_res.0
-                };
+                let tcycles_res = self.fetcher.tcycle_budget.saturating_add(tcycle as u8);
+                self.fetcher.tcycle_budget = tcycles_res;
+
 
                 // match self.fetcher.active_layer {
                 //     Layer::BG | Layer::WIN => {
@@ -1037,8 +1026,14 @@ impl Ppu {
                     Ok(_) => {},
                     Err(PPUEvent::EndOfScanLine) => {
                         // This is required because my ppu and fetcher are out of sync and I could end up resetting vars in fetcher but be in same LY position
-                        //print!("finished scan line early, switching to mode 0 H blank \n");
-                        self.tcycle_in_scanline = self.mode_0_h_blank_first_tcycle;
+                        //print!("finished scan line early, switching to mode 0 H blank  - tcycle is {}\n", self.tcycle_in_scanline);
+                        self.tcycle_skipped_in_scanline = self.mode_0_h_blank_first_tcycle - self.tcycle_in_scanline;
+                        self.mode_0_h_blank_first_tcycle = self.tcycle_in_scanline;
+                        self.max_tcycle_in_scanline -= self.tcycle_skipped_in_scanline;
+
+
+                        //self.tcycle_in_scanline = self.tcycle_in_scanline + (self.max_tcycle_in_scanline - self.tcycle_in_scanline);
+
                     },
                     Err(PPUEvent::BufferOverflow) => {
                        // reset everything since we finished the pixels
@@ -1049,7 +1044,6 @@ impl Ppu {
                 //self.tcycle_in_mode_3_draw += tcycle;
             }
 
-
             if self.tcycle_in_scanline >= self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && !self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
                 //print!("entering mode_0_h_blank \n");
                 mbc.restrict_vram_access = false;
@@ -1059,7 +1053,6 @@ impl Ppu {
                 self.started_mode_0_in_scanline = true;
             }
             if self.tcycle_in_scanline >=  self.mode_0_h_blank_first_tcycle && self.started_mode_2_in_scanline && self.started_mode_3_in_scanline && self.started_mode_0_in_scanline && !self.started_mode_1_in_frame {
-
                 self.mode_0_h_blank(&tcycle);
             }
         }
@@ -1106,7 +1099,8 @@ impl Ppu {
         // reset tcycle in scan line because max is 456
         // also inc LY
         // note for later, switch to tcycle_in_scanline % 456 and save that as budget for next scanline?
-        if self.tcycle_in_scanline >= 456 {
+        if self.tcycle_in_scanline >= self.max_tcycle_in_scanline {
+        //if self.tcycle_in_scanline >= 456 {
             // this print is very freq
             //print!("tcycle_in_scanline >= 456, incrementing LY \n");
             self.tcycle_in_scanline = 0;
@@ -1141,12 +1135,13 @@ impl Ppu {
         //let max_tcycle_in_mode_3_draw: u64 = 24_768;
         //let max_tcycle_in_mode_3_draw: u64 = 41_616;
 
-        let max_tcycle_in_frame = 70_224;
+
         // if self.tcycle_in_mode_3_draw >= max_tcycle_in_mode_3_draw {
         //     self.tcycle_in_mode_3_draw = 0;
         // }
 
-        if self.tcycle_in_frame >= max_tcycle_in_frame {
+        if self.tcycle_in_frame >= self.max_tcycle_in_frame {
+            self.max_tcycle_in_frame = 70_224;
             //print!("tcycle_in_frame is >= 70224, generating frame \n");
             self.tcycle_in_frame = 0;
             //self.tcycle_in_scanline = 0;

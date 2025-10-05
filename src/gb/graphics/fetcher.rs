@@ -150,24 +150,24 @@ impl Fetcher {
 
         let tile_base_add = self.get_tile_map_address_in_bg_win_step_1(mbc);
         // check if we need to switch to window layer
-            //if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() && self.active_layer != Layer::WIN {
-            if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled()  {
-            // are we in a window pixel
-                //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-                // doesn't need saturating sub because I am using i16
-                if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) as i16 >= (mbc.hw_reg.wx as i16 - 7) {
-                    // print!("LY is {}, and WY is {}\n",mbc.hw_reg.ly, mbc.hw_reg.wy);
-                    // print!("WX is {} \n", (mbc.hw_reg.wx).wrapping_sub(7));
-                    self.active_layer = Layer::WIN;
-                    print!("switching to WIN layer\n");
-                    if !self.window_layer_active_in_scanline {
-                        self.window_layer_active_in_scanline = true;
-                        self.win_x_pos = 0;
-                    }
+        //if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() && self.active_layer != Layer::WIN {
+        if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled()  {
+        // are we in a window pixel
+            //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
+            // doesn't need saturating sub because I am using i16
+            if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) as i16 >= (mbc.hw_reg.wx as i16 - 7) {
+                // print!("LY is {}, and WY is {}\n",mbc.hw_reg.ly, mbc.hw_reg.wy);
+                // print!("WX is {} \n", (mbc.hw_reg.wx).wrapping_sub(7));
+                self.active_layer = Layer::WIN;
+                print!("switching to WIN layer\n");
+                if !self.window_layer_active_in_scanline {
+                    self.window_layer_active_in_scanline = true;
+                    self.win_x_pos = 0;
                 }
-            } else {
-                self.active_layer = Layer::BG;
             }
+        } else {
+            self.active_layer = Layer::BG;
+        }
 
         // // check if we need to disable switched_to_window_layer every scan line
         // moved this logic above
