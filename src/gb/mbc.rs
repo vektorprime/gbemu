@@ -349,15 +349,16 @@ impl Mbc {
 
 
             // Joypad and serial
-            // writing 0x20 means select buttons
-            // writing 0x10 means select direction keys
+            // writing 0x10 means select buttons
+            // writing 0x20 means select direction keys
             // writing 0x30 means neither, lower nibble should read 0xF
             0xFF00 => {
                 //println!("writing to FF00 (joypad) byte {:#x}", byte);
-                let jp_mask = self.hw_reg.joyp & 0b0000_1111;
-                self.hw_reg.joyp = jp_mask | byte;
+                //let jp_mask = self.hw_reg.joyp & 0b0000_1111;
+                //self.hw_reg.joyp = jp_mask | byte;
+                self.hw_reg.joyp = byte | 0b0000_1111;
                 if byte == 0x30 {
-                    self.hw_reg.joyp = 0xFF;
+                    self.hw_reg.joyp = 0x3F;
                 }
                 self.is_joypad_pending_update_from_reg = true;
             },

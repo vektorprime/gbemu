@@ -40,7 +40,7 @@ impl Emu {
             current_time: Instant::now(),
             is_cpu_tested: false,
             // todo re-enable, also some tests are not correctly working, verified via blargg
-            is_cpu_test_enabled: false,
+            is_cpu_test_enabled: true,
             joypad,
         }
     }

@@ -24,7 +24,7 @@ pub struct Joypad {
     pub select_dpad: bool,
     pub select_buttons: bool,
 
-    pub is_reg_pending_update_from_obj: bool,
+    pub is_reg_pending_update_from_joypad: bool,
     pub is_pending_joypad_interrupt_trigger: bool,
 }
 
@@ -45,7 +45,7 @@ impl Joypad {
             start: false,
             select_dpad: false,
             select_buttons: false,
-            is_reg_pending_update_from_obj: false,
+            is_reg_pending_update_from_joypad: false,
             is_pending_joypad_interrupt_trigger: false,
         }
     }
@@ -57,33 +57,38 @@ impl Joypad {
             self.is_pending_joypad_interrupt_trigger = false;
         }
 
-        if self.is_reg_pending_update_from_obj {
-            //println!("updating joypad reg from obj");
-            let lower_joyp = self.get_state_as_u8();
-            let upper_joyp =  mbc.hw_reg.joyp & 0b1111_0000;
-            mbc.hw_reg.joyp = upper_joyp | lower_joyp;
-            self.is_reg_pending_update_from_obj = false;
-        }
-
-        else if mbc.is_joypad_pending_update_from_reg {
-           //println!("updating joypad from reg");
+        if mbc.is_joypad_pending_update_from_reg {
+            //println!("updating joypad from reg");
 
             let byte = mbc.hw_reg.joyp;
 
-            if byte & 0x20 == 0x00 {
-                self.select_buttons = true;
-                self.select_dpad = false;
-            }
-            else if byte & 0x10 == 0x00 {
-                self.select_dpad = true;
+            if byte & 0x20 == 0x20 {
                 self.select_buttons = false;
+                self.select_dpad = true;
             }
+            else if byte & 0x10 == 0x10 {
+                self.select_dpad = false;
+                self.select_buttons = true;
+            }
+            let new_byte = self.get_state_as_u8();
+
+            mbc.hw_reg.joyp = new_byte;
 
             mbc.is_joypad_pending_update_from_reg = false;
         }
+
+        // else if self.is_reg_pending_update_from_joypad {
+        //     //println!("updating joypad reg from obj");
+        //     let lower_joyp = self.get_state_as_u8();
+        //     let upper_joyp =  mbc.hw_reg.joyp & 0b0011_0000;
+        //     mbc.hw_reg.joyp = upper_joyp | lower_joyp;
+        //     self.is_reg_pending_update_from_joypad = false;
+        // }
+
+
     }
 
-    // todo handle key press VS release
+
     pub fn handle_input(&mut self, key: KeyCode, state: ElementState) {
         // interrupt only triggered when bit goes from 1 to 0 (key pressed)
         if state == ElementState::Pressed {
@@ -93,56 +98,48 @@ impl Joypad {
                 KeyCode::KeyW => {
                     if !self.up {
                         self.up = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed up");
                     }
                 },
                 KeyCode::KeyA => {
                     if !self.left {
                         self.left = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed left");
                     }
                 },
                 KeyCode::KeyS => {
                     if !self.down {
                         self.down = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed down");
                     }
                 },
                 KeyCode::KeyD => {
                     if !self.right {
                         self.right = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed right");
                     }
                 },
                 KeyCode::KeyK => {
                     if !self.b {
                         self.b = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed b");
                     }
                 },
                 KeyCode::KeyL => {
                     if !self.a {
                         self.a = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed a");
                     }
                 },
                 KeyCode::Backspace => {
                     if !self.select {
                         self.select = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed select");
                     }
                 },
                 KeyCode::Enter => {
                     if !self.start {
                         self.start = true;
-                        self.is_pending_joypad_interrupt_trigger = true;
                         println!("pressed start");
                     }
                 },
@@ -150,6 +147,7 @@ impl Joypad {
                     println!("unrecognized key in Joypad.handle_input()");
                 }
             }
+            self.is_pending_joypad_interrupt_trigger = true;
         }
         else { // release key
             match key {
@@ -190,42 +188,40 @@ impl Joypad {
                 }
             }
         }
-
-        self.is_reg_pending_update_from_obj = true;
-
+        self.is_reg_pending_update_from_joypad = true;
     }
 
     pub fn get_state_as_u8(&self) -> u8 {
-        let mut state: u8 = 0xFF;
+        let mut state: u8 = 0x3F;
 
         if self.select_dpad {
-            state &= 0b1110_1111;
+            state &= 0b0010_1111;
             if self.right == true {
-                state &= 0b1111_1110;
+                state &= 0b0010_1110;
             }
             if self.left == true {
-                state &= 0b1111_1101;
+                state &= 0b0010_1101;
             }
             if self.up == true {
-                state &= 0b1111_1011;
+                state &= 0b0010_1011;
             }
             if self.down == true {
-                state &= 0b1111_0111
+                state &= 0b0010_0111
             }
         }
         else if self.select_buttons {
-            state &= 0b1101_1111;
+            state &= 0b0001_1111;
                 if self.a == true {
-                    state &= 0b1111_1110;
+                    state &= 0b0001_1110;
                 }
                 if self.b == true {
-                    state &= 0b1111_1101;
+                    state &= 0b0001_1101;
                 }
                 if self.select == true {
-                    state &= 0b1111_1011;
+                    state &= 0b0001_1011;
                 }
                 if self.start == true {
-                    state &= 0b1111_0111
+                    state &= 0b0001_0111
                 }
         }
 

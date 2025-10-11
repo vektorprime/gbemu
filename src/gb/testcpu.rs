@@ -44,6 +44,7 @@ pub fn setup_initial_registers(registers: &mut Registers, initial_test_state: &T
     // println!("setting h to 0x{:x}", initial_test_state.h);
     registers.set_l(initial_test_state.l);
     // println!("setting l to 0x{:x}", initial_test_state.l);
+    //registers.set_ime(initial_test_state.ime);
 }
 
 pub fn compare_registers(registers: &Registers, final_test_state: &TestState) -> Vec<FailedRegister> {
@@ -117,6 +118,7 @@ pub struct TestState {
     pub f: u8,
     pub h: u8,
     pub l: u8,
+    //pub ime: u8,
     #[serde(rename = "ram")]
     pub test_ram: Vec<(u16, u8)>,
 }
