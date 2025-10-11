@@ -159,7 +159,7 @@ impl Fetcher {
                 // print!("LY is {}, and WY is {}\n",mbc.hw_reg.ly, mbc.hw_reg.wy);
                 // print!("WX is {} \n", (mbc.hw_reg.wx).wrapping_sub(7));
                 self.active_layer = Layer::WIN;
-                print!("switching to WIN layer\n");
+                //print!("switching to WIN layer\n");
                 if !self.window_layer_active_in_scanline {
                     self.window_layer_active_in_scanline = true;
                     self.win_x_pos = 0;

@@ -253,10 +253,15 @@ impl Ppu {
             // }
         }
 
+
         // sort once after scan is done or after hitting 10
-        if self.mode_2_oam_scan_current_tcycle >= mode_2_max_tcycles || self.sprites.len() == 10 {
-            self.sprites.sort_by(|a, b| a.byte1_x_pos.cmp(&b.byte1_x_pos));
-        }
+        self.sprites.sort_by(|a, b| a.byte1_x_pos.cmp(&b.byte1_x_pos));
+
+
+        // // sort once after scan is done or after hitting 10
+        // if self.mode_2_oam_scan_current_tcycle >= mode_2_max_tcycles || self.sprites.len() == 10 {
+        //     self.sprites.sort_by(|a, b| a.byte1_x_pos.cmp(&b.byte1_x_pos));
+        // }
         // // sort once after scan is done or after hitting 10
         // if self.mode_2_oam_scan_current_tcycle >= mode_2_max_tcycles || self.sprites.len() == 10 {
         //     self.sprites.sort_by(|a, b| a.byte1_x_pos.cmp(&b.byte1_x_pos));
@@ -571,7 +576,8 @@ impl Ppu {
                     self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, sp_px)?
                 },
                 (Ok(bg_px), Ok(sp_px)) => {
-                    if bg_px.bg_priority && bg_px.color != PaletteColor::White {
+                    //if (bg_px.bg_priority && bg_px.color != PaletteColor::White)  {
+                    if (bg_px.bg_priority && bg_px.color != PaletteColor::White) || !mbc.hw_reg.is_lcdc_obj_enable_bit1_enabled() {
                         // push_bg_px
                         self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px)?
 
