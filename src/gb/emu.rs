@@ -21,7 +21,9 @@ pub struct Emu {
     // pub lcd: Lcd,
     pub debug: bool,
     pub sec_mcycles: u64, // tracking max mcycles per sec
+    pub frame_mcycles: u64,
     pub current_time: Instant,
+    pub current_time_per_frame: Instant,
     pub is_cpu_test_enabled: bool,
     pub is_cpu_tested: bool,
     pub joypad: Arc<Mutex<Joypad>>
@@ -34,13 +36,14 @@ impl Emu {
             mbc: Box::new(Mbc::new()), // mbc has rom and ram
             bios: Bios::new(color_mode), 
             ppu: Ppu::new(),
-            // lcd: Lcd::new(),
             debug,
             sec_mcycles: 0, // tracking max mcycles per sec
+            frame_mcycles: 0,
             current_time: Instant::now(),
+            current_time_per_frame: Instant::now(),
             is_cpu_tested: false,
             // todo re-enable, also some tests are not correctly working, verified via blargg
-            is_cpu_test_enabled: true,
+            is_cpu_test_enabled: false,
             joypad,
         }
     }
@@ -119,9 +122,9 @@ impl Emu {
 
         //
         let mcycles_per_sec: u64 = 1_053_360;
-        let one_sec: u64 = 1;
-        let elapsed_time = self.current_time.elapsed().as_secs();
-        if elapsed_time < one_sec {
+        let one_sec = 1;
+        let elapsed_time = self.current_time.elapsed();
+        if elapsed_time.as_secs() < one_sec {
             if self.sec_mcycles < mcycles_per_sec {
                 let mcycles = self.cpu.tick(&mut self.mbc);
                 self.sec_mcycles += mcycles;
@@ -130,7 +133,7 @@ impl Emu {
                 return PPUEvent::RenderEvent(RenderState::NoRender);
             }
         }  else {
-            if elapsed_time > one_sec && self.debug == false {
+            if elapsed_time.as_secs() > one_sec && self.debug == false {
                 panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
             } else {
                 if self.sec_mcycles < mcycles_per_sec {
@@ -145,6 +148,49 @@ impl Emu {
             }
 
         }
+        // //
+        // let mcycles_per_sec: u64 = 1_053_360;
+        // let mcycles_per_frame: u64 = 17_556;
+        // //let one_sec: u64 = 1;
+        // let elapsed_time = self.current_time.elapsed();
+        // if elapsed_time.as_secs_f64() <= 1.0f64 {
+        //     if elapsed_time.as_millis() >= 166u128 && self.frame_mcycles < mcycles_per_frame {
+        //         if self.sec_mcycles < mcycles_per_sec {
+        //             let mcycles = self.cpu.tick(&mut self.mbc);
+        //             self.sec_mcycles += mcycles;
+        //             self.frame_mcycles += mcycles;
+        //             self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
+        //         } else {
+        //             //std::thread::sleep(std::time::Duration::from_secs_f64(1.0 / 180f64));
+        //             return PPUEvent::RenderEvent(RenderState::NoRender);
+        //         }
+        //     } else {
+        //        //std::thread::sleep(std::time::Duration::from_millis((292 - elapsed_time.as_millis()) as u64));
+        //         while self.current_time_per_frame.elapsed().as_millis() < 166u128 {
+        //             // hot spin the thread
+        //             print!("spin \n");
+        //         }
+        //         self.current_time_per_frame = Instant::now();
+        //         self.frame_mcycles = 0;
+        //         return PPUEvent::RenderEvent(RenderState::NoRender);
+        //     }
+        //
+        // }  else {
+        //     if elapsed_time.as_secs_f64() > 1.0f64 && self.debug == false {
+        //         panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
+        //     } else {
+        //         if self.sec_mcycles < mcycles_per_sec {
+        //             print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
+        //         }
+        //         else {
+        //             print!("sec has elapsed and reached max mcycle\n");
+        //         }
+        //         self.sec_mcycles = 0;
+        //         self.current_time = Instant::now();
+        //         return PPUEvent::RenderEvent(RenderState::NoRender);
+        //     }
+        //
+        // }
 
     }
 

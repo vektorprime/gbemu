@@ -130,6 +130,11 @@ impl Fetcher {
         // }
         // self.tcycle_budget -= 2;
 
+        //for debug
+        // if mbc.hw_reg.ly == 0x70 {
+        //     print!("ly is 0x70\n");
+        // }
+
         self.remaining_bg_pixels_before_sprite = 8;
         if !self.finished_sprites_in_scanline {
             let current_dot = self.current_bg_tile_x_pos as u8 * 8;
@@ -148,9 +153,8 @@ impl Fetcher {
 
         //print!("tcycle_budget is {}\n", self.tcycle_budget);
 
-        let tile_base_add = self.get_tile_map_address_in_bg_win_step_1(mbc);
+        let mut tile_base_add = self.get_tile_map_address_in_bg_win_step_1(mbc);
         // check if we need to switch to window layer
-        //if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() && self.active_layer != Layer::WIN {
         if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled()  {
         // are we in a window pixel
             //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
@@ -169,6 +173,14 @@ impl Fetcher {
             self.active_layer = Layer::BG;
         }
 
+        // using the below tile_base_add logic to check if it's working correctly, it is
+        // if self.active_layer == Layer::WIN && mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
+        //     tile_base_add = 0x9C00;
+        // } else if self.active_layer == Layer::WIN && !mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
+        //     tile_base_add = 0x9800;
+        // }
+
+
         // // check if we need to disable switched_to_window_layer every scan line
         // moved this logic above
         // if self.active_layer == Layer::WIN {
@@ -183,7 +195,7 @@ impl Fetcher {
             //print!("getting win tile index in bg_win_step_1_get_tile_num \n");
             let win_x = self.win_x_pos;
             // let win_y = ((mbc.hw_reg.ly - mbc.hw_reg.wy) / 8) * 32;
-            let win_y: u16 = (mbc.hw_reg.ly as u16 - mbc.hw_reg.wy as u16) / 8;
+            let win_y: u16 = (mbc.hw_reg.ly as u16 - mbc.hw_reg.wy as u16) / 8 * 32;
             mbc.read(tile_base_add + win_x as u16 + win_y as u16, OpSource::PPU) as usize
         } else {
             // bg index

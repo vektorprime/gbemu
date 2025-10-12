@@ -236,6 +236,8 @@ impl Cpu {
             self.debug_print_pc = true;
         }
 
+
+
         // if self.debug_print_pc {
         //         let pc = self.registers.get_pc();
         //         if !(pc == 0x21C || pc == 0x21D || pc == 0x21E) {
