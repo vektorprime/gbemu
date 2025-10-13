@@ -1,3 +1,4 @@
+use std::hint;
 use crate::gb::cpu::*;
 use crate::gb::rom::*;
 use crate::gb::bios::*;
@@ -120,63 +121,20 @@ impl Emu {
             joypad_unlocked.sync_state(&mut self.mbc);
         }
 
-        //
-        let mcycles_per_sec: u64 = 1_053_360;
-        let one_sec = 1;
-        let elapsed_time = self.current_time.elapsed();
-        if elapsed_time.as_secs() < one_sec {
-            if self.sec_mcycles < mcycles_per_sec {
-                let mcycles = self.cpu.tick(&mut self.mbc);
-                self.sec_mcycles += mcycles;
-                self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
-            } else {
-                return PPUEvent::RenderEvent(RenderState::NoRender);
-            }
-        }  else {
-            if elapsed_time.as_secs() > one_sec && self.debug == false {
-                panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
-            } else {
-                if self.sec_mcycles < mcycles_per_sec {
-                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
-                }
-                else {
-                    print!("sec has elapsed and reached max mcycle\n");
-                }
-                self.sec_mcycles = 0;
-                self.current_time = Instant::now();
-                return PPUEvent::RenderEvent(RenderState::NoRender);
-            }
-
-        }
         // //
         // let mcycles_per_sec: u64 = 1_053_360;
-        // let mcycles_per_frame: u64 = 17_556;
-        // //let one_sec: u64 = 1;
+        // let one_sec = 1;
         // let elapsed_time = self.current_time.elapsed();
-        // if elapsed_time.as_secs_f64() <= 1.0f64 {
-        //     if elapsed_time.as_millis() >= 166u128 && self.frame_mcycles < mcycles_per_frame {
-        //         if self.sec_mcycles < mcycles_per_sec {
-        //             let mcycles = self.cpu.tick(&mut self.mbc);
-        //             self.sec_mcycles += mcycles;
-        //             self.frame_mcycles += mcycles;
-        //             self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
-        //         } else {
-        //             //std::thread::sleep(std::time::Duration::from_secs_f64(1.0 / 180f64));
-        //             return PPUEvent::RenderEvent(RenderState::NoRender);
-        //         }
+        // if elapsed_time.as_secs() < one_sec {
+        //     if self.sec_mcycles < mcycles_per_sec {
+        //         let mcycles = self.cpu.tick(&mut self.mbc);
+        //         self.sec_mcycles += mcycles;
+        //         self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
         //     } else {
-        //        //std::thread::sleep(std::time::Duration::from_millis((292 - elapsed_time.as_millis()) as u64));
-        //         while self.current_time_per_frame.elapsed().as_millis() < 166u128 {
-        //             // hot spin the thread
-        //             print!("spin \n");
-        //         }
-        //         self.current_time_per_frame = Instant::now();
-        //         self.frame_mcycles = 0;
         //         return PPUEvent::RenderEvent(RenderState::NoRender);
         //     }
-        //
         // }  else {
-        //     if elapsed_time.as_secs_f64() > 1.0f64 && self.debug == false {
+        //     if elapsed_time.as_secs() > one_sec && self.debug == false {
         //         panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
         //     } else {
         //         if self.sec_mcycles < mcycles_per_sec {
@@ -191,6 +149,54 @@ impl Emu {
         //     }
         //
         // }
+        // //
+        let mcycles_per_sec: u64 = 1_053_360;
+        let mcycles_per_frame: u64 = 175_560;
+        //let one_sec: u64 = 1;
+        let elapsed_time = self.current_time.elapsed();
+        //0.0166 f64 sec is 1/60 of a sec
+
+        if elapsed_time.as_secs_f64() <= 1.0f64 {
+            if self.sec_mcycles < mcycles_per_sec {
+                if self.frame_mcycles < mcycles_per_frame {
+                        let mcycles = self.cpu.tick(&mut self.mbc);
+                        self.sec_mcycles += mcycles;
+                        self.frame_mcycles += mcycles;
+                        self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
+                }
+                else {
+                    // hot spin the thread
+                    while self.current_time_per_frame.elapsed().as_secs_f64() <= 0.166f64  {
+                        //print!(" ");
+                        hint::spin_loop();
+                    }
+                    self.current_time_per_frame = Instant::now();
+                    self.frame_mcycles = 0;
+                    return PPUEvent::RenderEvent(RenderState::NoRender);
+                }
+
+            } else {
+                self.sec_mcycles = 0;
+                self.current_time = Instant::now();
+                return PPUEvent::RenderEvent(RenderState::NoRender);
+            }
+
+        }  else {
+            if elapsed_time.as_secs_f64() > 1.0f64 && self.debug == false {
+                panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
+            } else {
+                if self.sec_mcycles < mcycles_per_sec {
+                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
+                }
+                else {
+                    print!("sec has elapsed and reached max mcycle\n");
+                }
+                self.sec_mcycles = 0;
+                self.current_time = Instant::now();
+                return PPUEvent::RenderEvent(RenderState::NoRender);
+            }
+
+        }
 
     }
 
