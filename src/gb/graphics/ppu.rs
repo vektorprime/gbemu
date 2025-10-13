@@ -954,8 +954,6 @@ impl Ppu {
                 // delay rendering 8 more tcycles because PPU does a fake render of this tile
                 self.fetcher.start_of_rendering = true; // outside of if
                 self.fetcher.window_layer_active_in_scanline = false;
-                //todo re-enable
-               // self.fetcher.window_layer_active_in_scanline = false;
                 self.set_stat_ppu_mode(mbc, PPUMode::Mode_2_OAM_Scan);
                 // need to skip this many pixels when rendering, mark them skipped in fetcher and skip in mode_3_draw
                 self.fetcher.pixels_to_mark_skipped = mbc.hw_reg.scx % 8;
@@ -991,7 +989,7 @@ impl Ppu {
                 self.fetcher.tcycle_budget = 0;
                 //self.fetcher.tile_x_coord = 0;
                 // always reset the layer before we start
-               
+
                 self.fetcher.active_layer = Layer::BG;
                 self.set_stat_ppu_mode(mbc, PPUMode::Mode_3_Draw);
                 self.started_mode_3_in_scanline = true;

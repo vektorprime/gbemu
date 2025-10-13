@@ -134,8 +134,7 @@ impl Fetcher {
         //     print!("ly is 0x70\n");
         // }
 
-        let inital_layer = self.active_layer;
-
+       // let inital_layer = self.active_layer;
 
         self.remaining_bg_pixels_before_sprite = 8;
         if !self.finished_sprites_in_scanline {
@@ -168,6 +167,7 @@ impl Fetcher {
                 if !self.window_layer_active_in_scanline && self.window_layer_active_in_frame {
                     self.window_layer_active_in_scanline = true;
                     self.win_y_pos += 1;
+                    //self.win_x_pos = 0;
                 }
                 //print!("switching to WIN layer\n");
                 if !self.window_layer_active_in_frame {
@@ -182,13 +182,13 @@ impl Fetcher {
             self.active_layer = Layer::BG;
         }
 
-        
+
         // get window tile index
         let tile_index = if self.active_layer == Layer::WIN {
             //print!("getting win tile index in bg_win_step_1_get_tile_num \n");
             let win_x = self.win_x_pos;
-            let win_y: u16 = (mbc.hw_reg.ly as u16 - mbc.hw_reg.wy as u16) / 8 * 32;
-            //let win_y: u16 = self.win_y_pos as u16 * 32;
+            //let win_y: u16 = (mbc.hw_reg.ly as u16 - mbc.hw_reg.wy as u16) / 8 * 32;
+            let win_y: u16 = (self.win_y_pos as u16 / 8 ) * 32;
             mbc.read(tile_base_add + win_x as u16 + win_y as u16, OpSource::PPU) as usize
         } else {
             // bg index
