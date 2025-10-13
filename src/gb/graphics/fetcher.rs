@@ -27,6 +27,7 @@ pub enum Layer {
 
 
 pub struct Fetcher {
+    pub window_layer_active_in_frame: bool,
     pub window_layer_active_in_scanline: bool,
     pub active_layer: Layer,
     //pub switched_to_window_layer: bool,
@@ -59,6 +60,7 @@ pub struct Fetcher {
 impl Fetcher {
     pub fn new() -> Self {
         Fetcher {
+            window_layer_active_in_frame: false,
             window_layer_active_in_scanline: false,
             active_layer: Layer::BG,
             // switched_to_window_layer: false,
@@ -92,9 +94,6 @@ impl Fetcher {
     pub fn get_tile_map_address_in_bg_win_step_1(&self, mbc: &Mbc) -> u16 {
         if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
             // are we in a window pixel
-
-            //if mbc.hw_reg.ly >= mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
-            //if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) >= (mbc.hw_reg.wx).saturating_sub(7) as u16 {
             if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) as i16 >= (mbc.hw_reg.wx as i16 - 7) {
                  if mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
                      return 0x9C00
@@ -135,6 +134,9 @@ impl Fetcher {
         //     print!("ly is 0x70\n");
         // }
 
+        let inital_layer = self.active_layer;
+
+
         self.remaining_bg_pixels_before_sprite = 8;
         if !self.finished_sprites_in_scanline {
             let current_dot = self.current_bg_tile_x_pos as u8 * 8;
@@ -156,46 +158,37 @@ impl Fetcher {
         let mut tile_base_add = self.get_tile_map_address_in_bg_win_step_1(mbc);
         // check if we need to switch to window layer
         if mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() && mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled()  {
-        // are we in a window pixel
-            //if mbc.hw_reg.ly == mbc.hw_reg.wy && self.dot_in_scanline >= (mbc.hw_reg.wx - 7) {
+            // are we in a window pixel
             // doesn't need saturating sub because I am using i16
             if mbc.hw_reg.ly >= mbc.hw_reg.wy && (self.current_bg_tile_x_pos * 8) as i16 >= (mbc.hw_reg.wx as i16 - 7) {
                 // print!("LY is {}, and WY is {}\n",mbc.hw_reg.ly, mbc.hw_reg.wy);
                 // print!("WX is {} \n", (mbc.hw_reg.wx).wrapping_sub(7));
                 self.active_layer = Layer::WIN;
-                //print!("switching to WIN layer\n");
-                if !self.window_layer_active_in_scanline {
+
+                if !self.window_layer_active_in_scanline && self.window_layer_active_in_frame {
                     self.window_layer_active_in_scanline = true;
-                    self.win_x_pos = 0;
+                    self.win_y_pos += 1;
                 }
+                //print!("switching to WIN layer\n");
+                if !self.window_layer_active_in_frame {
+                    self.window_layer_active_in_frame = true;
+                    self.win_x_pos = 0;
+                    self.win_y_pos = 0;
+                }
+            } else {
+                self.active_layer = Layer::BG;
             }
         } else {
             self.active_layer = Layer::BG;
         }
 
-        // using the below tile_base_add logic to check if it's working correctly, it is
-        // if self.active_layer == Layer::WIN && mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
-        //     tile_base_add = 0x9C00;
-        // } else if self.active_layer == Layer::WIN && !mbc.hw_reg.is_lcdc_window_tile_map_bit6_enabled() {
-        //     tile_base_add = 0x9800;
-        // }
-
-
-        // // check if we need to disable switched_to_window_layer every scan line
-        // moved this logic above
-        // if self.active_layer == Layer::WIN {
-        //     //print!("switching from BG layer to WIN\n");
-        //     if mbc.hw_reg.ly < mbc.hw_reg.wy || !mbc.hw_reg.is_lcdc_window_enable_bit5_enabled() || !mbc.hw_reg.is_lcdc_bg_and_win_enable_bit0_enabled() {
-        //         self.active_layer = Layer::BG;
-        //     }
-        // }
-
+        
         // get window tile index
         let tile_index = if self.active_layer == Layer::WIN {
             //print!("getting win tile index in bg_win_step_1_get_tile_num \n");
             let win_x = self.win_x_pos;
-            // let win_y = ((mbc.hw_reg.ly - mbc.hw_reg.wy) / 8) * 32;
             let win_y: u16 = (mbc.hw_reg.ly as u16 - mbc.hw_reg.wy as u16) / 8 * 32;
+            //let win_y: u16 = self.win_y_pos as u16 * 32;
             mbc.read(tile_base_add + win_x as u16 + win_y as u16, OpSource::PPU) as usize
         } else {
             // bg index
@@ -221,8 +214,6 @@ impl Fetcher {
         // Determine which tile data area
         let use_unsigned = mbc.hw_reg.is_lcdc_bg_win_tile_data_area_bit4_enabled();
         let row_offset: u16 = if self.active_layer == Layer::WIN {
-            //2 * (self.win_y_pos as u16 % 8)
-            //(2 * (mbc.hw_reg.ly - mbc.hw_reg.wy) * 32 % 8) as u16
             (2 * (mbc.hw_reg.ly - mbc.hw_reg.wy)  % 8) as u16
         } else {
             let fine_y = ((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) % 8;
@@ -253,8 +244,6 @@ impl Fetcher {
 
         let use_unsigned = mbc.hw_reg.is_lcdc_bg_win_tile_data_area_bit4_enabled();
         let row_offset: u16 = if self.active_layer == Layer::WIN {
-            // 2 * (self.win_y_pos as u16 % 8)
-            //(2 * (mbc.hw_reg.ly - mbc.hw_reg.wy) * 32 % 8) as u16
             (2 * (mbc.hw_reg.ly - mbc.hw_reg.wy)  % 8) as u16
         } else {
             let fine_y = ((mbc.hw_reg.ly as u16 + mbc.hw_reg.scy as u16) & 0xFF) % 8;
@@ -330,11 +319,6 @@ impl Fetcher {
 
         if self.active_layer == Layer::WIN {
             self.win_x_pos += 1;
-            // if self.win_x_pos == TILES_IN_WIN_ROW {
-            //     self.win_y_pos += 1;
-            //     self.win_x_pos = 0;
-            // }
-
         }
 
 
@@ -344,6 +328,22 @@ impl Fetcher {
             self.current_bg_tile_x_pos = 0;
             self.win_x_pos = 0;
         }
+
+
+        // self.current_bg_tile_x_pos += 1;
+        // // needed because it's used in the scan line calc in func get_tile_map_address_in_bg_win_step_1
+        // if self.current_bg_tile_x_pos == 20 {
+        //     self.current_bg_tile_x_pos = 0;
+        //     //self.win_x_pos = 0;
+        //
+        // } else {
+        //     if self.active_layer == Layer::WIN {
+        //         self.win_x_pos += 1;
+        //         if self.win_x_pos == 32 {
+        //             self.win_x_pos = 0;
+        //         }
+        //     }
+        // }
 
         self.bg_layer_current_step = 1;
         Ok(())

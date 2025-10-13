@@ -949,12 +949,13 @@ impl Ppu {
                 //     self.fetcher.window_layer_active_in_lcdc = true;
                 //     self.fetcher.switched_to_window_layer = false;
                 // }
-                // todo implement start of rendering scan line
                 // if start of rendering scan line
                 // delay rendering 6 tcycle so the PPU can fetch the first tile's data
                 // delay rendering 8 more tcycles because PPU does a fake render of this tile
                 self.fetcher.start_of_rendering = true; // outside of if
                 self.fetcher.window_layer_active_in_scanline = false;
+                //todo re-enable
+               // self.fetcher.window_layer_active_in_scanline = false;
                 self.set_stat_ppu_mode(mbc, PPUMode::Mode_2_OAM_Scan);
                 // need to skip this many pixels when rendering, mark them skipped in fetcher and skip in mode_3_draw
                 self.fetcher.pixels_to_mark_skipped = mbc.hw_reg.scx % 8;
@@ -1073,7 +1074,7 @@ impl Ppu {
             if self.tcycle_in_frame >= mode_1_v_blank_first_tcycle && !self.started_mode_1_in_frame  {
                 mbc.hw_reg.set_if_vblank_bit0();
                  //print!("entering mode_1_v_blank \n");
-                self.fetcher.win_y_pos = 0;
+
                 self.fetcher.current_tile_y_pos = 0;
                 // reset tile x pos every frame. It's & with 0x1F in the fetcher step 1
                 self.fetcher.current_bg_tile_x_pos = 0;
@@ -1081,7 +1082,7 @@ impl Ppu {
                 //only draw these tiles once per frame in mode 3
 
                 self.drew_tiles_in_mode_3 = false;
-
+                self.fetcher.window_layer_active_in_frame = false;
                 self.set_stat_ppu_mode(mbc, PPUMode::Mode_1_V_Blank);
                 self.started_mode_1_in_frame = true;
             }

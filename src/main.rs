@@ -54,12 +54,12 @@ fn main() {
     //emu.load_rom_file(String::from("tamagotchi.gb"));
     // one of my opcodes must be broken because tetris breaks after starting
     //emu.load_rom_file(String::from("tetris.gb"));
-    //emu.load_rom_file(String::from("dmg-acid2.gb"));
+    emu.load_rom_file(String::from("dmg-acid2.gb"));
     //emu.load_rom_file(String::from("daa.gb"));
     //emu.load_rom_file(String::from("cpu_instrs.gb"));
     //emu.load_rom_file(String::from("addams.gb"));
     //emu.load_rom_file(String::from("drmario.gb"));
-    emu.load_rom_file(String::from("mm2.gb"));
+    //emu.load_rom_file(String::from("mm2.gb"));
     //emu.load_rom_file(String::from("paperboy.gb"));
     emu.load_bios();
 
