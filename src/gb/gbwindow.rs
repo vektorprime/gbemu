@@ -1,17 +1,11 @@
 use std::cmp::PartialEq;
-use pixels::{Error, Pixels, SurfaceTexture};
+use pixels::{Pixels, SurfaceTexture};
 use winit::dpi::LogicalSize;
-use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
-use winit::keyboard::KeyCode;
 use winit::window::{Window, WindowBuilder};
 use winit_input_helper::WinitInputHelper;
 
 use std::sync::Arc;
-
-use crate::gb::constants::*;
-use crate::gb::graphics::ppu::RenderState;
-//screen
 
 
 pub enum WindowType {

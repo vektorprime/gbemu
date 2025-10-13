@@ -2,27 +2,22 @@
 #![forbid(unsafe_code)]
 
 
-use winit::keyboard::NativeKey::Unidentified;
-use std::env;
-use pixels::{Error, Pixels, SurfaceTexture};
-use winit::dpi::LogicalSize;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop};
-use winit::keyboard::{KeyCode, PhysicalKey};
-use winit::window::{WindowBuilder, WindowId};
-use winit_input_helper::WinitInputHelper;
+use winit::keyboard::{ PhysicalKey};
+use winit::window::{ WindowId};
 
 
 use std::thread;
-use std::sync::{Arc, Mutex, mpsc};
-use std::time::{Duration, Instant};
+use std::sync::{Arc, Mutex};
+use std::time::{Instant};
 
 mod gb;  
 
 use gb::bios::ColorMode;
 use crate::gb::emu::*;
 use crate::gb::gbwindow::*;
-use crate::gb::constants::*;
+//use crate::gb::constants::*;
 use crate::gb::graphics::ppu::{PPUEvent, RenderState};
 use crate::gb::joypad::Joypad;
 
@@ -35,10 +30,10 @@ fn main() {
     event_loop.set_control_flow(ControlFlow::Poll);
     /////////////////////////////////////
     // these are for quick debugging
-    // todo re-enable
-    let skip_bg_render = true;
+
+    let skip_bg_render = false;
     let skip_gw_render = false;
-    let skip_tile_render = true;
+    let skip_tile_render = false;
 
 
     let skip_windows = false;
@@ -95,6 +90,7 @@ fn main() {
                 *rs = emu.tick(&tile_win_buffer_arc, &bg_map_win_buffer_arc, &game_win_buffer_arc);
             }
         });
+
         let mut tw_current_time = Instant::now();
         let mut bgmw_current_time = Instant::now();
         let mut gw_current_time = Instant::now();

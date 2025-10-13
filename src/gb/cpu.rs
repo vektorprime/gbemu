@@ -7,7 +7,6 @@ use crate::gb::bios::*;
 use std::collections::HashMap;
 //use std::time::{Duration, Instant};
 
-pub const MAX_T_CYCLE_PER_FRAME: u64 = 70224;
 
 pub struct Cpu {
     pub registers: Registers,
@@ -17,19 +16,19 @@ pub struct Cpu {
     //pub opcode: u8, // opcode of current inst.
     pub total_mcycles: u64, // total m cycle count
     pub last_mcycles_inc_val: u64, // mcycles pe tick to pass to ppu
-    pub div_tcycles: u64,
-    pub tima_tcycles: u64,
+    //pub div_tcycles: u64,
+    //pub tima_tcycles: u64,
     //pub sec_cycles: u64, // tracking max mcycles per sec
     //pub current_time: Instant,
     pub halted: bool,
     pub instructions: HashMap<u8, Instruction>,
     pub cb_instructions: HashMap<u8, Instruction>,
-    pub bios_executed: bool,
+    //pub bios_executed: bool,
     pub rom_loaded: bool,
     debug_print_pc: bool,
     counter: u16,
     last_counter: u16,
-    is_initial_ime_set: bool,
+    //is_initial_ime_set: bool,
 }
 
 impl Cpu { 
@@ -43,19 +42,19 @@ impl Cpu {
             //opcode: 0,
             total_mcycles: 0, // total mcyces
             last_mcycles_inc_val: 0, // mcycles per tick to pass to ppu
-            div_tcycles: 0,
-            tima_tcycles: 0,
+            //div_tcycles: 0,
+            //tima_tcycles: 0,
             //sec_cycles: 0, // tracking max mcycles per sec
             //current_time: Instant::now(),
             halted: false, 
             instructions: Cpu::setup_inst(),
             cb_instructions: Cpu::setup_cb_inst(),
-            bios_executed: false,
+            //bios_executed: false,
             rom_loaded: false,
             debug_print_pc: false,
             counter: 0,
             last_counter: 0,
-            is_initial_ime_set: false,
+            //is_initial_ime_set: false,
         } 
     } 
 

@@ -1,21 +1,13 @@
 use std::cmp::PartialEq;
 use crate::gb::ram::*;
 use crate::gb::rom::*;
-use crate::gb::bios::*;
 use crate::gb::hwregisters::HardwareRegisters;
-
-use std::thread::sleep;
-use std::time::Duration;
-use crate::gb::joypad::Joypad;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum OpSource {
     CPU,
     PPU,
 }
-
-pub const ROM_BANK_SIZE: u16 = 0x4000;
-pub const RAM_BANK_SIZE: u16 = 0x4000;
 
 pub struct Mbc {
     pub hw_reg: HardwareRegisters,

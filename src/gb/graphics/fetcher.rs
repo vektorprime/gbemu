@@ -5,9 +5,10 @@ use crate::gb::graphics::sprite::*;
 use crate::gb::graphics::pixel::*;
 use crate::gb::graphics::tile::{get_tile, Tile, TileType};
 
-const TILES_IN_WIN_ROW: u8 = 20;
-const PIXELS_PER_ROW_IN_TILE: u8 = 8;
-const ROWS_OF_PIXELS_IN_TILE: u8 = 8;
+// const TILES_IN_WIN_ROW: u8 = 20;
+// const PIXELS_PER_ROW_IN_TILE: u8 = 8;
+// const ROWS_OF_PIXELS_IN_TILE: u8 = 8;
+
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum FetcherError {
     NotEnoughTcycles,
@@ -40,18 +41,18 @@ pub struct Fetcher {
     pub win_y_pos: u8,
     //pub dot_in_scanline: u8,
     pub tcycle_budget: u8,
-    pub row_in_tile: u8,
+    //pub row_in_tile: u8,
     pub bg_layer_current_step: u8,
     pub sprite_layer_current_step: u8,
     pub current_tile_num: u16,
     pub current_tile_low_byte: u8,
     pub current_tile_high_byte: u8,
-    pub current_priority: bool,
+    //pub current_priority: bool,
     pub bg_layer_need_to_resume: bool,
     pub sprite_layer_need_to_resume: bool,
     pub pixels_to_mark_skipped: u8,
     pub remaining_bg_pixels_before_sprite: u8,
-    pub fetcher_end_of_scanline: bool,
+    //pub fetcher_end_of_scanline: bool,
     pub finished_sprites_in_scanline: bool,
     pub scan_for_sprites_in_last_fetch: bool,
     current_sprite: Option<Sprite>,
@@ -73,18 +74,18 @@ impl Fetcher {
             win_y_pos: 0,
             //dot_in_scanline: 0,
             tcycle_budget: 0,
-            row_in_tile: 0,
+            //row_in_tile: 0,
             bg_layer_current_step: 0,
             sprite_layer_current_step: 0,
             current_tile_num: 0,
             current_tile_low_byte: 0,
             current_tile_high_byte: 0,
-            current_priority: false,
+            //current_priority: false,
             bg_layer_need_to_resume: false,
             sprite_layer_need_to_resume: false,
             pixels_to_mark_skipped: 0,
             remaining_bg_pixels_before_sprite: 0,
-            fetcher_end_of_scanline: false,
+            //fetcher_end_of_scanline: false,
             finished_sprites_in_scanline: false,
             scan_for_sprites_in_last_fetch: false,
             current_sprite: None,
@@ -107,15 +108,15 @@ impl Fetcher {
              }
             // not in a window, use bg map
             if mbc.hw_reg.is_lcdc_bg_tile_map_bit3_enabled() {
-                return 0x9C00
+                0x9C00
             } else {
-                return 0x9800
+                0x9800
             }
         } else {
             if mbc.hw_reg.is_lcdc_bg_tile_map_bit3_enabled() {
-                return 0x9C00
+                0x9C00
             } else {
-                return 0x9800
+                0x9800
             }
         }
     }
@@ -281,7 +282,7 @@ impl Fetcher {
         for p in raw_pixels {
 
 
-            let mut skip = if self.pixels_to_mark_skipped > 0 {
+            let skip = if self.pixels_to_mark_skipped > 0 {
                 self.pixels_to_mark_skipped -= 1;
                 true
             } else {
@@ -415,7 +416,7 @@ impl Fetcher {
                             return;
                         },
                         Err(FetcherError::FifoNotEmpty) => {
-                            // print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
+                            // print!("FIFO not empty in bg_win_step_4_push_pixels_to_fifo \n");
                         },
                         _ => {
                             panic!("unknown error in handle_bg_win_layer's step 4");
@@ -430,7 +431,7 @@ impl Fetcher {
                             return;
                         },
                         Err(FetcherError::FifoNotEmpty) => {
-                            // print!("FIFO not emtpy in bg_win_step_4_push_pixels_to_fifo \n");
+                            // print!("FIFO not empty in bg_win_step_4_push_pixels_to_fifo \n");
                         },
                         _ => {
                             panic!("unknown error in handle_bg_win_layer's step 4");
@@ -558,7 +559,7 @@ impl Fetcher {
 
 
         self.bg_layer_current_step = 2;
-        return Ok(sprite);
+        Ok(sprite)
 
 
     }

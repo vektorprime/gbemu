@@ -1,16 +1,12 @@
-use crate::gb::emu::Emu;
+
 use crate::gb::mbc::*;
 use crate::gb::graphics::palette::*;
 use crate::gb::graphics::tile::*;
-use crate::gb::hwregisters::*;
 use crate::gb::graphics::fetcher::*;
 use crate::gb::graphics::fifo::*;
-use crate::gb::gbwindow::*;
 
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::sync::mpsc::Sender;
-use std::thread::current;
-use pixels::Pixels;
+
 use crate::gb::graphics::pixel::GBPixel;
 use crate::gb::graphics::sprite::Sprite;
 
@@ -59,15 +55,15 @@ pub struct Ppu {
     started_mode_1_in_frame: bool,
     started_mode_2_in_scanline: bool,
     started_mode_3_in_scanline: bool,
-    pub tiles: Vec<Tile>,
+    //pub tiles: Vec<Tile>,
     pub sprites: Vec<Sprite>,
     //pub sprites_in_oam_idx: u16,
     //pub sprites_interesting_x_pos: [u8; 10],
     //bg_tile_map: [u8; 1024],
     pub ppu_init_complete: bool,
-    pub bg_tile_map: [u8; 1024],
+    //pub bg_tile_map: [u8; 1024],
     // pub active: bool,
-    pub tcycle_in_mode_3_draw: u64,
+    //pub tcycle_in_mode_3_draw: u64,
     pub pixel_in_frame: u64,
     drew_tiles_in_mode_3: bool,
     pub  mode_1_v_blank_first_scan_line: u8,
@@ -94,14 +90,14 @@ impl Ppu {
             started_mode_1_in_frame: false,
             started_mode_2_in_scanline: false,
             started_mode_3_in_scanline: false,
-            tiles: Vec::new(),
+            //tiles: Vec::new(),
             sprites: Vec::new(),
             //sprites_in_oam_idx: 0,
             //sprites_interesting_x_pos: [0; 10],
             ppu_init_complete: false,
-            bg_tile_map: [0; 1024],
+            //bg_tile_map: [0; 1024],
             // active: false,
-            tcycle_in_mode_3_draw: 0,
+            //tcycle_in_mode_3_draw: 0,
             pixel_in_frame: 0,
             drew_tiles_in_mode_3: false,
             mode_1_v_blank_first_scan_line: 144,
@@ -115,49 +111,49 @@ impl Ppu {
     }
 
 
-    // deprecated
-    pub fn load_all_tiles(&mut self, mbc: &Mbc) {
-        self.tiles.clear();
-        let address: u16 = 0x8000;
-
-        // the whole tile range
-        for x in (0..6144).step_by(16) {
-            let mut new_tile = Tile::new();
-            // every 16 bytes is a tile
-            let mut temp_tile: [u8; 16] = [0; 16];
-            for y in 0..16 {
-                temp_tile[y] = mbc.read(address + x + (y as u16), OpSource::PPU);
-                // if temp_tile[y] != 0 && x < 10 {
-                //     print!("Tile #{} byte {} is {:#x} \n", x / 16, y, temp_tile[y] );
-                // }
-            }
-            // todo need to redo these so the output is those 8 commands about decoding
-            // decode every 2 bytes as a row
-            // for (z, byte) in temp_tile.chunks_exact(2).enumerate() {
-            //     new_tile.decode_tile_row(byte[0], byte[1], z);
-            //     print!("decoding byte {:#x} and {:#x} in row {} \n", byte[0], byte[1], z);
-            // }
-            
-            //for r in 0..8 {
-                //new_tile.decode_tile_row(temp_tile[r], temp_tile[ r + 1], r);
-                //print!("decoding byte {:#x} and {:#x} in row {} \n", temp_tile[0], temp_tile[1], r);
-            //} 
-
-            new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
-            new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
-            new_tile.decode_tile_row(temp_tile[4], temp_tile[5], 2);
-            new_tile.decode_tile_row(temp_tile[6], temp_tile[7], 3);
-            new_tile.decode_tile_row(temp_tile[8], temp_tile[9], 4);
-            new_tile.decode_tile_row(temp_tile[10], temp_tile[11], 5);
-            new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
-            new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
-                
-            
-            // store in self.tiles vec
-            self.tiles.push(new_tile);
-            
-        }
-    }
+    // // deprecated
+    // pub fn load_all_tiles(&mut self, mbc: &Mbc) {
+    //     self.tiles.clear();
+    //     let address: u16 = 0x8000;
+    //
+    //     // the whole tile range
+    //     for x in (0..6144).step_by(16) {
+    //         let mut new_tile = Tile::new();
+    //         // every 16 bytes is a tile
+    //         let mut temp_tile: [u8; 16] = [0; 16];
+    //         for y in 0..16 {
+    //             temp_tile[y] = mbc.read(address + x + (y as u16), OpSource::PPU);
+    //             // if temp_tile[y] != 0 && x < 10 {
+    //             //     print!("Tile #{} byte {} is {:#x} \n", x / 16, y, temp_tile[y] );
+    //             // }
+    //         }
+    //         // todo need to redo these so the output is those 8 commands about decoding
+    //         // decode every 2 bytes as a row
+    //         // for (z, byte) in temp_tile.chunks_exact(2).enumerate() {
+    //         //     new_tile.decode_tile_row(byte[0], byte[1], z);
+    //         //     print!("decoding byte {:#x} and {:#x} in row {} \n", byte[0], byte[1], z);
+    //         // }
+    //
+    //         //for r in 0..8 {
+    //             //new_tile.decode_tile_row(temp_tile[r], temp_tile[ r + 1], r);
+    //             //print!("decoding byte {:#x} and {:#x} in row {} \n", temp_tile[0], temp_tile[1], r);
+    //         //}
+    //
+    //         new_tile.decode_tile_row(temp_tile[0], temp_tile[1], 0);
+    //         new_tile.decode_tile_row(temp_tile[2], temp_tile[3], 1);
+    //         new_tile.decode_tile_row(temp_tile[4], temp_tile[5], 2);
+    //         new_tile.decode_tile_row(temp_tile[6], temp_tile[7], 3);
+    //         new_tile.decode_tile_row(temp_tile[8], temp_tile[9], 4);
+    //         new_tile.decode_tile_row(temp_tile[10], temp_tile[11], 5);
+    //         new_tile.decode_tile_row(temp_tile[12], temp_tile[13], 6);
+    //         new_tile.decode_tile_row(temp_tile[14], temp_tile[15], 7);
+    //
+    //
+    //         // store in self.tiles vec
+    //         self.tiles.push(new_tile);
+    //
+    //     }
+    // }
 
     pub fn set_stat_ppu_mode(&mut self, mbc: &mut Mbc, ppu_mode: PPUMode) {
         match ppu_mode {
@@ -185,22 +181,22 @@ impl Ppu {
         }
     }
 
-    pub fn load_bg_tile_map(&mut self, mbc: &Mbc) {
-        let address = if self.is_lcdc_bit3_bg_tile_map_set(&mbc) {
-            0x9C00
-        } else {
-            0x9800
-        };
-
-        for x in 0x0..0x3FF {
-            let temp = mbc.read(address + x, OpSource::PPU);
-            let idx = x as usize;
-            self.bg_tile_map[idx] = temp;
-            // if temp != 47 && temp != 0 {
-            //     print!("Tile map entry is {:?} \n", temp);
-            // }
-        }
-    }
+    // pub fn load_bg_tile_map(&mut self, mbc: &Mbc) {
+    //     let address = if self.is_lcdc_bit3_bg_tile_map_set(&mbc) {
+    //         0x9C00
+    //     } else {
+    //         0x9800
+    //     };
+    //
+    //     for x in 0x0..0x3FF {
+    //         let temp = mbc.read(address + x, OpSource::PPU);
+    //         let idx = x as usize;
+    //         self.bg_tile_map[idx] = temp;
+    //         // if temp != 47 && temp != 0 {
+    //         //     print!("Tile map entry is {:?} \n", temp);
+    //         // }
+    //     }
+    // }
 
     pub fn mode_2_oam_scan(&mut self, mbc: &mut Mbc, tcycles: u64) {
         let mode_2_max_tcycles: u16 = 80;

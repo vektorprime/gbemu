@@ -1,9 +1,4 @@
 use std::fs;
-use std::io::ErrorKind;
-use std::io::Write;
-
-
-use crate::gb::mbc::*;
 
 // need to dynamically load the banks based on the rom
 // 

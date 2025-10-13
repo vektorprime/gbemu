@@ -100,11 +100,11 @@ pub fn compare_registers(registers: &Registers, final_test_state: &TestState) ->
 //  compare FinalTestRegisters with real registers
 //  compare finalTestRam with real ram
 
-pub struct TestOpCode {
-    pub opcode: u8,
-    pub param: u16,
-    pub isCB: bool,
-}
+// pub struct TestOpCode {
+//     pub opcode: u8,
+//     pub param: u16,
+//     pub is_cb: bool,
+// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TestState {

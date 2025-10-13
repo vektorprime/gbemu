@@ -5,14 +5,11 @@ use crate::gb::bios::*;
 use crate::gb::mbc::*;
 use crate::gb::graphics::ppu::*;
 use crate::gb::testcpu::*;
-use crate::gb::hwregisters::HardwareRegisters;
-use crate::gb::gbwindow::*;
 use crate::gb::joypad::Joypad;
 
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 use std::sync::{Arc, Mutex};
-use std::sync::mpsc::{Sender, Receiver};
-use pixels::Pixels;
+
 
 pub struct Emu {
     pub cpu: Cpu,
@@ -43,8 +40,7 @@ impl Emu {
             current_time: Instant::now(),
             current_time_per_frame: Instant::now(),
             is_cpu_tested: false,
-            // todo re-enable, also some tests are not correctly working, verified via blargg
-            is_cpu_test_enabled: false,
+            is_cpu_test_enabled: true,
             joypad,
         }
     }
@@ -56,10 +52,6 @@ impl Emu {
     pub fn load_bios(&mut self) {
         self.mbc.boot_rom.load_bios_to_mem(&self.bios);
     }
-
-    // pub fn init_ppu(&mut self) {
-    //     self.ppu.load_all_tiles(&self.mbc);
-    // }
 
     pub fn test_cpu() {
         println!("TESTING CPU");
@@ -122,34 +114,7 @@ impl Emu {
         }
 
         // //
-        // let mcycles_per_sec: u64 = 1_053_360;
-        // let one_sec = 1;
-        // let elapsed_time = self.current_time.elapsed();
-        // if elapsed_time.as_secs() < one_sec {
-        //     if self.sec_mcycles < mcycles_per_sec {
-        //         let mcycles = self.cpu.tick(&mut self.mbc);
-        //         self.sec_mcycles += mcycles;
-        //         self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
-        //     } else {
-        //         return PPUEvent::RenderEvent(RenderState::NoRender);
-        //     }
-        // }  else {
-        //     if elapsed_time.as_secs() > one_sec && self.debug == false {
-        //         panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
-        //     } else {
-        //         if self.sec_mcycles < mcycles_per_sec {
-        //             print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
-        //         }
-        //         else {
-        //             print!("sec has elapsed and reached max mcycle\n");
-        //         }
-        //         self.sec_mcycles = 0;
-        //         self.current_time = Instant::now();
-        //         return PPUEvent::RenderEvent(RenderState::NoRender);
-        //     }
-        //
-        // }
-        // //
+
         let mcycles_per_sec: u64 = 1_053_360;
         let mcycles_per_frame: u64 = 175_560;
         //let one_sec: u64 = 1;
