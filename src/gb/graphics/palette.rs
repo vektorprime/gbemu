@@ -1,5 +1,13 @@
 
+use crate::gb::mbc::Mbc;
 
+
+
+//used by fetcher functions
+pub enum RequestedPalette {
+    BG,
+    Sprite,
+}
 
 // palette is set via hardware register (mem location) 0xFF47, BG palette data aka BGP
 
@@ -19,8 +27,8 @@ impl PaletteColor {
             1 => Self::LightGray,
             2 => Self::DarkGray,
             3 => Self::Black,
-            4 => Self::Transparent,
-            _ => Self::White,
+            //4 => Self::Transparent,
+            _ => { panic!("Unknown palette color {}", n); },
         }
     }
     pub fn get_rgba_code(&self) -> [u8; 4] {
@@ -29,10 +37,16 @@ impl PaletteColor {
             PaletteColor::LightGray => [192, 192, 192, 255],
             PaletteColor::DarkGray => [96, 96, 96, 255],
             PaletteColor::Black => [0, 0, 0, 255],
-            PaletteColor::Transparent => [255, 0, 255, 255],
+            PaletteColor::Transparent => [255, 255, 255, 0],
         }
     }
 }
+
+pub enum Palette {
+    OBJ(OBJPalette),
+    BG(BGPalette),
+}
+
 
 pub struct BGPalette {
     id0: PaletteColor,
@@ -42,12 +56,21 @@ pub struct BGPalette {
 }
 
 impl BGPalette {
-    pub fn new() -> Self {
+    pub fn new(mbc: &Mbc) -> Self {
         BGPalette {
-            id0: PaletteColor::White,
-            id1: PaletteColor::White,
-            id2: PaletteColor::White,
-            id3: PaletteColor::White,
+            id0: PaletteColor::from_u8(mbc.hw_reg.get_bgp_id0()),
+            id1: PaletteColor::from_u8(mbc.hw_reg.get_bgp_id1()),
+            id2: PaletteColor::from_u8(mbc.hw_reg.get_bgp_id2()),
+            id3: PaletteColor::from_u8(mbc.hw_reg.get_bgp_id3()),
+        }
+    }
+    pub fn from_u8(&self, n: u8) -> PaletteColor {
+        match n {
+            0 => self.id0,
+            1 => self.id1,
+            2 => self.id2,
+            3 => self.id3,
+            _ => {panic!("requested a bad PaletteColor in BGPalette::from_u8(n)")},
         }
     }
 }
@@ -61,13 +84,22 @@ pub struct OBJPalette {
 }
 
 impl OBJPalette {
-    pub fn new() -> Self {
-        OBJPalette {
-            // id0 is always transparent here so we ignore it
+    pub fn new(mbc: &Mbc) -> Self {
+       OBJPalette {
             id0: PaletteColor::Transparent,
-            id1: PaletteColor::White,
-            id2: PaletteColor::White,
-            id3: PaletteColor::White,
+            id1: PaletteColor::from_u8(mbc.hw_reg.get_obp0_id1()),
+            id2: PaletteColor::from_u8(mbc.hw_reg.get_obp0_id2()),
+            id3: PaletteColor::from_u8(mbc.hw_reg.get_obp0_id3()),
+        }
+    }
+    pub fn from_u8(&self, n: u8) -> PaletteColor {
+        match n {
+            0 => self.id0,
+            1 => self.id1,
+            2 => self.id2,
+            3 => self.id3,
+            _ => {panic!("requested a bad PaletteColor in OBJPalette::from_u8(n)")},
         }
     }
 }
+

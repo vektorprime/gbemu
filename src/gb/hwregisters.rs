@@ -460,4 +460,48 @@ pub fn is_ie_vblank_bit0_set(&self) -> bool {
         }
     }
 
+    pub fn get_bgp_id0(&self) -> u8 {
+        0b0000_0011 & self.bgp
+    }
+
+    pub fn get_bgp_id1(&self) -> u8 {
+        (0b0000_1100 & self.bgp) >> 2
+    }
+
+    pub fn get_bgp_id2(&self) -> u8 {
+        (0b0011_0000 & self.bgp) >> 4
+    }
+
+    pub fn get_bgp_id3(&self) -> u8 {
+        (0b1100_0000 & self.bgp) >> 6
+    }
+
+    pub fn get_obp0_id1(&self) -> u8 {
+        (0b0000_1100 & self.obp0) >> 2
+    }
+
+    pub fn get_obp0_id2(&self) -> u8 {
+        (0b0011_0000 & self.obp0) >> 4
+    }
+
+    pub fn get_obp0_id3(&self) -> u8 {
+        (0b1100_0000 & self.obp0) >> 6
+    }
+
+
+    pub fn get_obp1_id1(&self) -> u8 {
+        (0b0000_1100 & self.obp1) >> 2
+    }
+
+    pub fn get_obp1_id2(&self) -> u8 {
+        (0b0011_0000 & self.obp1) >> 4
+    }
+
+    pub fn get_obp1_id3(&self) -> u8 {
+        (0b1100_0000 & self.obp1) >> 6
+    }
+
+
+
+
 }

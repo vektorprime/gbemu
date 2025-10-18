@@ -1,5 +1,5 @@
 use crate::gb::graphics::palette::*;
-
+use crate::gb::mbc::Mbc;
 
 #[derive(Debug, Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 // only implementing enough for DMG not CGB.  Palette and sprite priority would be different for CGB.
@@ -21,7 +21,24 @@ impl GBPixel {
             skip: false,
         }
     }
-    pub fn decode_pixels_from_bytes(byte1: u8, byte2: u8, x_flip: bool) -> [PaletteColor; 8] {
+
+    pub fn get_color_from_palette(palette: &Palette, p1: u8, p2: u8) -> PaletteColor {
+        match &palette {
+            Palette::OBJ(objp) => {
+                objp.from_u8(p1 | p2)
+            },
+            Palette::BG(bgp) => {
+                bgp.from_u8(p1 | p2)
+            }
+        }
+    }
+    pub fn decode_pixels_from_bytes(mbc: &Mbc, requested_palette: RequestedPalette, byte1: u8, byte2: u8, x_flip: bool) -> [PaletteColor; 8] {
+        let palette: Palette = match requested_palette {
+            RequestedPalette::BG => Palette::BG(BGPalette::new(mbc)),
+            RequestedPalette::Sprite => Palette::OBJ(OBJPalette::new(mbc))
+        };
+
+
         let mut colors = [PaletteColor::White; 8];
 
         let b0: u8 = 0b0000_0001;
@@ -39,7 +56,8 @@ impl GBPixel {
             p1 >>= 7;
             p2 >>= 7;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            // PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel1 = {
@@ -48,7 +66,8 @@ impl GBPixel {
             p1 >>= 6;
             p2 >>= 6;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel2 = {
@@ -57,7 +76,8 @@ impl GBPixel {
             p1 >>= 5;
             p2 >>= 5;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel3 = {
@@ -66,7 +86,8 @@ impl GBPixel {
             p1 >>= 4;
             p2 >>= 4;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel4 = {
@@ -75,7 +96,8 @@ impl GBPixel {
             p1 >>= 3;
             p2 >>= 3;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel5 = {
@@ -84,7 +106,8 @@ impl GBPixel {
             p1 >>= 2;
             p2 >>= 2;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel6 = {
@@ -93,14 +116,16 @@ impl GBPixel {
             p1 >>= 1;
             p2 >>= 1;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         let pixel7 = {
             let mut p1: u8 = byte2 & b0;
             let p2: u8 = byte1 & b0;
             p1 <<= 1;
-            PaletteColor::from_u8(p1 | p2)
+            Self::get_color_from_palette(&palette, p1, p2)
+            //PaletteColor::from_u8(p1 | p2)
         };
 
         if x_flip {

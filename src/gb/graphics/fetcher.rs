@@ -1,5 +1,6 @@
 use crate::gb::mbc::*;
 use crate::gb::graphics::fifo::*;
+use crate::gb::graphics::palette::RequestedPalette;
 use crate::gb::graphics::ppu::*;
 use crate::gb::graphics::sprite::*;
 use crate::gb::graphics::pixel::*;
@@ -278,7 +279,7 @@ impl Fetcher {
                 return Err(FetcherError::FifoNotEmpty);
             }
 
-        let raw_pixels = GBPixel::decode_pixels_from_bytes(tile_low_byte, tile_high_byte, false);
+        let raw_pixels = GBPixel::decode_pixels_from_bytes(mbc, RequestedPalette::BG, tile_low_byte, tile_high_byte, false);
         for p in raw_pixels {
 
 
@@ -687,7 +688,7 @@ impl Fetcher {
         let x_flip = self.current_sprite.as_ref().unwrap().get_byte3_sprite_flags_bit5_xflip();
         let y_flip = self.current_sprite.as_ref().unwrap().get_byte3_sprite_flags_bit6_yflip();
 
-        let raw_pixels = GBPixel::decode_pixels_from_bytes(self.current_tile_low_byte, self.current_tile_high_byte, x_flip);
+        let raw_pixels = GBPixel::decode_pixels_from_bytes(mbc, RequestedPalette::Sprite, self.current_tile_low_byte, self.current_tile_high_byte, x_flip);
 
 
         for p in raw_pixels {

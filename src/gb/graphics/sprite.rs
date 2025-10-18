@@ -16,15 +16,20 @@ impl Sprite {
         }
     }
 
-    pub fn get_byte3_sprite_flags_bit4_dmg_palette(&self) -> bool {
+    pub fn get_byte3_sprite_flags_bit4_dmg_palette(&self) -> u8 {
         if self.byte3_sprite_flags & 0b0001_0000 == 0b0001_0000 {
-            true
+            1
         } else {
-            false
+            0
         }
     }
+    
     pub fn set_byte3_sprite_flags_bit4_dmg_palette(&mut self) {
         self.byte3_sprite_flags = self.byte3_sprite_flags | 0b0001_0000;
+    }
+
+    pub fn clear_byte3_sprite_flags_bit4_dmg_palette(&mut self) {
+        self.byte3_sprite_flags &= 0b1110_1111;
     }
 
     pub fn get_byte3_sprite_flags_bit5_xflip(&self) -> bool {

@@ -9,7 +9,8 @@ use crate::gb::joypad::Joypad;
 
 use std::time::{Instant};
 use std::sync::{Arc, Mutex};
-
+use std::thread;
+use std::time::{Duration};
 
 pub struct Emu {
     pub cpu: Cpu,
@@ -116,7 +117,7 @@ impl Emu {
         // //
 
         let mcycles_per_sec: u64 = 1_053_360;
-        let mcycles_per_frame: u64 = 175_560;
+        let mcycles_per_frame: u64 = 17_560;
         //let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed();
         //0.0166 f64 sec is 1/60 of a sec
@@ -130,11 +131,10 @@ impl Emu {
                         self.ppu.tick(&mut self.mbc, tw, bgmw, gw, mcycles)
                 }
                 else {
-                    // hot spin the thread
-                    while self.current_time_per_frame.elapsed().as_secs_f64() <= 0.166f64  {
-                        //print!(" ");
-                        hint::spin_loop();
-                    }
+                    //print!("sleep\n");
+                    thread::sleep(Duration::from_millis(22));
+                    //thread::yield_now();
+
                     self.current_time_per_frame = Instant::now();
                     self.frame_mcycles = 0;
                     return PPUEvent::RenderEvent(RenderState::NoRender);
@@ -150,12 +150,6 @@ impl Emu {
             if elapsed_time.as_secs_f64() > 1.0f64 && self.debug == false {
                 panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
             } else {
-                if self.sec_mcycles < mcycles_per_sec {
-                    print!("sec has elapsed without reaching max mcycles, current mcycle is {}\n", self.sec_mcycles);
-                }
-                else {
-                    print!("sec has elapsed and reached max mcycle\n");
-                }
                 self.sec_mcycles = 0;
                 self.current_time = Instant::now();
                 return PPUEvent::RenderEvent(RenderState::NoRender);
@@ -194,11 +188,6 @@ impl Emu {
             }
 
         }
-        // if self.sec_cycles < mcycle_per_sec && self.current_time.elapsed().as_secs() < one_sec {
-        //     let cycles = self.cpu.tick(&mut self.mbc, &self.bios);
-        //     self.sec_cycles += cycles;
-        //     self.ppu.tick(&mut self.mbc, tile_frame, game_frame, cycles)
-        // }
 
 
 
