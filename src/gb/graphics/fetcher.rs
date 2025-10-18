@@ -332,20 +332,6 @@ impl Fetcher {
         }
 
 
-        // self.current_bg_tile_x_pos += 1;
-        // // needed because it's used in the scan line calc in func get_tile_map_address_in_bg_win_step_1
-        // if self.current_bg_tile_x_pos == 20 {
-        //     self.current_bg_tile_x_pos = 0;
-        //     //self.win_x_pos = 0;
-        //
-        // } else {
-        //     if self.active_layer == Layer::WIN {
-        //         self.win_x_pos += 1;
-        //         if self.win_x_pos == 32 {
-        //             self.win_x_pos = 0;
-        //         }
-        //     }
-        // }
 
         self.bg_layer_current_step = 1;
         Ok(())

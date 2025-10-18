@@ -283,7 +283,7 @@ impl Ppu {
                     self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, sp_px)?
                 },
                 (Ok(bg_px), Ok(sp_px)) => {
-                    if (bg_px.bg_priority && bg_px.color != PaletteColor::White) || !mbc.hw_reg.is_lcdc_obj_enable_bit1_enabled() {
+                    if  sp_px.color == PaletteColor::Transparent || (sp_px.bg_priority && bg_px.color != PaletteColor::White) || !mbc.hw_reg.is_lcdc_obj_enable_bit1_enabled() {
                         // push_bg_px
                         self.push_pixel_and_advance_counter(&mut gw_buffer_unlocked, bg_px)?
 
