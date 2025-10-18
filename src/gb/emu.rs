@@ -117,7 +117,7 @@ impl Emu {
         // //
 
         let mcycles_per_sec: u64 = 1_053_360;
-        let mcycles_per_frame: u64 = 17_560;
+        let mcycles_per_frame: u64 = 17_556;
         //let one_sec: u64 = 1;
         let elapsed_time = self.current_time.elapsed();
         //0.0166 f64 sec is 1/60 of a sec
@@ -132,9 +132,11 @@ impl Emu {
                 }
                 else {
                     //print!("sleep\n");
-                    thread::sleep(Duration::from_millis(22));
-                    //thread::yield_now();
-
+                    let duration = self.current_time_per_frame.elapsed().as_millis() as u64;
+                    if duration < 17 {
+                        thread::sleep(Duration::from_millis(17 - duration));
+                        //thread::yield_now();
+                    }
                     self.current_time_per_frame = Instant::now();
                     self.frame_mcycles = 0;
                     return PPUEvent::RenderEvent(RenderState::NoRender);
@@ -142,16 +144,20 @@ impl Emu {
 
             } else {
                 self.sec_mcycles = 0;
+                self.frame_mcycles = 0;
                 self.current_time = Instant::now();
+                self.current_time_per_frame = Instant::now();
                 return PPUEvent::RenderEvent(RenderState::NoRender);
             }
 
         }  else {
             if elapsed_time.as_secs_f64() > 1.0f64 && self.debug == false {
-                panic!("ERROR: Elapsed time greater than one sick in EMU tic\n");
+                panic!("ERROR: Elapsed time greater than one tick in EMU tic\n");
             } else {
                 self.sec_mcycles = 0;
+                self.frame_mcycles = 0;
                 self.current_time = Instant::now();
+                self.current_time_per_frame = Instant::now();
                 return PPUEvent::RenderEvent(RenderState::NoRender);
             }
 

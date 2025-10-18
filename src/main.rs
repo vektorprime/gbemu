@@ -31,9 +31,9 @@ fn main() {
     /////////////////////////////////////
     // these are for quick debugging
 
-    let skip_bg_render = false;
+    let skip_bg_render = true;
     let skip_gw_render = false;
-    let skip_tile_render = false;
+    let skip_tile_render = true;
 
 
     let skip_windows = false;
@@ -94,16 +94,17 @@ fn main() {
         let mut tw_current_time = Instant::now();
         let mut bgmw_current_time = Instant::now();
         let mut gw_current_time = Instant::now();
-        let one_sec: u64 = 1;
+        let one_sec: f64 = 1.0;
         let mut tw_frames_this_sec: u64 = 0;
         let mut bgmw_frames_this_sec: u64 = 0;
         let mut gw_frames_this_sec: u64 = 0;
 
         let tw_max_fps = 10;
         let bgmw_max_fps = 10;
-        let gw_max_fps = 60;
+        //let gw_max_fps = 60;
 
         event_loop.run(|event, elwt| {
+            //print!("{} \n", gw_frames_this_sec);
             let render_state_cloned = {
                 let mut rs = render_state.lock().unwrap();
                 rs.clone()
@@ -224,7 +225,7 @@ fn main() {
             }
 
             if !skip_tile_render {
-                if tw_current_time.elapsed().as_secs() < one_sec  {
+                if tw_current_time.elapsed().as_secs_f64() < one_sec  {
                     if tw_frames_this_sec < tw_max_fps {
                         {
                             let mut tw_buffer_unlocked = tile_win_buffer.lock().unwrap();
@@ -247,7 +248,7 @@ fn main() {
             }
 
             if !skip_bg_render {
-                if bgmw_current_time.elapsed().as_secs() < one_sec  {
+                if bgmw_current_time.elapsed().as_secs_f64() < one_sec  {
                     if bgmw_frames_this_sec < bgmw_max_fps {
                         {
                             let mut bgmw_buffer_unlocked = bg_map_win_buffer.lock().unwrap();
@@ -270,8 +271,8 @@ fn main() {
 
 
             if !skip_gw_render {
-                if gw_current_time.elapsed().as_secs_f64() < 1.0f64  {
-                    if gw_frames_this_sec < gw_max_fps {
+                //if gw_current_time.elapsed().as_secs_f64() < one_sec  {
+                    //if gw_frames_this_sec < gw_max_fps {
                         {
                             let mut gw_buffer_unlocked = game_win_buffer.lock().unwrap();
                             let mut gw_pixels = game_win.frame.frame_mut();
@@ -280,18 +281,18 @@ fn main() {
 
                         game_win.frame.render().unwrap();
                         game_win.window.request_redraw();
-                        gw_frames_this_sec += 1;
-                    }
+                        //gw_frames_this_sec += 1;
+                    //}
                     // causes the window to show loading/freezing
                     // else {
                     //     std::thread::sleep(std::time::Duration::from_secs_f64(0.01));
                     // }
-                }
-                else {
-                    //print!("sec has elapsed in main tile viewer drawing\n");
-                    gw_current_time = Instant::now();
-                    gw_frames_this_sec = 0;
-                }
+                //}
+                // else {
+                //     //print!("sec has elapsed in main tile viewer drawing\n");
+                //     gw_current_time = Instant::now();
+                //     gw_frames_this_sec = 0;
+                // }
 
             }
 
